@@ -6,7 +6,7 @@ export const VERSION_DATA = 2;
 
 const read = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
-const empty = () => ({ v: VERSION_DATA, cards: [], items: {}, points: 0, seq: {} });
+const empty = () => ({ v: VERSION_DATA, cards: [], items: {}, points: 0, seq: {}, goals: {} });
 
 // v1（名所ごとに visits と variants を持つ形）から v2 へ移す
 export function migrate(b) {
@@ -49,6 +49,12 @@ export function arrive(place, v, m = mode()) {
     lat: v.lat ?? null, lng: v.lng ?? null, pose: null, friends: [] };
   b.cards.push(card); b.points += points; save(m);
   return { first, count: before.length + 1, points, item, card };
+}
+
+// アチーブメントの達成を記録する（1回だけ）。ポイントも足す
+export function markGoal(id, pts, m = mode()) {
+  const b = books[m]; if (b.goals[id]) return false;
+  b.goals[id] = new Date().toISOString(); b.points += pts; save(m); return true;
 }
 
 // ---- 書き出しと読み込み ----

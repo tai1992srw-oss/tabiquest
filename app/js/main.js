@@ -8,11 +8,13 @@ import { esc, img, toast, fmtDate } from './ui.js';
 import { playArrival } from './arrival.js';
 import { renderZukan, renderPlace, openViewer } from './zukan.js';
 import { renderDebug } from './debug.js';
+import { renderMap } from './map.js';
+import { renderGoals, checkGoals } from './goals.js';
 import * as minatomirai from './scenes/minatomirai.js';
 import * as chukagai from './scenes/chukagai.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 for (const p of PLACES) if (p.kind === 'photo') engine.register(p.scene, () => photo.build(p));
@@ -30,11 +32,14 @@ function header() {
 function route() {
   closeViewer?.(); closeViewer = null;
   const [name, ...args] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
-  const tab = ['zukan', 'place', 'card', 'preview'].includes(name) ? 'zukan' : name === 'settings' ? 'settings' : 'list';
+  const tab = ['zukan', 'place', 'card', 'preview', 'goals'].includes(name) ? 'zukan' : ['settings', 'map'].includes(name) ? name : 'list';
   document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   header();
-  if (tab === 'list') renderList();
+  view.classList.toggle('mapmode', tab === 'map');
+  if (tab === 'map') renderMap(view);
+  else if (tab === 'list') renderList();
   else if (tab === 'settings') renderSettings();
+  else if (name === 'goals') renderGoals(view);
   else if (name === 'place') renderPlace(view, args[0]);
   else if (name === 'card') {
     const c = book().cards.find(x => x.id === args[0]);
@@ -95,6 +100,7 @@ function renderList() {
     btn.disabled = true; btn.textContent = '天気を確かめています…';
     const v = await conditionsAt(p, current()), r = arrive(p, v); header();
     const act = await playArrival(p, r.card, r, {});
+    checkGoals(); header();
     if (act === 'zukan') location.hash = `#/card/${r.card.id}`; else { renderList(); header(); }
   };
 }

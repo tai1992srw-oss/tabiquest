@@ -82,6 +82,37 @@ h2{margin:0;font:400 17px var(--dot);color:var(--teal)}
 .credits{margin:0;padding-left:18px;font-size:12px;color:var(--sub)}
 .credits a,.note a{color:var(--teal)}
 
+/* ---- アチーブメント ---- */
+ul.goals{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+ul.goals li{display:flex;gap:10px;background:var(--paper);border:2px solid var(--line);padding:10px 12px}
+ul.goals li.ok{border-color:var(--gold)}
+ul.goals .gl{flex:1;display:flex;flex-direction:column;gap:3px}
+ul.goals b{font:400 16px var(--dot)}
+ul.goals li.ok b{color:var(--gold)}
+ul.goals .gr{flex:none;display:flex;flex-direction:column;align-items:flex-end;font:400 14px var(--dot);gap:2px}
+ul.goals .sub{font-size:12px;color:var(--sub)}
+.bar{display:block;height:8px;background:#0E1230;border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:var(--teal)}
+li.ok .bar i{background:var(--gold)}
+.tag.gold{border-color:var(--gold);color:var(--gold);font-size:13px;padding:2px 8px}
+
+/* ---- 地図 ---- */
+main.mapmode{max-width:none;padding:0}
+.mapwrap{position:relative;height:calc(100dvh - var(--nav) - env(safe-area-inset-bottom) - 52px - env(safe-area-inset-top));overflow:hidden;background:#10183E}
+canvas.map{position:absolute;inset:0;width:100%;height:100%;touch-action:none;image-rendering:pixelated;cursor:grab}
+.mapctl{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:6px}
+.mapctl button{width:44px;height:44px;padding:0;font-size:20px;background:rgba(21,26,56,.92)}
+.maplegend{position:absolute;left:10px;top:10px;display:flex;gap:10px;align-items:center;font:400 12px var(--dot);background:rgba(11,14,34,.8);padding:4px 8px;border:2px solid var(--line)}
+.maplegend .src{color:var(--sub);font-size:10px}
+.lg{display:inline-block;width:10px;height:10px;margin-right:4px;vertical-align:-1px;border:1px solid #14122E}
+.lg.v{background:#FFC857}.lg.n{background:#8FA8FF}
+.mapinfo{position:absolute;left:12px;right:12px;bottom:12px;background:var(--paper);border:2px solid var(--gold);padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.mapinfo[hidden]{display:none}
+.mapinfo b{font:400 18px var(--dot)}
+.mapinfo .sub{font-size:13px;color:var(--sub)}
+.mapinfo .x{position:absolute;right:6px;top:6px;min-height:32px;width:32px;padding:0}
+.kari-s.static{position:static;display:inline-block;align-self:flex-start}
+
 /* ---- 図鑑 ---- */
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 16px;padding:6px}
 .grid a{display:block;text-decoration:none}

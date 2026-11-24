@@ -1,4 +1,4 @@
-# タビクエ Webアプリ（v0.2.0）
+# タビクエ Webアプリ（v0.3.0）
 
 ## PCで動かす
 `M:\Claude\旅アプリ` で次を実行し、ブラウザで http://localhost:5180 を開く。
@@ -21,6 +21,8 @@ main に送ると GitHub Actions が `app/` を GitHub Pages に公開する（h
 - `js/geo.js` 位置情報と到着の判定
 - `js/arrival.js` 到着演出（組み上がり→光→スタンプ→紙吹雪→帯）
 - `js/zukan.js` 図鑑（名所ごとのアルバム）と、カード1枚の全画面表示
+- `js/map.js` ドットの地図（`assets/map/` は Natural Earth の県境を1マス約1kmに落としたもの。R＝県番号、G＝県境・海岸）
+- `js/goals.js` アチーブメント（記録から自動で数える）
 - `js/debug.js` デバッグモード（設定のバージョン表記を7回つづけてタップ）
 - `sw.js` オフライン対応（Service Worker）
 - `vendor/three.r128.min.js` Three.js（MIT）

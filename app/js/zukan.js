@@ -12,7 +12,7 @@ function mini(p, c) { const el = cardEl(p, c); snapshot(p.scene, c).then(u => el
 
 export function renderZukan(view) {
   const b = book(), got = PLACES.filter(p => cardsOf(p.id).length);
-  view.innerHTML = `<h1>図鑑</h1><p class="count">${got.length} / ${PLACES.length} か所 ／ カード ${b.cards.length} まい</p><div class="grid"></div>`;
+  view.innerHTML = `<h1>図鑑</h1><p class="row"><a class="btn" href="#/goals">★ アチーブメント</a></p><p class="count">${got.length} / ${PLACES.length} か所 ／ カード ${b.cards.length} まい</p><div class="grid"></div>`;
   const grid = view.querySelector('.grid');
   for (const p of PLACES) {
     const cs = cardsOf(p.id);
