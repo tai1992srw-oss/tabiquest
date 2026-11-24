@@ -15,7 +15,7 @@ async function loadBase() {
   const c = document.createElement('canvas'); c.width = meta.W; c.height = meta.H;
   const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0);
   const src = x.getImageData(0, 0, meta.W, meta.H);
-  base = { meta, raw: src.data, canvas: c, ctx: x, painted: '' };
+  base = { meta, raw: src.data, canvas: c, ctx: x, painted: null };
   return base;
 }
 

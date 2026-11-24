@@ -14,7 +14,7 @@ import * as minatomirai from './scenes/minatomirai.js';
 import * as chukagai from './scenes/chukagai.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.3.1';
+export const VERSION = '0.3.2';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 for (const p of PLACES) if (p.kind === 'photo') engine.register(p.scene, () => photo.build(p));
