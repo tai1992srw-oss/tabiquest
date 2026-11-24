@@ -14,7 +14,7 @@ import * as minatomirai from './scenes/minatomirai.js';
 import * as chukagai from './scenes/chukagai.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.3.1';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 for (const p of PLACES) if (p.kind === 'photo') engine.register(p.scene, () => photo.build(p));
@@ -154,9 +154,9 @@ async function renderSettings() {
 
 // ---- オフライン（Service Worker） ----
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-  navigator.serviceWorker?.register('sw.js').then(reg => {
+  navigator.serviceWorker?.register('sw.js', { updateViaCache: 'none' }).then(reg => {
     reg.addEventListener('updatefound', () => {
-      const w = reg.installing; w?.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) toast('新しい版があります。開き直すと切り替わります', 4000); });
+      const w = reg.installing; w?.addEventListener('statechange', () => { if (w.state === 'activated' && navigator.serviceWorker.controller) { toast('新しい版にしました'); setTimeout(() => location.reload(), 900); } });
     });
   }).catch(() => {});
 }

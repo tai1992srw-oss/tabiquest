@@ -1,6 +1,6 @@
 // オフライン対応：アプリ本体と絵を端末に保存して、電波がなくても開けるようにする
 // 版を上げるときは VERSION を変える（古い保存は消える）
-const VERSION = 'tabiquest-v0.3.0';
+const VERSION = 'tabiquest-v0.3.1';
 const CORE = [
   './', 'index.html', 'manifest.json', 'css/app.css', 'vendor/three.r128.min.js',
   'js/main.js', 'js/card.js', 'js/places.js', 'js/photo_places.js', 'js/store.js', 'js/geo.js', 'js/conditions.js', 'js/ui.js', 'js/arrival.js', 'js/zukan.js', 'js/debug.js',
@@ -14,7 +14,7 @@ const CORE = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('tabiquest-') && k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -37,7 +37,7 @@ self.addEventListener('fetch', e => {
   // アプリ本体と絵：保存したものをすぐ返し、裏でネットから新しくする
   e.respondWith(caches.open(VERSION).then(async c => {
     const hit = await c.match(e.request, { ignoreSearch: true });
-    const net = fetch(e.request).then(r => { if (r.ok) c.put(e.request, r.clone()); return r; }).catch(() => null);
+    const net = fetch(e.request, { cache: 'no-cache' }).then(r => { if (r.ok) c.put(e.request, r.clone()); return r; }).catch(() => null);
     if (hit) { e.waitUntil(net); return hit; }
     const r = await net; if (r) return r;
     if (e.request.mode === 'navigate') return (await c.match('index.html')) || Response.error();
