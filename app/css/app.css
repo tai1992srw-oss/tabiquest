@@ -50,6 +50,9 @@ h2{margin:0;font:400 17px var(--dot);color:var(--teal)}
 .stamp{position:absolute;right:5%;bottom:17%;width:27cqw;aspect-ratio:1;border:1.3cqw double #E8473A;border-radius:50%;color:#E8473A;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--dot);transform:rotate(-14deg);background:rgba(255,244,224,.12);text-shadow:0 0 1px rgba(255,244,224,.5);pointer-events:none;transition:opacity .3s}
 .stamp b{font-weight:400;font-size:7.5cqw;line-height:1}
 .stamp small{font-size:2.6cqw;line-height:1.2;margin-top:.6cqw}
+.kari{position:absolute;left:3cqw;top:3cqw;font:400 4cqw var(--dot);background:var(--coral);color:#14122E;padding:.2cqw 1.6cqw;pointer-events:none}
+.credit{position:absolute;left:3cqw;bottom:18cqw;max-width:58%;font:400 2.3cqw/1.2 var(--sans);color:rgba(255,244,224,.85);text-shadow:0 1px 2px #000;pointer-events:none}
+.card.clean .kari,.card.clean .credit{opacity:.7}
 .card.locked{display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#11163A 0 6px,#0E1230 6px 12px);border-color:var(--line);box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--line)}
 .card.locked .q{font:400 22cqw var(--dot);color:#2E3570}
 .card.locked .no{position:absolute;bottom:4cqw;left:0;right:0;text-align:center;font:400 5cqw var(--dot);color:#4A5294}
@@ -70,12 +73,31 @@ h2{margin:0;font:400 17px var(--dot);color:var(--teal)}
 .spot .st.far{color:var(--sub)}
 .spot .st.go{color:var(--gold)}
 .spot .act{margin-top:auto}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font:400 11px var(--dot);padding:0 6px;border:1px solid var(--line);color:var(--sub)}
+.kari-s{position:absolute;left:3px;top:3px;font:400 11px var(--dot);background:var(--coral);color:#14122E;padding:0 4px}
+.filters{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.filters .count{align-self:center;margin-left:4px;font-size:13px}
+.warn{color:var(--coral)}
+.credits{margin:0;padding-left:18px;font-size:12px;color:var(--sub)}
+.credits a,.note a{color:var(--teal)}
 
 /* ---- 図鑑 ---- */
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 16px;padding:6px}
 .grid a{display:block;text-decoration:none}
 .grid .card{width:100%}
 .count{font:400 15px var(--dot);color:var(--sub)}
+.grid.three{grid-template-columns:repeat(3,1fr);gap:14px 10px}
+.slotlink{position:relative}
+.badge{position:absolute;right:-6px;top:-8px;z-index:3;font:400 13px var(--dot);background:var(--gold);color:#14122E;padding:1px 7px;border:2px solid var(--ink)}
+.back{font:400 14px var(--dot);color:var(--teal);text-decoration:none}
+table.combo{border-collapse:collapse;font:400 13px var(--dot);width:100%}
+table.combo th,table.combo td{padding:4px 2px;text-align:center;border-bottom:1px dashed var(--line)}
+table.combo th{color:var(--sub);font-weight:400}
+table.combo .got{color:var(--gold)}
+table.combo .no{color:#3A4180}
+.chips-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.chips-row button{flex:none;min-height:36px;font-size:13px;padding:4px 10px}
 
 /* ---- 全画面のカード ---- */
 .viewer{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;align-items:center;gap:12px;overflow-y:auto;padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 16px)}
@@ -123,6 +145,7 @@ h2{margin:0;font:400 17px var(--dot);color:var(--teal)}
 .dbg .line{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 0;border-top:1px dashed var(--line)}
 .dbg .line .nm{font:400 14px var(--dot);flex:1 1 120px}
 .dbg button{min-height:38px;font-size:13px;padding:4px 10px}
+.sel{font:400 14px var(--dot);min-height:38px;background:#20265A;color:var(--ink);border:2px solid var(--line);padding:4px 8px;max-width:100%}
 .ver{background:none;border:0;padding:8px 0;min-height:auto;color:#5A6094;font-size:13px;cursor:default}
 dl.rec{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
 dl.rec dt{color:var(--sub)}

@@ -64,6 +64,9 @@ export function makeParticles(scene, splash) {
   return { mesh, draw };
 }
 
+// 描くときの状態：天気「不明」は晴れで描く
+const drawState = st => ({ ...st, weather: ['rain', 'snow', 'cloudy'].includes(st.weather) ? st.weather : 'clear' });
+
 // ---- 描画エンジン（WebGL は1つだけ使い、表示する場所へキャンバスを移す） ----
 class Engine {
   constructor() {
@@ -84,12 +87,12 @@ class Engine {
   // container の中に動くカードを出す
   async show(container, id, state) {
     const s = await this.get(id);
-    this.cur = s; this.state = { ...state }; s.apply(this.state); this.reset(s); this.lastF = -1; this.par = 0; this.target = null;
+    this.cur = s; this.state = drawState(state); s.apply(this.state); this.reset(s); this.lastF = -1; this.par = 0; this.target = null;
     container.prepend(this.canvas);
     if (!this.running) { this.running = true; requestAnimationFrame(this.loop); }
     return s;
   }
-  setState(state) { this.state = { ...state }; if (this.cur) { this.cur.apply(this.state); this.lastF = -1; } }
+  setState(state) { this.state = drawState(state); if (this.cur) { this.cur.apply(this.state); this.lastF = -1; } }
   stop() { this.running = false; this.canvas.remove(); this.cur = null; }
   loop(ms) {
     if (!this.running) return; requestAnimationFrame(this.loop);
@@ -101,7 +104,7 @@ class Engine {
   }
   // 一覧・図鑑の小さな絵（止まった1コマ）を作る
   async snapshot(id, state) {
-    const s = await this.get(id);
+    state = drawState(state); const s = await this.get(id);
     const keep = s === this.cur ? [...s.layers, s.ch.chara].map(m => m.material.uniforms.uReveal.value).concat([s.drop, s.ch.shadow.material.opacity]) : null;
     s.apply(state); this.reset(s); s.frame(0, 0, true, true, state); this.renderer.render(s.scene, this.cam);
     if (keep) { [...s.layers, s.ch.chara].forEach((m, i) => { m.material.uniforms.uReveal.value = keep[i]; }); s.drop = keep.at(-2); s.ch.shadow.material.opacity = keep.at(-1); }

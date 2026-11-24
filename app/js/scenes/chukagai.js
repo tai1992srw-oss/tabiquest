@@ -13,6 +13,7 @@ export async function build() {
     let [r, g, b] = c; const l = r * .3 + g * .59 + b * .11, eve = st.time === 'evening', warm = r > b + 40 && l > 110;
     if (layer === 'scene' && eve) { const k = warm ? .1 : 1; r = r * (1 + .28 * k) + 46 * k * (1 - l / 255); g = g * (1 + .12 * k) + 20 * k * (1 - l / 255); b = b * (1 + .02 * k) + 30 * k * (1 - l / 255); if (warm && l > 190) { r *= .96; g *= .9; b *= .82; } }
     if (layer === 'chara') { if (eve) { r = r * .95 + 8; g = g * .86; b = b * .9; } else { r = r * .8 + 12; g = g * .68; b = b * .8 + 10; } }
+    if (st.weather === 'cloudy') { const k = warm ? .1 : .28; r = (r + (l - r) * k) * .93; g = (g + (l - g) * k) * .93; b = (b + (l - b) * k) * .96; }
     if (st.weather === 'rain') { const k = warm ? .2 : .5; r = (r + (l * .82 - r) * k) * .84; g = (g + (l * .9 - g) * k) * .84; b = (b + (l * 1.05 - b) * k) * .88; }
     if (st.weather === 'snow') { const k = warm ? .12 : .34; r = r + (l * .95 - r) * k + 8; g = g + (l - g) * k + 10; b = b + (l * 1.08 - b) * k + 16; }
     return [r, g, b];

@@ -1,0 +1,73 @@
+// 仮の名所：写真を背景にして、キャラを重ねる（ドット絵ができるまでのつなぎ）
+// 写真の形は変えず、時間帯・天気は色づけだけで表す。背景を描き足さない
+import { W, H, near, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
+const THREE = window.THREE;
+
+let charaData = null;
+async function chara() {
+  if (!charaData) charaData = (async () => {
+    const D = await (await fetch('assets/minatomirai/data.json')).json();
+    const t = near(await new THREE.TextureLoader().loadAsync('assets/minatomirai/chara.png'));
+    return { size: D.chara, pal: D.pal.chara, tex: t };
+  })();
+  return charaData;
+}
+
+// 時間帯と天気の色づけ：c' = mix(c, 灰色, desat) * mul + add
+const TIME = {
+  morning: { mul: [1.04, 1.0, .96], add: [.04, .03, .02], desat: 0 },
+  day: { mul: [1, 1, 1], add: [0, 0, 0], desat: 0 },
+  evening: { mul: [1.08, .8, .66], add: [.07, .01, .03], desat: .1 },
+  night: { mul: [.34, .4, .62], add: [0, .01, .06], desat: .35 },
+};
+const WEATHER = {
+  clear: { mul: [1, 1, 1], add: [0, 0, 0], desat: 0 },
+  cloudy: { mul: [.9, .9, .93], add: [0, 0, 0], desat: .35 },
+  rain: { mul: [.78, .8, .88], add: [0, 0, .02], desat: .45 },
+  snow: { mul: [.96, .98, 1.02], add: [.06, .07, .09], desat: .35 },
+};
+
+export async function build(place) {
+  const scene = new THREE.Scene();
+  const ph = await new THREE.TextureLoader().loadAsync(place.photo.src);
+  ph.magFilter = THREE.NearestFilter; ph.minFilter = THREE.LinearFilter; ph.generateMipmaps = false;
+  const C = await chara();
+
+  const photo = makeLayer(scene, 0, `uniform sampler2D tPhoto; uniform vec3 uMul,uAdd; uniform float uDesat;
+  void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; if(hidden(px)) discard;
+    vec2 s=(px-uOff+vec2(6.,10.)+.5)/(uSize+vec2(12.,20.));
+    vec3 c=texture2D(tPhoto,vec2(s.x,1.-s.y)).rgb; float l=lum(c);
+    c=mix(c,vec3(l),uDesat)*uMul+uAdd; gl_FragColor=vec4(c,1.); }`);
+  Object.assign(photo.material.uniforms, { tPhoto: { value: ph }, uMul: { value: new THREE.Vector3(1, 1, 1) }, uAdd: { value: new THREE.Vector3() }, uDesat: { value: 0 } });
+  photo.material.needsUpdate = true;
+
+  const ch = makeChara(scene, C.size, 0x100a26, .45);
+  ch.chara.material.uniforms.tIdx.value = C.tex;
+  const parts = makeParticles(scene, [560, H - 4]);
+
+  const self = {
+    scene, layers: [photo], ch, drop: 0,
+    apply(st) {
+      const t = TIME[st.time] || TIME.day, w = WEATHER[st.weather] || WEATHER.clear, u = photo.material.uniforms;
+      u.uMul.value.set(t.mul[0] * w.mul[0], t.mul[1] * w.mul[1], t.mul[2] * w.mul[2]);
+      u.uAdd.value.set(t.add[0] + w.add[0], t.add[1] + w.add[1], t.add[2] + w.add[2]);
+      u.uDesat.value = Math.min(1, t.desat + w.desat);
+      const night = st.time === 'night', eve = st.time === 'evening';
+      setPal(ch.chara, palTex(C.pal, ([r, g, b]) => {
+        if (night) { r = r * .62 * .8; g = g * .62 * .9; b = b * .62 * 1.25 + 8; }
+        else if (eve) { r = r * 1.02 + 6; g *= .9; b *= .86; }
+        if (st.weather === 'rain' || st.weather === 'cloudy') { const l = r * .3 + g * .59 + b * .11; r = (r + (l - r) * .3) * .88; g = (g + (l - g) * .3) * .88; b = (b + (l - b) * .3) * .92; }
+        return [r, g, b];
+      }));
+    },
+    frame(par, f, newF, rm, st) {
+      const off = k => Math.round(-par * k);
+      photo.material.uniforms.uOff.value.set(off(5), 0);
+      const cx = W / 2 + off(12), feet = 610;
+      ch.chara.position.set(cx, H - (feet - ch.CH / 2) + self.drop, 4); ch.shadow.position.set(cx, H - feet + 1, 3);
+      ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
+      if (newF) parts.draw(f, st.weather);
+    },
+  };
+  return self;
+}

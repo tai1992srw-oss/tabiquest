@@ -6,11 +6,11 @@ import { cardEl, esc } from './ui.js';
 const clamp = x => Math.max(0, Math.min(1, x));
 const bounce = x => { const n = 7.5625, d = 2.75; if (x < 1 / d) return n * x * x; if (x < 2 / d) return n * (x -= 1.5 / d) * x + .75; if (x < 2.5 / d) return n * (x -= 2.25 / d) * x + .9375; return n * (x -= 2.625 / d) * x + .984375; };
 
-// result: { first, count, points, item }  v: 時間帯・天気・季節
-export function playArrival(place, v, result, { at, onZukan } = {}) {
+// result: { first, count, points, item }  v: 到着で撮ったカード（時間帯・天気・季節・日時・通し番号）
+export function playArrival(place, v, result, { onZukan } = {}) {
   return new Promise(async resolve => {
     const root = document.createElement('div'); root.className = 'arrival'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', place.welcome);
-    const card = cardEl(place, v, { at }); card.classList.add('pre');
+    const card = cardEl(place, v); card.classList.add('pre');
     const bandText = result.first ? 'カードを手に入れた！' : `${result.count}回目の到着！`;
     const gains = [];
     if (result.points) gains.push(`<em>+${result.points}pt</em>`);

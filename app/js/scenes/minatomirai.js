@@ -12,6 +12,7 @@ export async function build() {
   function grade(c, layer, st) {
     let [r, g, b] = c; const l = r * .3 + g * .59 + b * .11, night = st.time === 'night', warm = r > b + 40 && l > 120;
     if ((layer === 'fg' || layer === 'chara') && night) { const k = warm && layer === 'fg' ? .95 : layer === 'chara' ? .62 : .5; r = r * k * (warm ? 1 : .8); g = g * k * (warm ? 1 : .9); b = b * k * 1.25 + (warm ? 0 : 8); }
+    if (st.weather === 'cloudy') { const k = warm ? .12 : .3; r = (r + (l - r) * k) * .92; g = (g + (l - g) * k) * .92; b = (b + (l - b) * k) * .95; }
     if (st.weather === 'rain') { const k = warm ? .25 : .5; r = (r + (l * .82 - r) * k) * .82; g = (g + (l * .9 - g) * k) * .82; b = (b + (l * 1.05 - b) * k) * .86; }
     if (st.weather === 'snow') { const k = warm ? .15 : .38; r = r + (l * .95 - r) * k + 10; g = g + (l - g) * k + 12; b = b + (l * 1.08 - b) * k + 18; }
     return [r, g, b];
