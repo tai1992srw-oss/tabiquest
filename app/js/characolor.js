@@ -75,7 +75,7 @@ export async function renderCharaColors(box, onChange) {
         ${p.presets.map(h => `<button class="sw" data-c="${h}" style="background:${h}" aria-label="${p.name}を ${h} に" aria-pressed="${cur[p.k] === h}"></button>`).join('')}
         <label class="pick" aria-label="${p.name}の色を自由にえらぶ"><input type="color" value="${cur[p.k] || p.presets[0]}"></label>
         <button class="reset" data-c="" aria-pressed="${!cur[p.k]}">元の色</button></div>`).join('')}</div></div>
-    <p class="note">いまの土台のキャラ（下着・短い髪）の、肌・服・目・髪の色を変えられます。カードと撮影にも反映されます。</p>`;
+    <p class="note">キャラ1の肌・服・目・髪の色を変えられます。カードと撮影にも反映されます。</p>`;
   const cv = box.querySelector('.chprev');
   try { drawSample(cv, await loadSample()); } catch (e) { cv.replaceWith(Object.assign(document.createElement('p'), { className: 'note', textContent: 'キャラの見本を読みこめませんでした' })); }
   const set = (k, hex) => {
