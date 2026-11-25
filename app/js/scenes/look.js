@@ -60,15 +60,18 @@ export function gradeChara([r, g, b], st) {
   return [r, g, b];
 }
 // キャラの置き場所（撮影で選べる）
-//   ground：名所ごとの地面の決まり { base：ふだんの足もとの高さ（絵の高さに対する割合）, top：いちばん奥に立てる足もと, hz：遠近の消える高さ（目の高さ・水平線） }
+//   ground：名所ごとの地面の決まり { base：ふだんの足もとの高さ（絵の高さに対する割合）, top：いちばん奥に立てる足もと, hz：遠近の消える高さ（目の高さ・水平線）,
+//             s：ふだんの大きさ（なければ 1）, x：ふだんの横の位置（絵の幅に対する割合。まん中が 0、左が負） }
+//   ふだんの立ち方は「手前に大きく」（2026-11-26 くりたの希望）：名所ごとに s を 2 前後、base を 1 より少し下（足もとはカードの下にかくれる）、x で主役の建物をよける
+//   撮影で選ぶ大きさ（st.photo.s）は、ふだんの大きさ s に対する倍率。位置（x, y）もふだんの位置からのずれ
 //   st.photo：{ x：横のずれ（絵の幅に対する割合）, y：上下のずれ（絵の高さに対する割合。上が正）, s：大きさ, r：角度（ラジアン。左回りが正） }
 //   返す値：dx（横のずれ）、feet（足もとの行）、s（大きさ）、r（角度）
 //   奥へ動かしても大きさは変えない。上は地面の奥（ground.top）まで、下はカードの外へはみ出してよい（2026-11-25 くりたの希望）
 export function charaPlace(st, W, H, ground) {
-  const g = { base: .885, top: .75, ...ground };
+  const g = { base: .885, top: .75, s: 1, x: 0, ...ground };
   const f = Math.max(g.top, Math.min(2.4, g.base - (st.photo?.y || 0)));
-  const s = Math.max(.4, Math.min(6, st.photo?.s || 1));
-  return { dx: Math.round((st.photo?.x || 0) * W), feet: Math.round(H * f), s, r: st.photo?.r || 0 };
+  const s = Math.max(.4, Math.min(6, st.photo?.s || 1)) * g.s;
+  return { dx: Math.round((g.x + (st.photo?.x || 0)) * W), feet: Math.round(H * f), s, r: st.photo?.r || 0 };
 }
 // 影の向き：晴れの日は太陽の向きに、体の形の影を地面へ落とす（朝は左奥、昼は短く右奥、夕方は右へ長く）
 //   曇り・雨・雪・夜は光がやわらかいので、足もとに短い影だけ。k：足もとから高さ1のぶんのずれ [横, 奥]、fade：影にする高さ（キャラの背の何割まで。上ほど薄い）、op：濃さの倍率

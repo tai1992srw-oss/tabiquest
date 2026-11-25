@@ -63,7 +63,7 @@ export async function build(place) {
     frame(par, f, newF, rm, st) {
       const off = v => Math.round(-par * v * k);
       photo.material.uniforms.uOff.value.set(off(5), 0);
-      const cp = charaPlace(st, W, H, { base: .885, top: .76, hz: .56 }), cx = W / 2 + off(12) + cp.dx;
+      const cp = charaPlace(st, W, H, { base: 1.02, top: .76, hz: .56, s: 2.1, x: -.18 }), cx = W / 2 + off(12) + cp.dx;
       ch.setPose(self.forcePose ?? st.photo?.pose ?? 0, f, rm);   // 到着の演出では forcePose（喜び）が優先
       placeChara(ch, cx, cp.feet, cp.s, H, self.drop, cp.r, st);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
