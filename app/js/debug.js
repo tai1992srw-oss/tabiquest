@@ -19,7 +19,7 @@ export function renderDebug(box, refresh) {
     <div class="row"><button data-a="normal">通常版をひらく</button></div>
     ${on ? `
     <span class="lab">いる場所（位置の上書き）</span>
-    <select class="sel" data-sel="loc"><option value="none">上書きしない</option>${PLACES.map(p => `<option value="${p.id}" ${settings.loc === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}<option value="nowhere" ${settings.loc === 'nowhere' ? 'selected' : ''}>どこでもない</option></select>
+    <select class="sel" data-sel="loc"><option value="none">上書きしない（どの名所もタップで到着できる）</option>${PLACES.map(p => `<option value="${p.id}" ${settings.loc === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}<option value="nowhere" ${settings.loc === 'nowhere' ? 'selected' : ''}>どこでもない</option></select>
     <span class="lab">到着したときの時間帯（自動＝時刻と日の出・日の入りから）</span>${pick('time', [['auto', '自動'], ...TIMES.map(t => [t, LABEL.time[t]])])}
     <span class="lab">到着したときの季節（自動＝今日の日付から）</span>${pick('season', [['auto', '自動'], ...SEASONS.map(s => [s, LABEL.season[s]])])}
     <span class="lab">到着したときの天気（自動＝Open-Meteo から）</span>${pick('weather', [['auto', '自動'], ...WEATHERS.map(w => [w, LABEL.weather[w]]), ['unknown', '不明']])}

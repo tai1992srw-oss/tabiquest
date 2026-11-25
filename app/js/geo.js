@@ -33,6 +33,8 @@ export function current() {
 }
 
 export function statusOf(place) {
+  // デバッグ版：位置を上書きしていないときは、どの名所もその場にいるあつかい（タップするだけで到着できる）。遠いときの見え方を試すなら、設定で位置を上書きする
+  if (mode() === 'debug' && settings.loc === 'none') { const p = here.pos; return { known: true, d: p ? distance(p, place) : 0, inside: true, fake: true }; }
   const pos = current(); if (!pos) return { known: false };
   const d = distance(pos, place);
   return { known: true, d, inside: d <= place.radius + Math.min(pos.acc || 0, 100), fake: !!pos.fake };

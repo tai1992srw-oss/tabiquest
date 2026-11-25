@@ -25,7 +25,7 @@ import * as hitsujiyama from './scenes/hitsujiyama.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.47';
+export const VERSION = '0.10.48';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);
