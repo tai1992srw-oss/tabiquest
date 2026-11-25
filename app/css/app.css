@@ -437,3 +437,15 @@ ul.hm-goods .own{font:400 13px var(--dot);color:var(--teal)}
 .hm-stage.vox .hm-ov.top{background:linear-gradient(rgba(120,60,90,.28),transparent)}
 .hm-stage.vox .hm-ov.bot{background:linear-gradient(transparent,rgba(120,60,90,.35))}
 .hm-stage.vox.night{background:linear-gradient(#2A2552,#3B2E5E 55%,#4A3466)}
+/* 設定：キャラの色（2026-11-25） */
+.chcol{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.chprev{image-rendering:pixelated;background:var(--bg);border:2px solid var(--line);max-width:40%;height:auto}
+.chrows{display:flex;flex-direction:column;gap:10px;flex:1;min-width:0}
+.chrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chrow .lab{width:2em;font-size:13px;color:var(--sub)}
+.chrow .sw{min-height:0;width:32px;height:32px;border:2px solid var(--line);padding:0;cursor:pointer}
+.chrow .sw[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:1px}
+.chrow .pick{display:inline-flex;width:30px;height:30px;border:2px dashed var(--line);align-items:center;justify-content:center}
+.chrow .pick input{width:24px;height:24px;border:0;padding:0;background:none;cursor:pointer}
+.chrow .reset{min-height:32px;font-size:12px;padding:3px 8px}
+.chrow .reset[aria-pressed="true"]{background:var(--ink);color:var(--paper)}

@@ -1,5 +1,7 @@
 // 図鑑：名所ごとのアルバム。カードは到着ごとの1枚で、時間帯や天気をあとから変えることはできない
 import { PLACES, placeById, LABEL, TIMES, WEATHERS, PLAIN_BG } from './places.js';
+// キャラのポーズ（コマの順。assets の data.json の charaPoses と同じ）
+const POSE_NAMES = ['立ち', 'ばんざい', 'ピース', '指さし', '手をふる', 'ジャンプ', '撮る', '持つ', 'ながめる', '歩く', 'ハート', '地図', '自撮り'];
 import { book, cardsOf, cardById, setPhoto } from './store.js';
 import { engine, snapshot, RS } from './card.js';
 import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast } from './ui.js';
@@ -108,7 +110,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
       <div class="sheet" hidden>
         <p class="hint">指でなぞると動く（下へはみ出せます）。二本指で広げる・つまむと大きさ、ひねると角度が変わります</p>
         <div class="seg" role="group" aria-label="キャラの明るさ"><span class="lab">明るさ</span><button data-light="bright">明るいまま</button><button data-light="blend">景色になじませる</button></div>
-        <div class="seg" role="group" aria-label="ポーズ"><span class="lab">ポーズ</span><button data-pose="0">立ち</button><button data-pose="1">喜び</button></div>
+        <div class="seg" role="group" aria-label="ポーズ"><span class="lab">ポーズ</span>${POSE_NAMES.map((n, i) => `<button data-pose="${i}">${n}</button>`).join('')}</div>
         <div class="seg"><button data-a="center">元に戻す</button>${preview ? '' : '<button class="primary" data-a="keep">この配置を残す</button>'}<button data-a="photo">とじる</button></div>
       </div>
     </div>`;

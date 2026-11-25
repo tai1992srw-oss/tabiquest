@@ -8,6 +8,7 @@
 import { PLACES, placeById, LABEL, seasonOf } from './places.js';
 import { book, mode, settings, saveBook } from './store.js';
 import { engine, snapshot, reduceMotion } from './card.js';
+import { recolorChara } from './characolor.js';
 import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, img, cardEl, fmtDate, toast } from './ui.js';
@@ -97,7 +98,7 @@ function loadChara() {
     const im = new Image(); im.src = base + 'chara.png'; await im.decode();
     const [w, h] = D.charaTex || D.chara, c = document.createElement('canvas'); c.width = w; c.height = h;
     const x = c.getContext('2d'); x.drawImage(im, 0, 0, w, h, 0, 0, w, h);
-    const d = x.getImageData(0, 0, w, h), pal = D.pal.chara;
+    const d = x.getImageData(0, 0, w, h), pal = D.pal.chara.map((c, i) => recolorChara(c, i, D));   // 設定の「キャラの色」を反映
     for (let k = 0; k < d.data.length; k += 4) { if (d.data[k + 3] < 128) { d.data[k + 3] = 0; continue; } const p = pal[d.data[k]] || [255, 0, 255]; d.data[k] = p[0]; d.data[k + 1] = p[1]; d.data[k + 2] = p[2]; d.data[k + 3] = 255; }
     x.putImageData(d, 0, 0); return c;
   })());

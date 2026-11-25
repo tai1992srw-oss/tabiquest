@@ -4,6 +4,7 @@
 //   差分：昼の絵・夜の絵・雪の絵（どれも同じ位置）と、空（朝・夕暮れ・夜・曇り・冬）を組み合わせる
 //   印（景色の G）：1＝海のきらめき 2＝街灯の灯り 3＝窓（夜にまたたく） 5＝観覧車の輪（夜に色が回る。B＝角度） 6＝提灯（夕暮れ・夜に灯る）
 import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
+import { recolorChara } from '../characolor.js';
 import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara, charaPlace, placeChara } from './look.js';
 const THREE = window.THREE;
 
@@ -55,7 +56,7 @@ export async function buildDot(cfg) {
   const gulls = D.sprites?.gull && cfg.gulls ? cfg.gulls.map(() => makeLayer(scene, .5, GULL, ...D.sprites.gull)) : [];
   for (const g of gulls) g.material.uniforms.tIdx.value = tex.gulls;
   const [GW] = D.sprites?.gull || [0];
-  const ch = makeChara(scene, D.chara, 0x1a2a44, .35, D.charaFrames || 1); ch.chara.material.uniforms.tIdx.value = tex.chara;
+  const ch = makeChara(scene, D.chara, 0x1a2a44, .35, D.charaFrames || 1, D.charaBlink || 0); ch.chara.material.uniforms.tIdx.value = tex.chara;
   ch.setLods(await charaLods(base, D, tex.chara));
   const parts = makeParticles(scene, [Math.round(H * .74), H - 4]);
 
@@ -96,7 +97,7 @@ export async function buildDot(cfg) {
       self.gullN = st.time === 'night' || ['rain', 'snow'].includes(st.weather) ? 0 : st.weather === 'cloudy' || st.season === 'winter' ? 1 : st.season === 'summer' ? 3 : 2;
       self.leaves = st.season === 'autumn' && st.weather !== 'snow' && cfg.leaves;
       self.steam = cfg.steam && st.weather !== 'rain' ? cfg.steam : null;
-      setPal(ch.chara, palTex(D.pal.chara, c => gradeChara(c, st)));
+      setPal(ch.chara, palTex(D.pal.chara, (c, i) => gradeChara(recolorChara(c, i, D), st)));
     },
     frame(par, f, newF, rm, st) {
       const off = v => Math.round(-par * v * k);
@@ -120,7 +121,7 @@ export async function buildDot(cfg) {
         g.material.uniforms.uOff.value.set(Math.floor(f / 3 + i) % 8 < 6 ? Math.floor(f / 3 + i) % 2 : 1, 0);
       });
       const cp = charaPlace(st, W, H, cfg.ground), cx = W / 2 + off(P[2]) + cp.dx;
-      ch.setPose(self.forcePose ?? st.photo?.pose ?? 0);   // 到着の演出では forcePose（喜び）が優先
+      ch.setPose(self.forcePose ?? st.photo?.pose ?? 0, f, rm);   // 到着の演出では forcePose（喜び）が優先
       placeChara(ch, cx, cp.feet, cp.s, H, self.drop, cp.r);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
       if (newF) {

@@ -19,7 +19,7 @@ export async function loadTextures(base, names) {
 // パレット：色番号→色。時間帯や天気は grade を通して書き換える
 export function palTex(pal, grade) {
   const d = new Uint8Array(256 * 4);
-  pal.forEach((c, i) => { const g = grade(c); for (let k = 0; k < 3; k++) d[i * 4 + k] = Math.max(0, Math.min(255, g[k])); d[i * 4 + 3] = 255; });
+  pal.forEach((c, i) => { const g = grade(c, i); for (let k = 0; k < 3; k++) d[i * 4 + k] = Math.max(0, Math.min(255, g[k])); d[i * 4 + 3] = 255; });
   const t = new THREE.DataTexture(d, 256, 1, THREE.RGBAFormat); t.magFilter = t.minFilter = THREE.NearestFilter; t.needsUpdate = true; return t;
 }
 export function setPal(mesh, tex) { const u = mesh.material.uniforms.tPal; if (u.value) u.value.dispose(); u.value = tex; }
@@ -45,13 +45,20 @@ export function makeLayer(scene, z, frag, w, h) {
 }
 
 // キャラ（背景と別の層。あとで着せ替えのパーツ層にする）
-// frames：絵にコマ（ポーズ）が横に何枚並んでいるか。setPose(i) で i 番目のコマにする（0＝立ち、1＝喜び）
-export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1) {
+// frames：絵にコマ（ポーズ）が横に何枚並んでいるか。setPose(i, f, rm) で i 番目のポーズにする（0＝立ち、1＝ばんざい…）
+// blink：まばたきのコマが、ポーズのコマから何番うしろにあるか（0＝まばたきなし）。f（12コマ/秒）で、ときどき目を閉じる
+export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1, blink = 0) {
   const [CW, CH] = size;
   const chara = makeLayer(scene, 4, `uniform float uPose,uFrames; void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; vec2 s=px; if(s.y<uSize.y*.62) s.y-=uOff.y;
     vec4 t=texture2D(tIdx,(vec2(s.x+uPose*uSize.x,s.y)+.5)/vec2(uSize.x*uFrames,uSize.y)*vec2(1.,-1.)+vec2(0.,1.)); if(t.a<.5||s.y<0.||hidden(px)) discard; gl_FragColor=vec4(pal(t.r),1.); }`, CW, CH);
   Object.assign(chara.material.uniforms, { uPose: { value: 0 }, uFrames: { value: frames } }); chara.material.needsUpdate = true;
-  const setPose = i => { chara.material.uniforms.uPose.value = Math.min(frames - 1, Math.max(0, i)); };
+  const poses = blink ? blink : frames;
+  const blinkNow = f => { const q = f % 52; return q < 2 || (f % 156 >= 104 && q >= 5 && q < 7); };   // 約4秒に1回、ときどき2回つづけて
+  const setPose = (i, f = 0, rm = true) => {
+    i = Math.min(poses - 1, Math.max(0, i));
+    if (blink && !rm && blinkNow(f)) i += blink;
+    chara.material.uniforms.uPose.value = Math.min(frames - 1, i);
+  };
   const shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: shadowColor, transparent: true, opacity: shadowOpacity, depthTest: false }));
   shadow.scale.set(30, 5, 1); shadow.renderOrder = 3; scene.add(shadow);
   // 細かさの段階：大きさ s に合わせて、いちばん合う絵に切り替える（小さいとき用・ふだん用・寄り用）
@@ -158,6 +165,7 @@ class Engine {
 }
 export const engine = new Engine();
 const snaps = new Map();
+export const clearSnaps = () => snaps.clear();   // キャラの色を変えたときなど、一覧の小さな絵を描き直す
 export function snapshot(id, state) {
   const k = `${id}|${state.time}|${state.weather}|${state.season || ''}|${JSON.stringify(state.photo || null)}`;
   if (!snaps.has(k)) snaps.set(k, engine.snapshot(id, state));

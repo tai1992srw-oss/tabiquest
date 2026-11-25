@@ -1,7 +1,8 @@
 // 画面の切り替えと、一覧・設定の画面
 import { PLACES, placeById, CATEGORIES, PLAIN_BG } from './places.js';
 import { settings, saveSettings, book, mode, arrive, cardsOf, visited, exportBook, importBook, persist } from './store.js';
-import { engine, snapshot } from './card.js';
+import { engine, snapshot, clearSnaps } from './card.js';
+import { renderCharaColors } from './characolor.js';
 import { locate, here, statusOf, fmtDist, current } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, img, toast, fmtDate, prefCity } from './ui.js';
@@ -17,7 +18,7 @@ import * as chukagai from './scenes/chukagai.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.9.5';
+export const VERSION = '0.9.6';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('kamakura', kamakura.build);
@@ -139,6 +140,7 @@ async function renderSettings() {
       <div class="stats"><div><b>${b.points}</b><span>ポイント</span></div><div><b>${got}<small>/${PLACES.length}</small></b><span>行った名所</span></div><div><b>${b.cards.length}</b><span>カード</span></div><div><b>${items.length}</b><span>アイテム</span></div></div>
       ${items.length ? `<p class="note">${items.join('　')}</p>` : ''}
       <a class="wide" href="#/goals">★ 称号とアチーブメントを見る</a></div>
+    <div class="group" id="chcolors"></div>
     <div class="group"><h2>記録の保存</h2>
       <p class="note">記録はこの端末の中だけにあります。機種変更やブラウザのデータ消去にそなえて、ときどきファイルに書き出してください。${m === 'debug' ? '<br><b>いまはデバッグ用の記録が対象です。</b>' : ''}</p>
       <p class="note" id="persist">消さないでの設定：確かめています…</p>
@@ -152,6 +154,7 @@ async function renderSettings() {
       <p class="note">天気：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>（CC BY 4.0）</p></div>
     <div id="dbg"></div>
     <button class="ver" id="ver">タビクエ v${VERSION}</button>`;
+  renderCharaColors(view.querySelector('#chcolors'), () => clearSnaps());
   const dbgBox = view.querySelector('#dbg');
   if (settings.debugUnlocked) renderDebug(dbgBox, () => { header(); renderSettings(); });
   view.querySelector('#ver').addEventListener('click', () => {

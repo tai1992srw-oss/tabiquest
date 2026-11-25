@@ -5,6 +5,7 @@
 //               海のきらめき、踏切のランプ、電車とカモメの動き、雨・雪・落ち葉の粒、濡れた道の光
 // 絵はコードで描き足さない（形が変わるものは Codex の絵を使う）
 import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
+import { recolorChara } from '../characolor.js';
 import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara, charaPlace, placeChara } from './look.js';
 const THREE = window.THREE;
 
@@ -47,7 +48,7 @@ export async function build() {
   const [GW, GH] = D.sprites.gull;
   const gulls = [0, 1, 2].map(() => makeLayer(scene, .5, `void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; vec2 s=px; if(uWet>.5) s.x=uSize.x-1.-s.x;
   vec4 t=texture2D(tIdx,(vec2(s.x+uOff.x*uSize.x,s.y)+.5)/vec2(uSize.x*2.,uSize.y)*vec2(1.,-1.)+vec2(0.,1.)); if(t.a<.5) discard; gl_FragColor=vec4(pal(t.r),1.); }`, GW, GH));
-  const ch = makeChara(scene, D.chara, 0x1a2a44, .35, D.charaFrames || 1);
+  const ch = makeChara(scene, D.chara, 0x1a2a44, .35, D.charaFrames || 1, D.charaBlink || 0);
   const parts = makeParticles(scene, [Math.round(H * .72), H - 4]);
 
   train.material.uniforms.tIdx.value = tex.train; for (const g of gulls) g.material.uniforms.tIdx.value = tex.gulls; ch.chara.material.uniforms.tIdx.value = tex.chara;
@@ -89,7 +90,7 @@ export async function build() {
       // カモメ：夏は3羽、春・秋は2羽、冬と曇りは1羽。夜・雨・雪は出ない
       self.gullN = st.time === 'night' || ['rain', 'snow'].includes(st.weather) ? 0 : st.weather === 'cloudy' || st.season === 'winter' ? 1 : st.season === 'summer' ? 3 : 2;
       self.leaves = st.season === 'autumn' && st.weather !== 'snow';
-      setPal(ch.chara, palTex(D.pal.chara, c => gradeChara(c, st)));
+      setPal(ch.chara, palTex(D.pal.chara, (c, i) => gradeChara(recolorChara(c, i, D), st)));
     },
     frame(par, f, newF, rm, st) {
       const off = v => Math.round(-par * v * k);
@@ -114,7 +115,7 @@ export async function build() {
       });
       // 地面：踏切の手前まで奥に行ける。目の高さは海の水平線
       const cp = charaPlace(st, W, H, { base: .885, top: .70, hz: D.HOR / H }), cx = W / 2 + off(14) + cp.dx;
-      ch.setPose(self.forcePose ?? st.photo?.pose ?? 0);   // 到着の演出では forcePose（喜び）が優先
+      ch.setPose(self.forcePose ?? st.photo?.pose ?? 0, f, rm);   // 到着の演出では forcePose（喜び）が優先
       placeChara(ch, cx, cp.feet, cp.s, H, self.drop, cp.r);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
       if (newF) {
