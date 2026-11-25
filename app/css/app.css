@@ -615,3 +615,18 @@ body.du-open{overflow:hidden}
 .du-hint,.du-note,.du-load{margin:0;font-size:12px;color:var(--sub)}
 .du-note:empty{display:none}
 @media (min-width:700px){.dressup{max-width:560px;margin:0 auto;box-shadow:0 0 0 100vmax rgba(20,15,50,.5)}}
+
+/* お着替え：色はいつも見える帯に（横1列）、服は絞りこみ、一覧の絵は高さをそろえる（2026-11-26） */
+.du-panel{height:auto}
+.du-filters{display:flex;gap:6px;padding:0 12px 8px;overflow-x:auto;scrollbar-width:none}
+.du-filters[hidden],.du-colorbar[hidden]{display:none}
+.du-filters button{flex:none;min-height:34px;padding:3px 14px;border-radius:999px;font-size:12.5px;background:var(--bg);color:var(--sub)}
+.du-filters button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+.du-colorbar{display:flex;flex-direction:column;gap:6px;padding:2px 0 8px;border-bottom:1px solid var(--line)}
+.du-colorbar .du-colors{flex-direction:row;align-items:center;gap:8px;padding-left:12px}
+.du-colorbar .du-lab{flex:none;width:3.6em;font-size:12px}
+.du-colorbar .du-sws{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:4px 12px 4px 2px;gap:7px}
+.du-colorbar .du-sw{flex:none;width:34px;height:34px}
+.du-colorbar .du-note{padding:0 12px}
+.du-body{padding-top:10px}
+.du-grid.body .du-item canvas,.du-grid.coord .du-item canvas{width:auto;height:112px;max-width:100%}

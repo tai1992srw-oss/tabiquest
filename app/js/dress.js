@@ -20,7 +20,9 @@ const MORE = {
 const TABS = [
   { id: 'hair', name: '髪型', icon: '✂', kind: 'items', focus: 'face', colors: ['hair'], items: P => hairList(P), get: L => L.hair || '', set: (L, v) => { L.hair = v; }, crop: 'face' },
   { id: 'face', name: '顔', icon: '☺', kind: 'colors', focus: 'face', colors: ['skin', 'eye'] },
-  { id: 'wear', name: '服', icon: '♥', kind: 'items', focus: 'body', colors: ['cloth'], items: P => outfitList(P), get: L => L.outfit || '', set: (L, v) => { L.outfit = v; }, crop: 'body', colorNote: L => (L.outfit ? '服の色は、インナーのときだけ変わります' : '') },
+  // 服：絞りこみ（セット・トップス・ボトムス・くつ下・くつ）。parts.json の outfits の type（なければ 'set'＝上下そろい）で分ける
+  { id: 'wear', name: '服', icon: '♥', kind: 'items', focus: 'body', colors: ['cloth'], items: P => outfitList(P).map(u => ({ type: u.id ? 'set' : 'set', ...u })), get: L => L.outfit || '', set: (L, v) => { L.outfit = v; }, crop: 'body', colorNote: L => (L.outfit ? '服の色は、インナーのときだけ変わります' : ''),
+    filters: [['all', 'すべて'], ['set', 'セット'], ['top', 'トップス'], ['bottom', 'ボトムス'], ['socks', 'くつ下'], ['shoes', 'くつ']] },
   { id: 'coord', name: 'コーデ', icon: '★', kind: 'coord', focus: 'body', colors: [] },
 ];
 const clone = L => ({ colors: { ...(L?.colors || {}) }, hair: L?.hair || '', outfit: L?.outfit || '' });
@@ -63,39 +65,47 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
       <div class="du-tools"><button data-a="undo" disabled>1つ戻す</button>${home ? '<button data-a="home">ホームに合わせる</button>' : ''}<button data-a="zoom" aria-pressed="false">全身</button></div></div>
     <div class="du-panel">
       <div class="du-tabs" role="tablist">${TABS.map(t => `<button role="tab" data-tab="${t.id}" aria-selected="${t === tab}"><i aria-hidden="true">${t.icon}</i><span>${t.name}</span></button>`).join('')}</div>
+      <div class="du-filters" hidden></div>
+      <div class="du-colorbar"></div>
       <div class="du-body"><p class="du-load">読みこみ中…</p></div>
     </div>`;
   document.body.append(root); document.body.classList.add('du-open');
-  const stage = root.querySelector('.du-stage'), cv = root.querySelector('.du-chara'), body = root.querySelector('.du-body');
+  const stage = root.querySelector('.du-stage'), cv = root.querySelector('.du-chara'), body = root.querySelector('.du-body'), bar = root.querySelector('.du-colorbar'), fbar = root.querySelector('.du-filters'), panel = root.querySelector('.du-panel');
+  const flt = {};   // タブごとの絞りこみ
   let whole = false;   // 「全身」を押している間は、どのタブでも全身を見せる
-  const paint = () => {   // 入りきる大きさで、いちばん大きく。寄り用の絵が入らないときは、半分の細かさの絵を使う（ドットが割り切れるように）
-    if (!env) return; const kind = (whole || tab.focus === 'body') ? 'body' : 'face', fit = c => Math.min((stage.clientHeight - 20) / c[3], (stage.clientWidth - 16) / c[2]);
-    let lod = 'close', crop = bounds(env.P, lod)[kind], z = Math.floor(fit(crop));
+  // 上のキャラを描く。入りきる大きさで、いちばん大きく。全身を見せるときは、寄り用の絵（360ドット）がそのまま入るように、下の枠を少しちぢめる
+  //   それでも入らない小さな画面では、半分の細かさの絵を使う（ドットが割り切れるように）
+  const paint = () => {
+    if (!env) return; const kind = (whole || tab.focus === 'body') ? 'body' : 'face';
+    let lod = 'close', crop = bounds(env.P, lod)[kind];
+    const free = root.clientHeight - root.querySelector('.du-top').offsetHeight, max = Math.min(free * .56, 470), min = Math.min(max, 300);
+    panel.style.height = Math.round(Math.max(min, Math.min(max, free - crop[3] * (kind === 'body' ? 1 : 2) - 22))) + 'px';   // 顔は2倍、全身は1倍がちょうど入る高さに
+    const fit = c => Math.min((stage.clientHeight - 20) / c[3], (stage.clientWidth - 16) / c[2]); let z = Math.floor(fit(crop));
     if (z < 1) { lod = 'normal'; crop = bounds(env.P, lod)[kind]; z = Math.max(1, Math.floor(fit(crop))); }
     draw(cv, env, L, lod, crop, 1); cv.style.width = crop[2] * z + 'px'; cv.style.height = crop[3] * z + 'px';
   };
   const change = (fn, keep = true) => { if (keep) { hist.push(clone(L)); if (hist.length > 30) hist.shift(); } fn(L); root.querySelector('[data-a=undo]').disabled = !hist.length; paint(); renderBody(false); onChange?.(clone(L)); };
+  // 色の帯：いつも見える所（タブのすぐ下）に、その部位の色を横1列で出す。多いときは横にすべらせる
+  const renderBar = () => { bar.innerHTML = tab.colors.map(swatches).join('') + (tab.colorNote?.(L) ? `<p class="du-note">${esc(tab.colorNote(L))}</p>` : ''); bar.hidden = !tab.colors.length;
+    fbar.hidden = !tab.filters; if (tab.filters) fbar.innerHTML = tab.filters.map(([id, nm]) => `<button data-flt="${id}" aria-pressed="${(flt[tab.id] || 'all') === id}">${nm}</button>`).join(''); };
   const swatches = k => { const cur = L.colors[k] || '', list = MORE[k] || COLORS[k].presets;
     return `<div class="du-colors" data-k="${k}"><span class="du-lab">${COLORS[k].name}の色</span><div class="du-sws"><button class="du-sw none" data-c="" aria-pressed="${!cur}" aria-label="${COLORS[k].name}を元の色に">元</button>${list.map(h => `<button class="du-sw" data-c="${h}" style="background:${h}" aria-pressed="${cur.toLowerCase() === h}" aria-label="${COLORS[k].name}を ${h} に"></button>`).join('')}<label class="du-sw pick${cur && !list.includes(cur.toLowerCase()) ? ' on' : ''}" aria-label="${COLORS[k].name}の色を自由にえらぶ"><input type="color" value="${cur || list[0]}"><span aria-hidden="true">＋</span></label></div></div>`; };
   const coords = () => settings.charaCoords || [];
   // 下の一覧を描く。full＝タブを切りかえたとき（絵から作り直す）。そうでなければ、えらんだ印と色だけ直す
   function renderBody(full = true) {
-    if (!env) return;
-    if (!full && tab.kind !== 'coord') {
-      body.querySelectorAll('.du-item').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === tab.get(L))));
-      body.querySelectorAll('.du-colors').forEach(el => { el.outerHTML = swatches(el.dataset.k); });
-      const nt = body.querySelector('.du-note'); if (nt) nt.textContent = tab.colorNote?.(L) || '';
-      if (tab.kind === 'items') thumbs(); return;
-    }
+    if (!env) return; renderBar();
+    if (!full && tab.kind !== 'coord') { body.querySelectorAll('.du-item').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === tab.get(L)))); if (tab.kind === 'items') thumbs(); return; }
     if (tab.kind === 'coord') {
       const cs = coords();
       body.innerHTML = `<p class="du-hint">気に入った組み合わせを残して、1回で着替えられます（${cs.length}／12）</p><div class="du-grid coord"><button class="du-item add" data-a="addcoord" ${cs.length >= 12 ? 'disabled' : ''}><span class="du-plus" aria-hidden="true">＋</span><span class="du-nm">いまのコーデを残す</span></button>${cs.map((c, i) => `<div class="du-cell"><button class="du-item" data-coord="${i}" aria-pressed="${same(c.look, L)}"><canvas></canvas><span class="du-nm">${esc(c.name)}</span></button><button class="du-del" data-del="${i}" aria-label="${esc(c.name)}を消す">×</button></div>`).join('')}</div>`;
       const B = bounds(env.P, 'normal'); body.querySelectorAll('[data-coord]').forEach(b => draw(b.querySelector('canvas'), env, clone(cs[+b.dataset.coord].look), 'normal', B.body, 1));
       return;
     }
-    const items = tab.kind === 'items' ? tab.items(env.P) : [];
-    body.innerHTML = (items.length ? `<div class="du-grid">${items.map(it => `<button class="du-item" data-v="${esc(it.id)}" aria-pressed="${it.id === tab.get(L)}"><canvas></canvas><span class="du-nm">${esc(it.name)}</span></button>`).join('')}</div>` : '')
-      + tab.colors.map(swatches).join('') + `<p class="du-note">${esc(tab.colorNote?.(L) || '')}</p>`;
+    const f = flt[tab.id] || 'all', all = tab.kind === 'items' ? tab.items(env.P) : [], items = all.filter(it => f === 'all' || !it.id || (it.type || 'set') === f);
+    const none = tab.kind === 'items' && f !== 'all' && !items.some(it => it.id);
+    body.innerHTML = tab.kind !== 'items' ? '<p class="du-hint">上の色をえらぶと、キャラの色が変わります</p>'
+      : none ? `<p class="du-hint">「${esc(tab.filters.find(x => x[0] === f)[1])}」の服は、まだありません</p>`
+      : `<div class="du-grid ${tab.crop}">${items.map(it => `<button class="du-item" data-v="${esc(it.id)}" aria-pressed="${it.id === tab.get(L)}"><canvas></canvas><span class="du-nm">${esc(it.name)}</span></button>`).join('')}</div>`;
     thumbs();
   }
   // 一覧の小さな絵：そのアイテムだけを替えた見た目（色はいまのまま）
@@ -107,7 +117,8 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); root.querySelector('[data-a=cancel]').click(); } };
   root.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return; const a = b.dataset.a;
-    if (b.dataset.tab) { tab = TABS.find(t => t.id === b.dataset.tab); root.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b))); paint(); renderBody(); }
+    if (b.dataset.flt) { flt[tab.id] = b.dataset.flt; renderBody(); }
+    else if (b.dataset.tab) { tab = TABS.find(t => t.id === b.dataset.tab); root.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b))); paint(); renderBody(); }
     else if (b.dataset.v !== undefined) { if (tab.get(L) !== b.dataset.v) change(x => tab.set(x, b.dataset.v)); }
     else if (b.dataset.c !== undefined) { const k = b.closest('.du-colors').dataset.k; change(x => { if (b.dataset.c) x.colors[k] = b.dataset.c; else delete x.colors[k]; }); }
     else if (b.dataset.coord !== undefined) { const c = coords()[+b.dataset.coord]; if (c) { change(x => Object.assign(x, clone(c.look))); renderBody(); } }
