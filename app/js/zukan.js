@@ -141,6 +141,8 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
       <div class="sheet" hidden>
         <p class="hint">指でなぞると動く（下へはみ出せます）。二本指で広げる・つまむと大きさ、ひねると角度が変わります</p>
         <div class="seg" role="group" aria-label="キャラの明るさ"><span class="lab">明るさ</span><button data-light="bright">明るいまま</button><button data-light="blend">景色になじませる</button></div>
+        <div class="seg" role="group" aria-label="光の当て方"><span class="lab">光</span><button data-rim="0">ふつう</button><button data-rim="1">半逆光</button></div>
+        <div class="seg" role="group" aria-label="光のにじみ"><span class="lab">グロー</span><button data-glow="0">なし</button><button data-glow="1">弱い</button><button data-glow="2">強い</button></div>
         <div class="seg" role="group" aria-label="ポーズ"><span class="lab">ポーズ</span>${POSES.map(([i, n]) => `<button data-pose="${i}">${n}</button>`).join('')}</div>
         <div class="seg"><button data-a="center">元に戻す</button>${preview ? '' : '<button class="primary" data-a="keep">この配置を残す</button>'}<button data-a="photo">とじる</button></div>
       </div>
@@ -151,7 +153,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
 
   function load(i) {
     idx = i; card = list[i]; p = placeById(card.placeId);
-    ph = { x: 0, y: 0, s: 1, r: 0, light: 'bright', pose: 0, ...(card.photo || {}) };
+    ph = { x: 0, y: 0, s: 1, r: 0, light: 'bright', pose: 0, rim: 0, glow: 0, ...(card.photo || {}) };
     stage.innerHTML = ''; el = cardEl(p, card); stage.append(el);
     if (btn('clean').getAttribute('aria-pressed') === 'true') el.classList.add('clean');
     root.setAttribute('aria-label', `${p.name}のカード`);
@@ -166,6 +168,8 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   const sync = () => {
     engine.setState({ ...card, photo: { ...ph } });
     sheet.querySelectorAll('[data-light]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.light === ph.light)));
+    sheet.querySelectorAll('[data-rim]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.rim === (ph.rim | 0))));
+    sheet.querySelectorAll('[data-glow]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.glow === (ph.glow | 0))));
     sheet.querySelectorAll('[data-pose]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.pose === ph.pose)));
   };
   function setPosing(on) {
@@ -227,6 +231,8 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     else if (a === 'photo') setPosing(sheet.hidden);
     else if (a === 'save') saveImage();
     else if (b.dataset.light) { ph.light = b.dataset.light; sync(); }
+    else if (b.dataset.rim) { ph.rim = +b.dataset.rim; sync(); }
+    else if (b.dataset.glow) { ph.glow = +b.dataset.glow; sync(); }
     else if (b.dataset.pose) { ph.pose = +b.dataset.pose; sync(); }
     else if (a === 'center') { ph.x = 0; ph.y = 0; ph.s = 1; ph.r = 0; sync(); }
     else if (a === 'keep') { setPhoto(card.id, { ...ph }); card.photo = { ...ph }; toast('この配置をカードに残しました'); setPosing(false); }
