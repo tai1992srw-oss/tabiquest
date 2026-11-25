@@ -4,12 +4,18 @@ import { PLACES, placeById, LABEL, TIMES, WEATHERS, PLAIN_BG } from './places.js
 const POSE_NAMES = ['立ち', 'ばんざい', 'ピース', '指さし', '手をふる', 'ジャンプ', '撮る', '持つ', 'ながめる', '歩く', 'ハート', '地図', '自撮り'];
 import { book, cardsOf, cardById, setPhoto } from './store.js';
 import { engine, snapshot, RS } from './card.js';
-import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast } from './ui.js';
+import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast, icon } from './ui.js';
 
-// 図鑑・カレンダー・称号の上に出す切り替え（同じ図鑑タブの中の3つの見方）
+// 図鑑・旅の記録・称号の上に出す切り替え（同じ図鑑タブの中の3つの見方）
 export function zukanTabs(on) {
-  return `<div class="seg3" role="tablist">${[['zukan', 'カード'], ['timeline', 'タイムライン'], ['goals', '称号']].map(([k, l]) =>
+  return `<div class="utabs" role="tablist">${[['zukan', 'カード'], ['timeline', '旅の記録'], ['goals', '称号']].map(([k, l]) =>
     `<a role="tab" href="#/${k}" aria-selected="${k === on}">${l}</a>`).join('')}</div>`;
+}
+// 図鑑の見出し：画面の名前と、全体の進みぐあい（輪）
+export function zukanHead(sub, ratio) {
+  const c = 2 * Math.PI * 24, d = Math.max(ratio > 0 ? 3 : 0, Math.round(c * ratio * 10) / 10);
+  return `<div class="zhead"><div><h1>旅の図鑑</h1><span class="prog">${sub}</span></div>
+    <div class="ring" role="img" aria-label="${Math.round(ratio * 100)}%"><svg width="58" height="58" viewBox="0 0 58 58" aria-hidden="true"><circle cx="29" cy="29" r="24" fill="none" stroke="var(--line)" stroke-width="7"/><circle cx="29" cy="29" r="24" fill="none" stroke="var(--teal)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${d} ${c}" transform="rotate(-90 29 29)"/></svg><span>${Math.round(ratio * 100)}%</span></div></div>`;
 }
 
 // カードの小さな絵（文字は重ねない。名前などは下に帯で出す）
@@ -17,12 +23,14 @@ function art(p, c, cls = '') {
   const el = document.createElement('div'); el.className = 'pic ' + cls;
   snapshot(p.scene, c).then(u => el.prepend(img(u, p.alt))); return el;
 }
+const ROT = [-3, 2, -1, 3, -2, 1], TAPE = ['rgba(255,182,206,.8)', 'rgba(150,200,255,.75)', 'rgba(255,214,107,.8)', 'rgba(190,170,255,.75)'];
 
 // 図鑑の絞り込み（エリア・集めたものだけ）。この端末に覚えておく
 const zf = (() => { try { return Object.assign({ pref: 'all', city: 'all', got: false }, JSON.parse(localStorage.getItem('tabiquest:zukan') || '{}')); } catch (e) { return { pref: 'all', city: 'all', got: false }; } })();
 const saveZf = () => { try { localStorage.setItem('tabiquest:zukan', JSON.stringify(zf)); } catch (e) {} };
 const cityOf = p => p.city.replace(/[^市]*$/, '') || p.city;   // 横浜市西区 → 横浜市、千代田区はそのまま
 
+// 図鑑：ノートのページに、撮った名所はポラロイドを貼る。まだの名所は点線のわくに番号だけ
 export function renderZukan(view) {
   const b = book(), prefs = [...new Set(PLACES.map(p => p.pref))];
   if (zf.pref !== 'all' && !prefs.includes(zf.pref)) { zf.pref = 'all'; zf.city = 'all'; }
@@ -30,14 +38,18 @@ export function renderZukan(view) {
   const cities = zf.pref === 'all' ? [] : [...new Set(inPref.map(cityOf))];
   if (!cities.includes(zf.city)) zf.city = 'all';
   const area = inPref.filter(p => zf.city === 'all' || cityOf(p) === zf.city);
-  const got = area.filter(p => cardsOf(p.id).length), cards = got.reduce((n, p) => n + cardsOf(p.id).length, 0);
+  const got = area.filter(p => cardsOf(p.id).length), allGot = PLACES.filter(p => cardsOf(p.id).length).length;
+  const areaName = zf.city !== 'all' ? zf.city : zf.pref !== 'all' ? zf.pref : 'ぜんぶ', rest = area.length - got.length;
   const chip = (k, v, l, on) => `<button data-${k}="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`;
-  view.innerHTML = `<div class="phead"><h1>図鑑</h1><span class="prog">${got.length} / ${area.length} か所 ・ ${cards} まい</span></div>
+  const peek = !area.length ? '' : rest === 0 ? `${areaName === 'ぜんぶ' ? 'ぜんぶ' : areaName + 'は'}コンプリート！` : got.length ? `あと${rest}か所で<br>${areaName === 'ぜんぶ' ? 'ぜんぶ' : areaName}コンプ！` : '最初の1枚を<br>撮りに行こう！';
+  view.innerHTML = `${zukanHead(`集めた名所 <b>${allGot}</b> / ${PLACES.length} ・ ${b.cards.length} まい`, allGot / PLACES.length)}
     ${zukanTabs('zukan')}
     <div class="filters">
       <div class="chips-row" role="group" aria-label="エリア">${chip('pref', 'all', 'ぜんぶ', zf.pref === 'all')}${prefs.map(x => chip('pref', x, x, zf.pref === x)).join('')}<span class="sep"></span>${chip('got', '1', '集めたものだけ', zf.got)}</div>
       ${cities.length > 1 ? `<div class="chips-row sub" role="group" aria-label="市区町村">${chip('city', 'all', '市区町村ぜんぶ', zf.city === 'all')}${cities.map(x => chip('city', x, x, zf.city === x)).join('')}</div>` : ''}
-    </div><div class="shelf"></div>`;
+    </div>
+    <section class="nbook"><div class="nb-h"><span class="nb-tag">${esc(areaName)}</span><span class="nb-n">${got.length} / ${area.length}</span></div><div class="shelf"></div>
+      ${peek ? `<div class="nb-peek"><p class="bubble">${peek}</p><img src="ui/chara_heart.png" alt=""></div>` : ''}</section>`;
   view.querySelector('.filters').onclick = e => {
     const t = e.target.closest('button'); if (!t) return; const d = t.dataset;
     if (d.pref) { zf.pref = d.pref; zf.city = 'all'; } else if (d.city) zf.city = d.city; else if (d.got) zf.got = !zf.got;
@@ -47,44 +59,62 @@ export function renderZukan(view) {
   // 手に入れた名所を先に（新しく到着した順）、まだの名所はあとに番号順で
   const order = [...got.sort((a, z) => cardsOf(z.id)[0].at.localeCompare(cardsOf(a.id)[0].at)), ...(zf.got ? [] : area.filter(p => !cardsOf(p.id).length))];
   if (!order.length) grid.outerHTML = `<p class="note empty">${zf.got ? 'このエリアで集めたカードはまだありません。' : 'このエリアの名所はありません。'}</p>`;
-  for (const p of order) {
+  order.forEach((p, i) => {
     const cs = cardsOf(p.id);
     if (!cs.length) {
-      grid.insertAdjacentHTML('beforeend', `<div class="slot locked" role="img" aria-label="まだ手に入れていないカード No.${esc(p.no)}"><span class="q" aria-hidden="true">？</span><span class="cap">No.${esc(p.no)}</span></div>`);
-      continue;
+      grid.insertAdjacentHTML('beforeend', `<div class="yetslot" role="img" aria-label="まだ手に入れていないカード No.${esc(p.no)}"><span class="q" aria-hidden="true">?</span><span class="no">${esc(p.no)}</span></div>`);
+      return;
     }
-    const a = document.createElement('a'); a.href = `#/place/${p.id}`; a.className = 'slot'; a.setAttribute('aria-label', `${p.name}のアルバムを開く（${cs.length}まい）`);
+    const a = document.createElement('a'); a.href = `#/place/${p.id}`; a.className = 'pola'; a.style.setProperty('--rot', ROT[i % ROT.length] + 'deg'); a.style.setProperty('--tape', TAPE[i % TAPE.length]);
+    a.setAttribute('aria-label', `${p.name}のアルバムを開く（${cs.length}まい）`);
     a.append(art(p, cs[0]));
+    a.insertAdjacentHTML('afterbegin', '<span class="tape" aria-hidden="true"></span>');
     a.insertAdjacentHTML('beforeend', `${cs.length > 1 ? `<span class="cnt">×${cs.length}</span>` : ''}<span class="cap">${esc(p.name)}</span>`);
     grid.append(a);
-  }
+  });
 }
 
-// 名所のアルバム：上に大きく最新のカード、下に集めたカードと、時間帯×天気の集まりぐあい
+// 名所のページ：上に絵を大きく（カードの中にキャラが立っている）、下から重なるシートに名前・集めたカード・時間と天気のスタンプ
+const WICON = { clear: 'sun', cloudy: 'cloud', rain: 'rain', snow: 'snow' };
 export function renderPlace(view, id) {
   const p = placeById(id); if (!p) { location.hash = '#/zukan'; return; }
   const cs = cardsOf(p.id), have = new Set(cs.map(c => c.time + '|' + c.weather)), times = TIMES.filter(t => p.times.includes(t));
   const total = times.length * WEATHERS.length, n = times.reduce((s, t) => s + WEATHERS.filter(w => have.has(t + '|' + w)).length, 0);
-  const tbl = `<table class="combo" aria-label="集めた時間帯と天気"><tr><th></th>${WEATHERS.map(w => `<th>${LABEL.weather[w]}</th>`).join('')}</tr>
-    ${times.map(t => `<tr><th>${LABEL.time[t]}</th>${WEATHERS.map(w => `<td>${have.has(t + '|' + w) ? '<span class="got" aria-label="あり">●</span>' : '<span class="no" aria-label="なし">・</span>'}</td>`).join('')}</tr>`).join('')}</table>`;
-  view.innerHTML = `<div class="phead"><a class="backbtn" href="#/zukan" aria-label="図鑑にもどる">‹</a><h1>${esc(p.name)}</h1></div>
-    <div class="hero${cs.length ? '' : ' yet'}"><div class="shade"></div><div class="t"><small>No.${esc(p.no)} ・ ${esc(p.pref)} ${esc(p.city)}</small>
-      <small>${cs.length ? `カード ${cs.length} まい ・ はじめての到着 ${fmtDate(cs.at(-1).at)}` : 'まだ到着していません'}</small></div>
-      ${cs.length ? `<a class="go" href="#/card/${cs[0].id}">▶ 大きく見る</a>` : ''}</div>
-    ${p.blurb ? `<p class="note blurb">${esc(p.blurb)}</p>` : ''}
-    ${cs.length ? `<h2 class="range">集めたカード</h2><div class="shelf three"></div>` : ''}
-    <div class="group"><h2>時間帯と天気（${n} / ${total}）</h2>${tbl}<p class="note">ちがう時間帯や天気の日に来ると、ちがうカードが手に入ります。</p></div>
-    ${p.kind === 'photo' ? `<p class="note">仮の写真：${esc(p.photo.author)}（<a href="${esc(p.photo.page)}" target="_blank" rel="noopener">Wikimedia Commons</a>、${esc(p.photo.license)}）</p>` : ''}`;
-  const hero = view.querySelector('.hero');
+  const stamps = `<div class="stamps" style="--cols:${times.length}" role="table" aria-label="集めた時間帯と天気">
+    <span role="columnheader"></span>${times.map(t => `<span class="th" role="columnheader">${LABEL.time[t]}</span>`).join('')}
+    ${WEATHERS.map(w => `<span class="wi" role="rowheader" aria-label="${LABEL.weather[w]}" title="${LABEL.weather[w]}">${icon(WICON[w], 22)}</span>${times.map((t, i) => have.has(t + '|' + w)
+      ? `<span class="sp got t-${t}" style="--r:${[-6, 5, -3, 4][i]}deg" role="cell" aria-label="${LABEL.time[t]}・${LABEL.weather[w]} あり">✓</span>`
+      : `<span class="sp" role="cell" aria-label="${LABEL.time[t]}・${LABEL.weather[w]} まだ"></span>`).join('')}`).join('')}</div>`;
+  const tags = [cityOf(p) === p.city ? p.city : p.city, ...p.categories];
+  view.innerHTML = `<div class="pview">
+    <div class="pv-hero${cs.length ? '' : ' yet'}">
+      <a class="pv-back" href="#/zukan" aria-label="図鑑にもどる">${icon('back', 20)}</a>
+      ${cs.length ? `<span class="pv-when">${LABEL.time[cs[0].time] || ''}・${LABEL.weather[cs[0].weather] || ''}　${fmtDate(cs[0].at, '/').slice(5)}</span>
+        <a class="pv-big" href="#/card/${cs[0].id}">${icon('expand', 16)}大きく見る</a>` : '<span class="pv-when">まだ到着していません</span>'}
+    </div>
+    <section class="pv-sheet">
+      <div class="pv-top"><div class="pv-t"><span class="no">No.${esc(p.no)}</span><h1>${esc(p.name)}</h1>
+        <div class="pv-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}</div></div>
+        ${cs.length ? `<a class="pv-stack" href="#/card/${cs[0].id}" aria-label="集めたカード ${cs.length}まい"><span class="n">${cs.length}まい</span></a>` : ''}</div>
+      ${p.blurb ? `<p class="note blurb">${esc(p.blurb)}</p>` : ''}
+      ${cs.length ? `<div class="lhead"><h2>集めたカード</h2><span class="prog">はじめての到着 ${fmtDate(cs.at(-1).at)}</span></div><div class="shelf three"></div>` : ''}
+      <div class="lhead"><h2>時間と天気のスタンプ</h2><span class="prog"><b>${n}</b> / ${total}</span></div>
+      ${stamps}
+      <p class="note tip">ちがう時間帯や天気の日に来ると、ちがうカードが手に入ります。</p>
+      ${p.kind === 'photo' ? `<p class="note">仮の写真：${esc(p.photo.author)}（<a href="${esc(p.photo.page)}" target="_blank" rel="noopener">Wikimedia Commons</a>、${esc(p.photo.license)}）</p>` : ''}
+    </section></div>`;
+  const hero = view.querySelector('.pv-hero');
   if (cs.length) snapshot(p.scene, cs[0]).then(u => hero.prepend(img(u, p.alt)));
   else if (p.kind === 'photo') hero.prepend(img(p.photo.src, ''));
   else if (p.kind === 'plain') hero.prepend(img(PLAIN_BG, ''));
   else snapshot(p.scene, { time: 'day', weather: 'clear' }).then(u => hero.prepend(img(u, '')));
+  const stack = view.querySelector('.pv-stack');
+  if (stack) cs.slice(0, 3).reverse().forEach((c, i, arr) => snapshot(p.scene, c).then(u => { const im = img(u, ''); im.style.setProperty('--i', arr.length - 1 - i); stack.prepend(im); }));
   const grid = view.querySelector('.shelf');
-  for (const c of cs) {
-    const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.className = 'slot'; a.setAttribute('aria-label', `${cardNo(p, c)} を開く`);
-    a.append(art(p, c)); a.insertAdjacentHTML('beforeend', `<span class="cap sm">${LABEL.time[c.time] || ''}・${LABEL.weather[c.weather] || ''}<br>${fmtDate(c.at)}</span>`); grid.append(a);
-  }
+  cs.forEach((c, i) => {
+    const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.className = 'pola sm'; a.style.setProperty('--rot', ROT[i % ROT.length] * .6 + 'deg'); a.setAttribute('aria-label', `${cardNo(p, c)} を開く`);
+    a.append(art(p, c)); a.insertAdjacentHTML('beforeend', `<span class="cap">${LABEL.time[c.time] || ''}・${LABEL.weather[c.weather] || ''}<br>${fmtDate(c.at, '/').slice(5)}</span>`); grid.append(a);
+  });
 }
 
 // 1枚のカードを全画面で見る（ストーリーズのような見せ方）

@@ -5,12 +5,12 @@ import { engine, snapshot, clearSnaps } from './card.js';
 import { renderCharaColors } from './characolor.js';
 import { locate, here, statusOf, fmtDist, current } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
-import { esc, img, toast, fmtDate, prefCity } from './ui.js';
+import { esc, img, toast, fmtDate, prefCity, icon } from './ui.js';
 import { playArrival } from './arrival.js';
 import { renderZukan, renderPlace, openViewer } from './zukan.js';
 import { renderDebug } from './debug.js';
 import { renderMap } from './map.js';
-import { renderGoals, checkGoals } from './goals.js';
+import { renderGoals, checkGoals, goalList } from './goals.js';
 import { renderTimeline } from './calendar.js';
 import { renderHome, renderShop } from './home.js';
 import * as minatomirai from './scenes/minatomirai.js';
@@ -18,7 +18,7 @@ import * as chukagai from './scenes/chukagai.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.9.11';
+export const VERSION = '0.10.0';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('kamakura', kamakura.build);
@@ -69,56 +69,81 @@ function route() {
 addEventListener('hashchange', route);
 
 // ---- 名所の一覧 ----
-// 近い順に、名所ごとの横長の絵（タイル）を並べる。まだ行っていない名所の絵はグレーにして、行ってからのお楽しみにする
+// 上に「いちばん近い名所」を大きく（カードの絵の中にキャラが立っている）。押すボタンはそこの1つだけ
+// その下に、近い順のチケット（2列）。まだ行っていない名所の絵はうすい灰色にして、行ってからのお楽しみにする
 // 現在地がわかっていれば「いま到着できる／近く／日帰りで／遠く」に分ける。わからなければ番号順
 const RANGES = [['can', 'いま到着できます'], [2000, '近く（2km以内）'], [50000, '日帰りで行ける（50km以内）'], [Infinity, '遠く']];
+// 名所の絵：行ったことがあれば最新のカード、なければいまの時間帯の絵
+function placeArt(p, el, cs = cardsOf(p.id)) {
+  if (cs.length) snapshot(p.scene, cs[0]).then(u => el.prepend(img(u, p.alt)));
+  else if (p.kind === 'photo') el.prepend(img(p.photo.src, ''));
+  else if (p.kind === 'plain') el.prepend(img(PLAIN_BG, ''));
+  else snapshot(p.scene, { time: renderTime(p, timeOfDay(new Date())), weather: 'clear' }).then(u => el.prepend(img(u, '')));
+}
 function renderList() {
   const pos = current(), fake = pos?.fake;
   const nowText = fake ? `デバッグ：${esc(placeById(settings.loc)?.name || 'どこでもない場所')}にいることにしています`
     : here.busy ? '現在地を確かめています…'
     : here.error ? `<span class="warn">${esc(here.error)}</span>`
     : pos ? `${here.at.getHours()}:${String(here.at.getMinutes()).padStart(2, '0')} の現在地から近い順${pos.acc > 200 ? `<br><span class="warn">誤差が約${Math.round(pos.acc)}mと大きいので、空の見える場所でもう一度確かめてください</span>` : ''}`
-    : '現在地を確かめると、近い順に並びます';
+    : '';
   const cats = CATEGORIES.filter(c => PLACES.some(p => p.categories.includes(c)));
   let list = PLACES.filter(p => (ui.cat === 'all' || p.categories.includes(ui.cat)) && (ui.seen === 'all' || (ui.seen === 'yes') === visited(p.id)));
   if (pos) list = [...list].sort((a, z) => statusOf(a).d - statusOf(z).d);
   const got = PLACES.filter(p => visited(p.id)).length;
-  view.innerHTML = `<div class="phead"><h1>名所</h1><span class="prog">${got} / ${PLACES.length} か所 行った</span>
-      ${fake ? '' : `<button class="pillbtn" id="locate" ${here.busy ? 'disabled' : ''}>◎ ${pos ? 'もう一度' : '現在地'}</button>`}</div>
-    <p class="nowline">${nowText}</p>
+  // いちばん近い名所（現在地がわかるとき）
+  const near = pos ? PLACES.reduce((a, p) => (!a || statusOf(p).d < statusOf(a).d ? p : a), null) : null, nst = near && statusOf(near);
+  const say = !pos ? (here.busy ? '現在地を確かめているよ…' : '現在地を確かめると、近くの名所を案内するよ')
+    : nst.inside ? '着いたよ！ここで撮ろう' : `${esc(near.name)}まで あと ${fmtDist(nst.d)}`;
+  const cta = near && nst.inside ? `<button class="cta" data-arrive="${near.id}">${icon('camera', 20)}到着して カードを撮る</button>`
+    : fake ? `<a class="cta sub" href="#/place/${near.id}">名所のページを見る</a>`
+    : `<button class="cta${pos ? ' sub' : ''}" id="locate" ${here.busy ? 'disabled' : ''}>${icon('locate', 20)}${pos ? 'もう一度 現在地を確かめる' : '現在地を確かめる'}</button>`;
+  view.innerHTML = `<div class="listwrap">
+    <section class="lhero${near ? '' : ' empty'}">
+      <div class="lh-art">${near ? '' : '<img class="lh-chara" src="ui/chara_wave.png" alt="">'}</div>
+      ${near ? `<a class="hit" href="#/place/${near.id}" aria-label="${esc(near.name)}を見る"></a>` : ''}
+      <p class="bubble">${say}</p>
+    </section>
+    <section class="lh-card">
+      <div class="lh-t"><small>${near ? (nst.inside ? 'いま いる場所' : 'いちばん近い名所') : 'タビクエ'}</small><b>${near ? esc(near.name) : '近くの名所をさがそう'}</b></div>
+      <span class="lh-d">${near ? fmtDist(nst.d) : `${got} / ${PLACES.length}`}</span>
+      ${cta}
+      ${nowText ? `<p class="nowline">${nowText}</p>` : ''}
+    </section>
+    <div class="lhead"><h2>名所</h2><span class="prog"><b>${got}</b> / ${PLACES.length} か所 行った</span></div>
     <div class="filters">
       <div class="chips-row" role="group" aria-label="行った／まだ">${[['all', 'ぜんぶ'], ['no', 'まだ'], ['yes', '行った']].map(([v, l]) => `<button data-seen="${v}" aria-pressed="${ui.seen === v}">${l}</button>`).join('')}<span class="sep"></span>${cats.map(c => `<button data-cat="${esc(c)}" aria-pressed="${ui.cat === c}">${esc(c)}</button>`).join('')}</div>
     </div>
-    <div id="spots"></div>`;
-  view.querySelector('#locate')?.addEventListener('click', async () => { here.busy = true; renderList(); await locate(); renderList(); });
-  view.querySelector('.filters').onclick = e => {
+    <div id="spots"></div></div>`;
+  const wrap = view.querySelector('.listwrap');
+  if (near) placeArt(near, wrap.querySelector('.lh-art'));
+  wrap.querySelector('#locate')?.addEventListener('click', async () => { here.busy = true; renderList(); await locate(); renderList(); });
+  wrap.querySelector('.filters').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.cat) ui.cat = ui.cat === b.dataset.cat ? 'all' : b.dataset.cat;   // カテゴリはもう一度押すと解除 if (b.dataset.seen) ui.seen = b.dataset.seen; saveUi(); renderList();
+    if (b.dataset.cat) ui.cat = ui.cat === b.dataset.cat ? 'all' : b.dataset.cat;   // カテゴリはもう一度押すと解除
+    if (b.dataset.seen) ui.seen = b.dataset.seen;
+    saveUi(); renderList();
   };
-  const box = view.querySelector('#spots');
+  const box = wrap.querySelector('#spots');
   if (!list.length) box.innerHTML = '<p class="note empty">この条件の名所はありません。</p>';
-  let range = null;
+  let range = null, grid = null;
   for (const p of list) {
     const cs = cardsOf(p.id), st = statusOf(p), been = cs.length > 0;
-    if (pos) {   // 距離のまとまりごとに見出しを入れる
-      const r = RANGES.find(([k]) => k === 'can' ? st.inside : st.d <= k);
-      if (r !== range) { range = r; box.insertAdjacentHTML('beforeend', `<h2 class="range${r[0] === 'can' ? ' can' : ''}">${r[1]}</h2>`); }
+    const r = pos ? RANGES.find(([k]) => k === 'can' ? st.inside : st.d <= k) : 'all';
+    if (r !== range || !grid) {   // 距離のまとまりごとに見出しを入れる
+      range = r;
+      if (pos) box.insertAdjacentHTML('beforeend', `<h3 class="range${r[0] === 'can' ? ' can' : ''}">${r[1]}</h3>`);
+      grid = document.createElement('div'); grid.className = 'tickets'; box.append(grid);
     }
-    const el = document.createElement('section'); el.className = 'tile' + (st.inside ? ' can' : '') + (been ? '' : ' yet'); el.setAttribute('aria-label', p.name);
-    const where = `${esc(prefCity(p))}${st.known ? ` ・ ここから ${fmtDist(st.d)}` : ''}`;
-    const act = st.inside ? `<button class="go" data-arrive="${p.id}">到着する</button>`
-      : been ? `<span class="go sub">アルバム ›</span>` : `<span class="go sub">まだ</span>`;
-    el.innerHTML = `<a class="hit" href="#/place/${p.id}" aria-label="${esc(p.name)}を見る"></a><div class="art"></div><div class="shade"></div>
-      ${cs.length > 1 ? `<span class="cnt">×${cs.length}</span>` : ''}${p.kind === 'photo' || p.kind === 'plain' ? '<span class="kari-s">仮</span>' : ''}
-      <div class="t"><b>${esc(p.name)}</b><small>${where}</small>${been ? '' : (p.blurb ? `<small class="bl">${esc(p.blurb)}</small>` : '')}</div>${act}`;
-    box.append(el);
-    const art = el.querySelector('.art');
-    if (been) snapshot(p.scene, cs[0]).then(u => art.append(img(u, p.alt)));
-    else if (p.kind === 'photo') art.append(img(p.photo.src, ''));
-    else if (p.kind === 'plain') art.append(img(PLAIN_BG, ''));
-    else snapshot(p.scene, { time: renderTime(p, timeOfDay(new Date())), weather: 'clear' }).then(u => art.append(img(u, '')));
+    const el = document.createElement('section'); el.className = 'ticket' + (st.inside ? ' can' : '') + (been ? '' : ' yet') + (p.kind === 'plain' && !been ? ' plain' : ''); el.setAttribute('aria-label', p.name);
+    el.innerHTML = `<a class="hit" href="#/place/${p.id}" aria-label="${esc(p.name)}を見る"></a>
+      <div class="art">${p.kind === 'plain' && !been ? icon('place', 34) : ''}${cs.length > 1 ? `<span class="cnt">×${cs.length}</span>` : ''}${been ? '' : '<span class="yetpill">まだ</span>'}${p.kind === 'photo' || p.kind === 'plain' ? '<span class="kari-s">仮</span>' : ''}</div>
+      <div class="tk-b"><b>${esc(p.name)}</b><small>${esc(p.city.replace(/[^市]*$/, '') || p.city)}${st.known ? ` ・ <span class="d">${fmtDist(st.d)}</span>` : ''}</small>
+        ${st.inside && p !== near ? `<button class="go" data-arrive="${p.id}">${icon('camera', 16)}到着する</button>` : ''}</div>`;
+    grid.append(el);
+    placeArt(p, el.querySelector('.art'), cs);
   }
-  box.onclick = async e => {
+  wrap.onclick = async e => {
     const btn = e.target.closest('[data-arrive]'); if (!btn) return;
     const p = placeById(btn.dataset.arrive); if (!statusOf(p).inside) return;
     btn.disabled = true; btn.textContent = '天気を確かめています…';
@@ -135,23 +160,34 @@ let taps = 0, tapT = 0;
 async function renderSettings() {
   const b = book(), got = PLACES.filter(p => visited(p.id)).length, m = mode();
   const items = PLACES.filter(p => b.items[p.item.id]).map(p => `${esc(p.item.name)} ×${b.items[p.item.id]}`);
-  view.innerHTML = `<div class="phead"><h1>設定</h1></div>
-    <div class="group"><h2>きろく${m === 'debug' ? '（デバッグ用）' : ''}</h2>
-      <div class="stats"><div><b>${b.points}</b><span>ポイント</span></div><div><b>${got}<small>/${PLACES.length}</small></b><span>行った名所</span></div><div><b>${b.cards.length}</b><span>カード</span></div><div><b>${items.length}</b><span>アイテム</span></div></div>
-      ${items.length ? `<p class="note">${items.join('　')}</p>` : ''}
-      <a class="wide" href="#/goals">★ 称号とアチーブメントを見る</a></div>
+  const last = goalList().filter(g => b.goals[g.id]).sort((x, y) => String(b.goals[y.id]).localeCompare(String(b.goals[x.id])))[0];
+  const row = (tag, attrs, ic, label, sub = '') => `<${tag} class="srow" ${attrs}><span class="si">${icon(ic, 19)}</span><span class="st">${label}${sub ? `<small>${sub}</small>` : ''}</span><span class="sc" aria-hidden="true">›</span></${tag}>`;
+  view.innerHTML = `<div class="phead"><h1>設定</h1>${m === 'debug' ? '<span class="prog">デバッグ用の記録</span>' : ''}</div>
+    <section class="prof">
+      <div class="pf-pic"><img src="ui/chara_wave.png" alt="いっしょに旅しているキャラ"></div>
+      <div class="pf-b"><small>いっしょに旅しているキャラ</small><b>キャラ1</b>
+        <span class="ttl">${last ? esc(last.title) : '称号はまだ'}</span>
+        <div class="stats"><div><b>${b.points}</b><span>pt</span></div><div><b>${got}<small>/${PLACES.length}</small></b><span>名所</span></div><div><b>${b.cards.length}</b><span>カード</span></div><div><b>${items.length}</b><span>アイテム</span></div></div></div>
+    </section>
+    ${items.length ? `<p class="note pad">${items.join('　')}</p>` : ''}
+    <h3 class="gh">キャラ</h3>
     <div class="group" id="chcolors"></div>
-    <div class="group"><h2>記録の保存</h2>
-      <p class="note">記録はこの端末の中だけにあります。機種変更やブラウザのデータ消去にそなえて、ときどきファイルに書き出してください。${m === 'debug' ? '<br><b>いまはデバッグ用の記録が対象です。</b>' : ''}</p>
-      <p class="note" id="persist">消さないでの設定：確かめています…</p>
-      <div class="col"><button data-a="export">↓ ファイルに書き出す</button><button data-a="import">↑ ファイルから読み込む</button><input type="file" id="importFile" accept="application/json,.json" hidden></div></div>
-    <div class="group"><h2>このアプリについて</h2>
-      <p class="note">位置情報は「現在地を確かめる」を押したときだけ使います。到着したときは、天気を調べるために、だいたいの位置（約1km単位）を Open-Meteo に送ります。</p>
-      <p class="note">端末で「動きを減らす」をオンにしていると、到着演出を省略します。</p>
-      <p class="note">朝・昼の絵がないドット絵の名所では、いちばん近い時間帯の絵で表示します。</p></div>
-    <div class="group"><h2>写真のクレジット（仮の名所）</h2>
-      <ul class="credits">${PLACES.filter(p => p.kind === 'photo').map(p => `<li>${esc(p.name)}：${esc(p.photo.author)}、<a href="${esc(p.photo.page)}" target="_blank" rel="noopener">Wikimedia Commons</a>、${p.photo.license_url ? `<a href="${esc(p.photo.license_url)}" target="_blank" rel="noopener">${esc(p.photo.license)}</a>` : esc(p.photo.license)}（9:16に切り抜き）</li>`).join('')}</ul>
-      <p class="note">天気：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>（CC BY 4.0）</p></div>
+    <div class="srows">${row('a', 'href="#/goals"', 'star', '称号とアチーブメント')}</div>
+    <h3 class="gh">記録の保存</h3>
+    <div class="srows">${row('button', 'data-a="export"', 'down', 'ファイルに書き出す')}${row('button', 'data-a="import"', 'up', 'ファイルから読み込む')}</div>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+    <p class="note pad">記録はこの端末の中だけにあります。機種変更やブラウザのデータ消去にそなえて、ときどきファイルに書き出してください。${m === 'debug' ? '<br><b>いまはデバッグ用の記録が対象です。</b>' : ''}</p>
+    <p class="note pad" id="persist">消さないでの設定：確かめています…</p>
+    <h3 class="gh">このアプリについて</h3>
+    <div class="srows">
+      <details class="sdet"><summary>${row('span', '', 'info', '位置情報と天気のこと')}</summary><div class="sbody">
+        <p class="note">位置情報は「現在地を確かめる」を押したときだけ使います。到着したときは、天気を調べるために、だいたいの位置（約1km単位）を Open-Meteo に送ります。</p>
+        <p class="note">端末で「動きを減らす」をオンにしていると、到着演出を省略します。</p>
+        <p class="note">朝・昼の絵がないドット絵の名所では、いちばん近い時間帯の絵で表示します。</p></div></details>
+      <details class="sdet"><summary>${row('span', '', 'photo', '写真のクレジット', '仮の名所の写真と天気のデータ')}</summary><div class="sbody">
+        <ul class="credits">${PLACES.filter(p => p.kind === 'photo').map(p => `<li>${esc(p.name)}：${esc(p.photo.author)}、<a href="${esc(p.photo.page)}" target="_blank" rel="noopener">Wikimedia Commons</a>、${p.photo.license_url ? `<a href="${esc(p.photo.license_url)}" target="_blank" rel="noopener">${esc(p.photo.license)}</a>` : esc(p.photo.license)}（9:16に切り抜き）</li>`).join('')}</ul>
+        <p class="note">天気：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>（CC BY 4.0）</p></div></details>
+    </div>
     <div id="dbg"></div>
     <button class="ver" id="ver">タビクエ v${VERSION}</button>`;
   renderCharaColors(view.querySelector('#chcolors'), () => clearSnaps());

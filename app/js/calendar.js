@@ -1,10 +1,10 @@
 // タイムライン：手に入れたカードを、新しい到着から順に、日ごとにまとめて縦に並べる（#/timeline）
 // 旅は毎日あるわけではなく、1日に何か所も回ることもあるので、カレンダーのマスではなく「旅をした日」だけを並べる
-import { placeById, LABEL } from './places.js';
+import { placeById, LABEL, PLACES } from './places.js';
 import { book } from './store.js';
 import { snapshot } from './card.js';
 import { img, esc, fmtTime, prefCity } from './ui.js';
-import { zukanTabs } from './zukan.js';
+import { zukanTabs, zukanHead } from './zukan.js';
 
 const pad = n => String(n).padStart(2, '0');
 const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -25,7 +25,8 @@ export function renderTimeline(view) {
   const days = [];
   for (const c of cards) { const d = new Date(c.at), k = dayKey(d); if (days.at(-1)?.k !== k) days.push({ k, d, cs: [] }); days.at(-1).cs.push(c); }
   const places = new Set(cards.map(c => c.placeId)).size;
-  view.innerHTML = `<div class="phead"><h1>図鑑</h1><span class="prog">${days.length} 日 ・ ${places} か所 ・ ${cards.length} まい</span></div>
+  const allPlaces = new Set(cards.map(c => c.placeId)).size;
+  view.innerHTML = `${zukanHead(`旅をした日 <b>${days.length}</b> 日 ・ ${places} か所 ・ ${cards.length} まい`, allPlaces / PLACES.length)}
     ${zukanTabs('timeline')}
     ${days.length ? '<ol class="tl"></ol>' : '<p class="note empty">まだ到着していません。<br>名所で「到着する」を押すと、ここに旅の記録が並びます。</p>'}`;
   const ol = view.querySelector('.tl'); if (!ol) return;
@@ -40,9 +41,8 @@ export function renderTimeline(view) {
     const body = li.querySelector('.tl-body');
     for (const c of cs.slice().reverse()) {   // 1日の中は、朝から順に
       const p = placeById(c.placeId); if (!p) continue;
-      const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.className = 'tile sm'; a.setAttribute('aria-label', `${p.name}のカードを開く`);
-      a.innerHTML = `<div class="art"></div><div class="shade"></div><span class="tm">${fmtTime(c.at)}</span>
-        <div class="t"><b>${esc(p.name)}</b><small>${LABEL.time[c.time] || ''}・${LABEL.weather[c.weather] || ''} ・ ${esc(prefCity(p))}</small></div><span class="go sub">見る ›</span>`;
+      const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.className = 'tl-card'; a.setAttribute('aria-label', `${p.name}のカードを開く`);
+      a.innerHTML = `<div class="art"></div><div class="t"><span class="tm">${fmtTime(c.at)}</span><b>${esc(p.name)}</b><small>${LABEL.time[c.time] || ''}・${LABEL.weather[c.weather] || ''} ・ ${esc(prefCity(p))}</small></div>`;
       a.dataset.scene = p.scene; a.dataset.id = c.id; body.append(a);
     }
     ol.append(li);
@@ -54,5 +54,5 @@ export function renderTimeline(view) {
     const a = e.target, c = byId.get(a.dataset.id), p = placeById(c.placeId);
     snapshot(a.dataset.scene, c).then(u => a.querySelector('.art').append(img(u, p.alt)));
   }), { rootMargin: '300px' });
-  ol.querySelectorAll('a.tile').forEach(a => io.observe(a));
+  ol.querySelectorAll('a.tl-card').forEach(a => io.observe(a));
 }
