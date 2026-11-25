@@ -12,7 +12,7 @@ import { recolorChara } from './characolor.js';
 import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, img, cardEl, fmtDate, toast } from './ui.js';
-import { mountVoxelRoom, V as VOX, WH as VWH } from './room_voxel.js';
+import { mountVoxelRoom, V as VOX, WH as VWH, FX } from './room_voxel.js';
 import { S, N, TW, TH, OX, OY, RW, RH, P, LEFT, RIGHT, PHOTO_SLOTS, WINDOW, onWall as wallAt, buildRoom, drawGarland, furnSprite } from './room_art.js';
 
 const DOTS = PLACES.filter(p => p.kind === 'dot');
@@ -115,6 +115,9 @@ export function renderHome(view, { header } = {}) {
   const lg = loginState(b, now);
   let edit = false, sel = null;   // 模様がえ中か、動かそうとしている家具
   const voxel = location.hash.startsWith('#/home/voxel');   // ボクセル版（ためし）
+  // ボクセル版：かわいく見せる工夫のオン・オフ（この端末に覚えておく）と、でんき（夕方と夜は、はじめからつける）
+  const vfx = (() => { try { return Object.assign(Object.fromEntries(FX.map(([k]) => [k, true])), JSON.parse(localStorage.getItem('tabiquest:voxfx') || '{}')); } catch (e) { return Object.fromEntries(FX.map(([k]) => [k, true])); } })();
+  let vlight = timeReal === 'night' || timeReal === 'evening';
 
   view.classList.add('homemode');
   view.innerHTML = `
@@ -126,7 +129,7 @@ export function renderHome(view, { header } = {}) {
         ${lg.got ? '' : `<button class="hm-bonus" data-a="login"><b>ログインボーナス</b><small>${lg.next}日め ・ +${bonusOf(lg.next)}pt を受け取る</small></button>`}
       </div>
       <div class="hm-ov side">
-        ${voxel ? '<a href="#/home"><i aria-hidden="true">▚</i><span>ドット版</span></a>' : '<button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button><a href="#/home/voxel"><i aria-hidden="true">▣</i><span>ボクセル</span></a>'}
+        ${voxel ? `<a href="#/home"><i aria-hidden="true">▚</i><span>ドット版</span></a><button data-a="light" aria-pressed="${vlight}"><i aria-hidden="true">💡</i><span>でんき</span></button><button data-a="fx"><i aria-hidden="true">✿</i><span>工夫</span></button>` : '<button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button><a href="#/home/voxel"><i aria-hidden="true">▣</i><span>ボクセル</span></a>'}
         <a href="#/shop"><i aria-hidden="true">¥</i><span>ショップ</span></a>
         <a href="#/zukan"><i aria-hidden="true">▦</i><span>図鑑</span></a>
         <a href="#/list"><i aria-hidden="true">◆</i><span>名所</span></a>
@@ -139,7 +142,7 @@ export function renderHome(view, { header } = {}) {
   const scroller = view.querySelector('.hm-scroll'), cv = view.querySelector('.hm-iso'), ctx = cv.getContext('2d');
   const tip = view.querySelector('.hm-tip'), selbar = view.querySelector('.hm-selbar');
   const setTip = () => {
-    tip.textContent = voxel ? 'ボクセル版のためしです。床を押すと歩きます（模様がえはドット版で）。' : !edit ? '床を押すと、そこまで歩きます。横にスクロールすると部屋を見わたせます。'
+    tip.textContent = voxel ? 'ボクセル版のためし。床を押すと歩きます。ライトを押すとでんき、キャラやくまを押すとハート。' : !edit ? '床を押すと、そこまで歩きます。横にスクロールすると部屋を見わたせます。'
       : sel ? `「${itemName(sel.id)}」を置きたいマスを押してください。` : 'マスを押すと家具を置けます。家具を押すと動かしたり外したりできます。左のかべの枠には写真を貼れます。';
     selbar.hidden = !(edit && sel);
   };
@@ -170,6 +173,7 @@ export function renderHome(view, { header } = {}) {
     const NV = 10 * VOX, k = NV / (N * TW / 2), vy = VWH / 300;
     vox = mountVoxelRoom({ stage: scroller, objects: r.objects, furn, me: r.me, blocked: (i, j) => blocked(r, i, j), onMove: (i, j) => { r.me = { i, j }; saveBook(); },
       chara: loadChara(), engineCanvas: engine.canvas, night: () => (st.time === 'night' ? 1 : st.time === 'evening' ? .55 : 0),
+      fx: vfx, light: vlight, onLight: v => { vlight = v; view.querySelector('[data-a=light]')?.setAttribute('aria-pressed', String(v)); },
       photoSlots: PHOTO_SLOTS.map(s => ({ z: NV - s.u * k, w: s.w * k, y: s.v * vy, h: s.h * vy })) });
     vox.setPhotos(photos);
     requestAnimationFrame(() => { scroller.scrollLeft = vox.screenX() * vox.canvas.clientWidth - scroller.clientWidth / 2; });
@@ -288,6 +292,13 @@ export function renderHome(view, { header } = {}) {
     else if (a === 'edit') { edit = !edit; sel = null; t.setAttribute('aria-pressed', String(edit)); t.querySelector('span').textContent = edit ? 'できた' : '模様がえ'; setTip(); }
     else if (a === 'remove' && sel) { r.objects = r.objects.filter(o => o !== sel); toast(`「${itemName(sel.id)}」を外しました`); sel = null; saveBook(); setTip(); }
     else if (a === 'cancel') { sel = null; setTip(); }
+    else if (a === 'light') { vlight = !vlight; vox?.setLight(vlight); t.setAttribute('aria-pressed', String(vlight)); }
+    else if (a === 'fx') {   // かわいく見せる工夫を、1つずつオン・オフして見比べる
+      const box = document.createElement('div'); box.className = 'hm-fx';
+      const draw = () => { box.innerHTML = FX.map(([k, l]) => `<button data-k="${k}" aria-pressed="${!!vfx[k]}">${l}</button>`).join('') + '<p class="note">押すと、その工夫を外した見え方になります。ライトやくま、キャラを押してみてください。</p>'; };
+      draw(); box.onclick = e => { const b = e.target.closest('[data-k]'); if (!b) return; vfx[b.dataset.k] = !vfx[b.dataset.k]; try { localStorage.setItem('tabiquest:voxfx', JSON.stringify(vfx)); } catch (err) {} vox?.setFx(vfx); draw(); };
+      sheet('かわいく見せる工夫', box);
+    }
   };
   const cleanup = () => { cancelAnimationFrame(raf); vox?.stop(); engine.stop(); view.classList.remove('homemode'); view.onclick = null; document.querySelector('.hm-pick')?.remove(); };
   return cleanup;

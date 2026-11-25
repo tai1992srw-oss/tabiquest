@@ -1,6 +1,6 @@
 // オフライン対応：アプリ本体と絵を端末に保存して、電波がなくても開けるようにする
 // 版を上げるときは VERSION を変える（古い保存は消える）
-const VERSION = 'tabiquest-v0.9.6';
+const VERSION = 'tabiquest-v0.9.7';
 const CORE = [
   './', 'index.html', 'manifest.json', 'css/app.css', 'vendor/three.r128.min.js',
   'js/main.js', 'js/card.js', 'js/places.js', 'js/photo_places.js', 'js/plain_places.js', 'js/store.js', 'js/geo.js', 'js/conditions.js', 'js/ui.js', 'js/arrival.js', 'js/zukan.js', 'js/debug.js',
