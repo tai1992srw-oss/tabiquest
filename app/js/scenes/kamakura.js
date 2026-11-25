@@ -116,8 +116,8 @@ export async function build() {
         g.material.uniforms.uWet.value = right ? 0 : 1;
         g.material.uniforms.uOff.value.set(Math.floor(f / 3 + i) % 8 < 6 ? Math.floor(f / 3 + i) % 2 : 1, 0);
       });
-      // 地面：踏切の手前まで奥に行ける。目の高さは海の水平線
-      const cp = charaPlace(st, W, H, { base: .885, top: .70, hz: D.HOR / H }), cx = W / 2 + off(14) + cp.dx;
+      // 地面：踏切の手前まで奥に行ける。目の高さは海の水平線。ふだんは手前に大きく、踏切のしま模様の柱をよけて少し左（2026-11-26 くりた「キャラぜんぶ手前に寄せてok」）
+      const cp = charaPlace(st, W, H, { base: 1.02, top: .70, hz: D.HOR / H, s: 2, x: -.15 }), cx = W / 2 + off(14) + cp.dx;
       ch.setPose(self.forcePose ?? st.photo?.pose ?? 0, f, rm);   // 到着の演出では forcePose（喜び）が優先
       placeChara(ch, cx, cp.feet, cp.s, H, self.drop, cp.r, st);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
