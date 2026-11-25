@@ -3,6 +3,7 @@
 import { gradeChara, charaPlace, placeChara } from './look.js';
 import { near, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
 import { recolorChara, lookColors } from '../characolor.js';
+import { loadParts, applyParts } from '../charaparts.js';
 const THREE = window.THREE;
 
 let charaData = null;
@@ -48,6 +49,7 @@ export async function build(place) {
 
   const ch = makeChara(scene, C.size, 0x100a26, .45, C.frames, C.blink, C.poseIds);
   ch.chara.material.uniforms.tIdx.value = C.tex; ch.setLods(C.lods);
+  const CP = await loadParts().catch(() => null);   // 髪型・腕の層
   const parts = makeParticles(scene, [Math.round(560 * k), H - 4]);
 
   const self = {
@@ -58,6 +60,7 @@ export async function build(place) {
       u.uAdd.value.set(t.add[0] + w.add[0], t.add[1] + w.add[1], t.add[2] + w.add[2]);
       u.uDesat.value = Math.min(1, t.desat + w.desat);
       const night = st.time === 'night', eve = st.time === 'evening';
+      if (CP) applyParts(CP, ch, st);
       setPal(ch.chara, palTex(C.pal, (c, i) => gradeChara(recolorChara(c, i, C.D, lookColors(st)), st)));
     },
     frame(par, f, newF, rm, st) {

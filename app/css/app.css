@@ -572,6 +572,8 @@ ul.hm-goods .own{font:700 13px var(--sans);color:var(--teal)}
 .chrow .pick{display:inline-flex;width:30px;height:30px;border:2px dashed var(--line);align-items:center;justify-content:center}
 .chrow .pick input{width:24px;height:24px;border:0;padding:0;background:none;cursor:pointer}
 .chrow .reset{min-height:32px;font-size:12px;padding:3px 8px}
+.chrow .hairbtn{min-height:32px;font-size:12px;padding:3px 8px}
+.chrow .hairbtn[aria-pressed="true"]{background:var(--ink);color:#fff}
 .chrow .reset[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 .hm-fx{display:flex;flex-wrap:wrap;gap:8px}
 .hm-fx button{border-radius:999px;min-height:44px;padding:4px 16px}

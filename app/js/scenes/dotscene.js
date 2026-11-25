@@ -5,6 +5,7 @@
 //   印（景色の G）：1＝海のきらめき 2＝街灯の灯り 3＝窓（夜にまたたく） 5＝観覧車の輪（夜に色が回る。B＝角度） 6＝提灯（夕暮れ・夜に灯る）
 import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
 import { recolorChara, lookColors } from '../characolor.js';
+import { loadParts, applyParts } from '../charaparts.js';
 import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara, charaPlace, placeChara } from './look.js';
 const THREE = window.THREE;
 
@@ -58,6 +59,7 @@ export async function buildDot(cfg) {
   const [GW] = D.sprites?.gull || [0];
   const ch = makeChara(scene, D.chara, 0x1a2a44, .35, D.charaFrames || 1, D.charaBlink || 0, D.charaPoseIds); ch.chara.material.uniforms.tIdx.value = tex.chara;
   ch.setLods(await charaLods(base, D, tex.chara));
+  const CP = await loadParts().catch(() => null);   // 髪型・腕の層（読めなければ、髪型なしの絵のまま）
   const parts = makeParticles(scene, [Math.round(H * .74), H - 4]);
 
   function skyOf(st) {
@@ -97,6 +99,7 @@ export async function buildDot(cfg) {
       self.gullN = st.time === 'night' || ['rain', 'snow'].includes(st.weather) ? 0 : st.weather === 'cloudy' || st.season === 'winter' ? 1 : st.season === 'summer' ? 3 : 2;
       self.leaves = st.season === 'autumn' && st.weather !== 'snow' && cfg.leaves;
       self.steam = cfg.steam && st.weather !== 'rain' ? cfg.steam : null;
+      if (CP) applyParts(CP, ch, st);
       setPal(ch.chara, palTex(D.pal.chara, (c, i) => gradeChara(recolorChara(c, i, D, lookColors(st)), st)));
     },
     frame(par, f, newF, rm, st) {

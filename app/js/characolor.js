@@ -3,6 +3,7 @@
 // 選んだ色に合わせて、その部位の色だけを書き換える。明るさの段（影・光）は元の絵のまま残す。
 // 絵は描き足さない。パレットの色を変えるだけ。
 import { settings, saveSettings } from './store.js';
+import { loadParts, sheet, hairList, charaHair, setCharaHair } from './charaparts.js';
 
 export const PARTS = [
   { k: 'skin', name: '肌', presets: ['#f7d6bf', '#f1c4a0', '#d9a074', '#a86c48', '#6b4330'] },
@@ -57,38 +58,41 @@ let sample = null;
 async function loadSample() {
   if (!sample) sample = (async () => {
     const D = await (await fetch('assets/kamakura/data.json')).json();
-    const img = await new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ng; i.src = 'assets/kamakura/chara_close.png'; });
-    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
-    const L = D.charaLods?.[0]; const fw = L ? L.size[0] : img.width, fh = L ? L.size[1] : img.height;
-    return { D, px: x.getImageData(0, 0, fw, fh), fw, fh };
+    const P = await loadParts(), [fw, fh] = P.J.close;   // 見本は、いまの髪型で重ねた立ちの絵（寄り用）
+    return { D, P, fw, fh };
   })();
   return sample;
 }
 function drawSample(cv, S) {
   const pal = S.D.pal.chara.map((c, i) => recolorChara(c, i, S.D));
-  const out = new ImageData(S.fw, S.fh), p = S.px.data, o = out.data;
-  for (let k = 0; k < p.length; k += 4) { if (p[k + 3] < 128) continue; const c = pal[p[k]] || [255, 0, 255]; o[k] = c[0]; o[k + 1] = c[1]; o[k + 2] = c[2]; o[k + 3] = 255; }
+  const src = sheet(S.P, charaHair(), 'close').px, p = src.data, out = new ImageData(S.fw, S.fh), o = out.data;
+  for (let y = 0; y < S.fh; y++) for (let x = 0; x < S.fw; x++) { const q = (y * src.width + x) * 4, k = (y * S.fw + x) * 4; if (p[q + 3] < 128) continue; const c = pal[p[q]] || [255, 0, 255]; o[k] = c[0]; o[k + 1] = c[1]; o[k + 2] = c[2]; o[k + 3] = 255; }
   const t = document.createElement('canvas'); t.width = S.fw; t.height = S.fh; t.getContext('2d').putImageData(out, 0, 0);
   const z = Math.max(1, Math.floor(260 / S.fh)) || 1, x = cv.getContext('2d');
   cv.width = S.fw * z; cv.height = S.fh * z; x.imageSmoothingEnabled = false; x.drawImage(t, 0, 0, cv.width, cv.height);
 }
 export async function renderCharaColors(box, onChange) {
   const cur = charaColors();
-  box.innerHTML = `<h2>キャラの色（ふだんのお着替え）</h2>
+  box.innerHTML = `<h2>キャラの髪型と色（ふだんのお着替え）</h2>
     <div class="chcol"><canvas class="chprev" aria-label="キャラの見本"></canvas>
-      <div class="chrows">${PARTS.map(p => `<div class="chrow" data-k="${p.k}"><span class="lab">${p.name}</span>
+      <div class="chrows"><div class="chrow chhair"><span class="lab">髪型</span></div>${PARTS.map(p => `<div class="chrow" data-k="${p.k}"><span class="lab">${p.name}</span>
         ${p.presets.map(h => `<button class="sw" data-c="${h}" style="background:${h}" aria-label="${p.name}を ${h} に" aria-pressed="${cur[p.k] === h}"></button>`).join('')}
         <label class="pick" aria-label="${p.name}の色を自由にえらぶ"><input type="color" value="${cur[p.k] || p.presets[0]}"></label>
         <button class="reset" data-c="" aria-pressed="${!cur[p.k]}">元の色</button></div>`).join('')}</div></div>
     <p class="note">ふだんのお着替えです。ホームのキャラと、これから手に入れるカードに使います。前に撮ったカードは、そのときの色のまま残ります。</p>`;
   const cv = box.querySelector('.chprev');
+  // 髪型：絵のある髪型をならべる。えらぶと、見本とホームのキャラ・これからのカードに使う
+  loadParts().then(P => {
+    const row = box.querySelector('.chhair'); row.insertAdjacentHTML('beforeend', hairList(P).map(h => `<button class="hairbtn" data-hair="${h.id}" aria-pressed="${h.id === charaHair()}">${h.name}</button>`).join(''));
+    row.querySelectorAll('[data-hair]').forEach(b => b.onclick = () => { setCharaHair(b.dataset.hair); row.querySelectorAll('[data-hair]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); loadSample().then(S => drawSample(cv, S)).catch(() => {}); onChange?.(); });
+  }).catch(() => {});
   try { drawSample(cv, await loadSample()); } catch (e) { cv.replaceWith(Object.assign(document.createElement('p'), { className: 'note', textContent: 'キャラの見本を読みこめませんでした' })); }
   const set = (k, hex) => {
     setCharaColor(k, hex); const row = box.querySelector(`.chrow[data-k="${k}"]`);
     row.querySelectorAll('[data-c]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.c || '') === (hex || ''))));
     loadSample().then(S => drawSample(cv, S)).catch(() => {}); onChange?.();
   };
-  box.querySelectorAll('.chrow').forEach(row => {
+  box.querySelectorAll('.chrow[data-k]').forEach(row => {
     const k = row.dataset.k;
     row.querySelectorAll('[data-c]').forEach(b => b.onclick = () => set(k, b.dataset.c || null));
     row.querySelector('input[type=color]').oninput = e => set(k, e.target.value);

@@ -6,6 +6,7 @@
 // 絵はコードで描き足さない（形が変わるものは Codex の絵を使う）
 import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
 import { recolorChara, lookColors } from '../characolor.js';
+import { loadParts, applyParts } from '../charaparts.js';
 import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara, charaPlace, placeChara } from './look.js';
 const THREE = window.THREE;
 
@@ -53,6 +54,7 @@ export async function build() {
 
   train.material.uniforms.tIdx.value = tex.train; for (const g of gulls) g.material.uniforms.tIdx.value = tex.gulls; ch.chara.material.uniforms.tIdx.value = tex.chara;
   ch.setLods(await charaLods(base, D, tex.chara));
+  const CP = await loadParts().catch(() => null);   // 髪型・腕の層（読めなければ、髪型なしの絵のまま）
 
   // どの空を使うか：曇り・雨・雪は曇り空、晴れは時間帯の空（冬の昼は富士山の見える空）
   function skyOf(st) {
@@ -90,6 +92,7 @@ export async function build() {
       // カモメ：夏は3羽、春・秋は2羽、冬と曇りは1羽。夜・雨・雪は出ない
       self.gullN = st.time === 'night' || ['rain', 'snow'].includes(st.weather) ? 0 : st.weather === 'cloudy' || st.season === 'winter' ? 1 : st.season === 'summer' ? 3 : 2;
       self.leaves = st.season === 'autumn' && st.weather !== 'snow';
+      if (CP) applyParts(CP, ch, st);
       setPal(ch.chara, palTex(D.pal.chara, (c, i) => gradeChara(recolorChara(c, i, D, lookColors(st)), st)));
     },
     frame(par, f, newF, rm, st) {
