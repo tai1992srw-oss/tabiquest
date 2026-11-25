@@ -5,7 +5,7 @@
 //   部位を足すとき：TABS に1行足し、items(P) でアイテムの一覧、get／set で look のどこに入れるかを書く
 import { settings, saveSettings } from './store.js';
 import { PARTS, recolorChara } from './characolor.js';
-import { loadParts, sheet, hairList, outfitList } from './charaparts.js';
+import { loadParts, sheet, hairList, outfitList, wearOf, packWear, WEAR_KEYS } from './charaparts.js';
 import { esc, toast } from './ui.js';
 
 const COLORS = Object.fromEntries(PARTS.map(p => [p.k, p]));
@@ -21,10 +21,17 @@ const TABS = [
   { id: 'hair', name: '髪型', icon: '✂', kind: 'items', focus: 'face', colors: ['hair'], items: P => hairList(P), get: L => L.hair || '', set: (L, v) => { L.hair = v; }, crop: 'face' },
   { id: 'face', name: '顔', icon: '☺', kind: 'colors', focus: 'face', colors: ['skin', 'eye'] },
   // 服：絞りこみ（セット・トップス・ボトムス・くつ下・くつ）。parts.json の outfits の type（なければ 'set'＝上下そろい）で分ける
-  { id: 'wear', name: '服', icon: '♥', kind: 'items', focus: 'body', colors: ['cloth'], items: P => outfitList(P).map(u => ({ type: u.id ? 'set' : 'set', ...u })), get: L => L.outfit || '', set: (L, v) => { L.outfit = v; }, crop: 'body', colorNote: L => (L.outfit ? '服の色は、インナーのときだけ変わります' : ''),
+  { id: 'wear', name: '服', icon: '♥', kind: 'items', focus: 'body', colors: ['cloth'], crop: 'body',
+    // 一覧：セット（上下そろい）と、部位ごと（'top:u01' のように「部位:番号」。番号なし＝その部位はインナー・なし）
+    items: P => [...outfitList(P).map(u => ({ type: 'set', id: 'set:' + u.id, name: u.id ? u.name + 'セット' : 'ぜんぶインナー' })),
+      ...WEAR_KEYS.flatMap(k => [{ type: k, id: k + ':', name: NONE[k] }, ...(P.J.wear?.[k] || []).map(u => ({ type: k, id: k + ':' + u.id, name: u.name }))])],
+    get: L => 'set:' + (L.outfit || ''), on: (L, v) => { const [k, id] = v.split(':'), W = wearOf(L.outfit); return k === 'set' ? WEAR_KEYS.every(q => W[q] === id) : W[k] === id; },
+    set: (L, v) => { const [k, id] = v.split(':'); if (k === 'set') L.outfit = id; else { const W = wearOf(L.outfit); W[k] = id; L.outfit = packWear(W); } },
+    colorNote: L => (wearOf(L.outfit).top && wearOf(L.outfit).bottom ? '服の色は、インナーの見えている所だけ変わります' : ''),
     filters: [['all', 'すべて'], ['set', 'セット'], ['top', 'トップス'], ['bottom', 'ボトムス'], ['socks', 'くつ下'], ['shoes', 'くつ']] },
   { id: 'coord', name: 'コーデ', icon: '★', kind: 'coord', focus: 'body', colors: [] },
 ];
+const NONE = { top: 'インナー（上）', bottom: 'インナー（下）', socks: 'くつ下なし', shoes: 'はだし' };
 const clone = L => ({ colors: { ...(L?.colors || {}) }, hair: L?.hair || '', outfit: L?.outfit || '' });
 const same = (a, b) => JSON.stringify(clone(a)) === JSON.stringify(clone(b));
 
@@ -94,18 +101,18 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   // 下の一覧を描く。full＝タブを切りかえたとき（絵から作り直す）。そうでなければ、えらんだ印と色だけ直す
   function renderBody(full = true) {
     if (!env) return; renderBar();
-    if (!full && tab.kind !== 'coord') { body.querySelectorAll('.du-item').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === tab.get(L)))); if (tab.kind === 'items') thumbs(); return; }
+    if (!full && tab.kind !== 'coord') { body.querySelectorAll('.du-item').forEach(b => b.setAttribute('aria-pressed', String(tab.on ? tab.on(L, b.dataset.v) : b.dataset.v === tab.get(L)))); if (tab.kind === 'items') thumbs(); return; }
     if (tab.kind === 'coord') {
       const cs = coords();
       body.innerHTML = `<p class="du-hint">気に入った組み合わせを残して、1回で着替えられます（${cs.length}／12）</p><div class="du-grid coord"><button class="du-item add" data-a="addcoord" ${cs.length >= 12 ? 'disabled' : ''}><span class="du-plus" aria-hidden="true">＋</span><span class="du-nm">いまのコーデを残す</span></button>${cs.map((c, i) => `<div class="du-cell"><button class="du-item" data-coord="${i}" aria-pressed="${same(c.look, L)}"><canvas></canvas><span class="du-nm">${esc(c.name)}</span></button><button class="du-del" data-del="${i}" aria-label="${esc(c.name)}を消す">×</button></div>`).join('')}</div>`;
       const B = bounds(env.P, 'normal'); body.querySelectorAll('[data-coord]').forEach(b => draw(b.querySelector('canvas'), env, clone(cs[+b.dataset.coord].look), 'normal', B.body, 1));
       return;
     }
-    const f = flt[tab.id] || 'all', all = tab.kind === 'items' ? tab.items(env.P) : [], items = all.filter(it => f === 'all' || !it.id || (it.type || 'set') === f);
-    const none = tab.kind === 'items' && f !== 'all' && !items.some(it => it.id);
+    const f = flt[tab.id] || 'all', all = tab.kind === 'items' ? tab.items(env.P) : [], items = all.filter(it => f === 'all' || (it.type ? it.type === f : !it.id || f === 'set'));
+    const none = tab.kind === 'items' && f !== 'all' && !items.some(it => it.id && !it.id.endsWith(':'));
     body.innerHTML = tab.kind !== 'items' ? '<p class="du-hint">上の色をえらぶと、キャラの色が変わります</p>'
       : none ? `<p class="du-hint">「${esc(tab.filters.find(x => x[0] === f)[1])}」の服は、まだありません</p>`
-      : `<div class="du-grid ${tab.crop}">${items.map(it => `<button class="du-item" data-v="${esc(it.id)}" aria-pressed="${it.id === tab.get(L)}"><canvas></canvas><span class="du-nm">${esc(it.name)}</span></button>`).join('')}</div>`;
+      : `<div class="du-grid ${tab.crop}">${items.map(it => `<button class="du-item" data-v="${esc(it.id)}" aria-pressed="${tab.on ? tab.on(L, it.id) : it.id === tab.get(L)}"><canvas></canvas><span class="du-nm">${esc(it.name)}</span></button>`).join('')}</div>`;
     thumbs();
   }
   // 一覧の小さな絵：そのアイテムだけを替えた見た目（色はいまのまま）
@@ -119,7 +126,7 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
     const b = e.target.closest('button'); if (!b) return; const a = b.dataset.a;
     if (b.dataset.flt) { flt[tab.id] = b.dataset.flt; renderBody(); }
     else if (b.dataset.tab) { tab = TABS.find(t => t.id === b.dataset.tab); root.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b))); paint(); renderBody(); }
-    else if (b.dataset.v !== undefined) { if (tab.get(L) !== b.dataset.v) change(x => tab.set(x, b.dataset.v)); }
+    else if (b.dataset.v !== undefined) { if (!(tab.on ? tab.on(L, b.dataset.v) : tab.get(L) === b.dataset.v)) change(x => tab.set(x, b.dataset.v)); }
     else if (b.dataset.c !== undefined) { const k = b.closest('.du-colors').dataset.k; change(x => { if (b.dataset.c) x.colors[k] = b.dataset.c; else delete x.colors[k]; }); }
     else if (b.dataset.coord !== undefined) { const c = coords()[+b.dataset.coord]; if (c) { change(x => Object.assign(x, clone(c.look))); renderBody(); } }
     else if (b.dataset.del !== undefined) { const cs = coords().slice(), c = cs[+b.dataset.del]; if (c && confirm(`「${c.name}」を消しますか？`)) { cs.splice(+b.dataset.del, 1); settings.charaCoords = cs; saveSettings(); renderBody(); } }

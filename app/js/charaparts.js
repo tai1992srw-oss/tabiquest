@@ -15,7 +15,7 @@ async function pixels(name) {
 export function loadParts() {
   return parts || (parts = (async () => {
     const J = await (await fetch(BASE + 'parts.json')).json(), L = {};
-    await Promise.all(['close', 'normal'].flatMap(lod => ['body', 'arms', 'hair', 'outfit', 'sleeve', 'face'].map(async k => { L[k + '_' + lod] = await pixels(k + '_' + lod); })));
+    await Promise.all(['close', 'normal'].flatMap(lod => ['body', 'arms', 'hair', 'top', 'sleeve', 'bottom', 'socks', 'shoes', 'face'].map(async k => { L[k + '_' + lod] = await pixels(k + '_' + lod); })));
     return { J, L, sheets: {}, tex: {} };
   })().catch(e => { parts = null; throw e; }));
 }
@@ -25,6 +25,10 @@ export const charaHair = () => settings.charaHair || '';
 export function setCharaHair(id) { if (id) settings.charaHair = id; else delete settings.charaHair; saveSettings(); }
 export const lookHair = st => (st?.look ? st.look.hair || '' : charaHair());
 export const outfitList = P => [{ id: '', name: 'インナー' }, ...(P.J.outfits || [])];
+// 衣装は部位ごと（トップス・ボトムス・くつ下・くつ）。look.outfit は1つの文字：'' ＝ ぜんぶインナー、'u01' ＝ 上下そろい（セット）、'u01..u01.' のように「トップス.ボトムス.くつ下.くつ」
+export const WEAR_KEYS = ['top', 'bottom', 'socks', 'shoes'];
+export function wearOf(outfit) { const s = outfit || '', a = s.includes('.') ? s.split('.') : [s, s, s, s]; return Object.fromEntries(WEAR_KEYS.map((k, i) => [k, a[i] || ''])); }
+export function packWear(w) { const a = WEAR_KEYS.map(k => w[k] || ''); return a.every(v => v === a[0]) ? a[0] : a.join('.'); }
 export const charaOutfit = () => settings.charaOutfit || '';
 export function setCharaOutfit(id) { if (id) settings.charaOutfit = id; else delete settings.charaOutfit; saveSettings(); }
 export const lookOutfit = st => (st?.look ? st.look.outfit || '' : charaOutfit());
@@ -36,8 +40,8 @@ export const lookFace = st => st?.photo?.face || '';
 //   face：表情の番号。コマは「ポーズ n 個」のうしろに「同じポーズのまばたき n 個」（目のあたりだけ「目をとじる」の層に替える。目を閉じた表情は、まばたきなし）
 export function sheet(P, hair, lod, outfit = '', face = '') {
   const key = hair + '|' + outfit + '|' + face + '|' + lod; if (P.sheets[key]) return P.sheets[key];
-  const [fw, fh] = P.J[lod], n = P.J.poses, hi = P.J.hairs.findIndex(h => h.id === hair), oi = (P.J.outfits || []).findIndex(u => u.id === outfit);
-  const wear = P.L['outfit_' + lod], slv = P.L['sleeve_' + lod];
+  const [fw, fh] = P.J[lod], n = P.J.poses, hi = P.J.hairs.findIndex(h => h.id === hair), W = wearOf(outfit), wi = Object.fromEntries(WEAR_KEYS.map(k => [k, (P.J.wear?.[k] || []).findIndex(u => u.id === W[k])])), oi = wi.top;
+  const slv = P.L['sleeve_' + lod], under = ['socks', 'shoes', 'bottom', 'top'].filter(k => wi[k] >= 0).map(k => [P.L[k + '_' + lod], wi[k]]);   // 体に着せる順：くつ下 → くつ → ボトムス → トップス
   const body = P.L['body_' + lod].data, arms = P.L['arms_' + lod].data, hairs = P.L['hair_' + lod], hw = hairs.width;
   const faces = P.L['face_' + lod], fl = P.J.faces || [], fi = fl.findIndex(q => q.id === face), bi = (P.J.closed || []).includes(face) ? -1 : fl.findIndex(q => q.id === P.J.blink);
   const by = (P.J.blinkY?.close ?? 0) * (lod === 'close' ? 1 : .5), src = arms.length / 4 / fh;   // by：この行より上だけ、まばたきの層を使う。src：腕の絵の幅
@@ -46,7 +50,7 @@ export function sheet(P, hair, lod, outfit = '', face = '') {
     const pf = f % n, k = (y * aw + f * fw + x) * 4, b = (y * fw + x) * 4, a = (y * src + pf * fw + x) * 4;
     let v = -1;
     if (body[b + 3] > 127) v = body[b];
-    if (oi >= 0) { const w = (y * wear.width + oi * fw + x) * 4; if (wear.data[w + 3] > 127) v = wear.data[w]; }
+    for (const [wl, i] of under) { const w = (y * wl.width + i * fw + x) * 4; if (wl.data[w + 3] > 127) v = wl.data[w]; }
     if (fi >= 0) { const q = (y * faces.width + fi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
     if (f >= n && bi >= 0 && y < by) { const q = (y * faces.width + bi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
     if (hi >= 0) { const h = (y * hw + hi * fw + x) * 4; if (hairs.data[h + 3] > 127) v = hairs.data[h]; }
