@@ -25,7 +25,7 @@ import * as hitsujiyama from './scenes/hitsujiyama.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.49';
+export const VERSION = '0.10.50';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);
@@ -41,7 +41,7 @@ for (const p of PLACES) if (p.kind === 'plain') engine.register(p.scene, () => p
 
 const view = document.getElementById('view');
 let closeViewer = null;
-const ui = (() => { try { return Object.assign({ cat: 'all', seen: 'all' }, JSON.parse(localStorage.getItem('tabiquest:ui') || '{}')); } catch (e) { return { cat: 'all', seen: 'all' }; } })();
+const ui = (() => { try { return Object.assign({ cat: 'all', seen: 'all', sort: 'near' }, JSON.parse(localStorage.getItem('tabiquest:ui') || '{}')); } catch (e) { return { cat: 'all', seen: 'all' }; } })();
 const saveUi = () => { try { localStorage.setItem('tabiquest:ui', JSON.stringify(ui)); } catch (e) {} };
 
 function header() {
@@ -104,7 +104,9 @@ function renderList() {
     : '';
   const cats = CATEGORIES.filter(c => PLACES.some(p => p.categories.includes(c)));
   let list = PLACES.filter(p => (ui.cat === 'all' || p.categories.includes(ui.cat)) && (ui.seen === 'all' || (ui.seen === 'yes') === visited(p.id)));
-  if (pos) list = [...list].sort((a, z) => statusOf(a).d - statusOf(z).d);
+  const byPref = ui.sort === 'pref';   // 並べ方：近い順（現在地がわかるとき）／県ごと（県の番号順、その中は名所の番号順）
+  if (byPref) list = [...list].sort((a, z) => (a.no || '') < (z.no || '') ? -1 : (a.no || '') > (z.no || '') ? 1 : 0);
+  else if (pos) list = [...list].sort((a, z) => statusOf(a).d - statusOf(z).d);
   const got = PLACES.filter(p => visited(p.id)).length;
   // いちばん近い名所（現在地がわかるとき）
   const near = pos ? PLACES.reduce((a, p) => (!a || statusOf(p).d < statusOf(a).d ? p : a), null) : null, nst = near && statusOf(near);
@@ -127,6 +129,7 @@ function renderList() {
     </section>
     <div class="lhead"><h2>名所</h2><span class="prog"><b>${got}</b> / ${PLACES.length} か所 行った</span></div>
     <div class="filters">
+      <div class="chips-row" role="group" aria-label="並べ方">${[['near', '近い順'], ['pref', '県ごと']].map(([v, l]) => `<button data-sort="${v}" aria-pressed="${ui.sort === v}">${l}</button>`).join('')}</div>
       <div class="chips-row" role="group" aria-label="行った／まだ">${[['all', 'ぜんぶ'], ['no', 'まだ'], ['yes', '行った']].map(([v, l]) => `<button data-seen="${v}" aria-pressed="${ui.seen === v}">${l}</button>`).join('')}<span class="sep"></span>${cats.map(c => `<button data-cat="${esc(c)}" aria-pressed="${ui.cat === c}">${esc(c)}</button>`).join('')}</div>
     </div>
     <div id="spots"></div></div>`;
@@ -137,6 +140,7 @@ function renderList() {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.cat) ui.cat = ui.cat === b.dataset.cat ? 'all' : b.dataset.cat;   // カテゴリはもう一度押すと解除
     if (b.dataset.seen) ui.seen = b.dataset.seen;
+    if (b.dataset.sort) ui.sort = b.dataset.sort;
     saveUi(); renderList();
   };
   const box = wrap.querySelector('#spots');
@@ -144,24 +148,24 @@ function renderList() {
   let range = null, grid = null;
   for (const p of list) {
     const cs = cardsOf(p.id), st = statusOf(p), been = cs.length > 0;
-    const r = pos ? RANGES.find(([k]) => k === 'can' ? st.inside : st.d <= k) : 'all';
-    if (r !== range || !grid) {   // 距離のまとまりごとに見出しを入れる
+    const r = byPref ? p.pref : pos ? RANGES.find(([k]) => k === 'can' ? st.inside : st.d <= k) : 'all';
+    if (r !== range || !grid) {   // 県ごと、または距離のまとまりごとに見出しを入れる
       range = r;
-      if (pos) box.insertAdjacentHTML('beforeend', `<h3 class="range${r[0] === 'can' ? ' can' : ''}">${r[1]}</h3>`);
+      if (byPref) { const inP = PLACES.filter(x => x.pref === p.pref); box.insertAdjacentHTML('beforeend', `<h3 class="range">${esc(p.pref)}　${inP.filter(x => visited(x.id)).length} / ${inP.length}</h3>`); }
+      else if (pos) box.insertAdjacentHTML('beforeend', `<h3 class="range${r[0] === 'can' ? ' can' : ''}">${r[1]}</h3>`);
       grid = document.createElement('div'); grid.className = 'tickets'; box.append(grid);
     }
     const el = document.createElement('section'); el.className = 'ticket' + (st.inside ? ' can' : '') + (been ? '' : ' yet') + (p.kind === 'plain' && !been ? ' plain' : ''); el.setAttribute('aria-label', p.name);
     el.innerHTML = `<a class="hit" href="#/place/${p.id}" aria-label="${esc(p.name)}を見る"></a>
-      <div class="art">${p.kind === 'plain' && !been ? icon('place', 34) : ''}${cs.length > 1 ? `<span class="cnt">×${cs.length}</span>` : ''}${been ? '' : '<span class="yetpill">まだ</span>'}${p.kind === 'photo' || p.kind === 'plain' ? '<span class="kari-s">仮</span>' : ''}</div>
-      <div class="tk-b"><b>${esc(p.name)}</b><small>${esc(p.city.replace(/[^市]*$/, '') || p.city)}${st.known ? ` ・ <span class="d">${fmtDist(st.d)}</span>` : ''}</small>
-        ${st.inside && p !== near ? `<button class="go" data-arrive="${p.id}">${icon('camera', 16)}到着する</button>` : ''}</div>`;
+      <div class="art">${p.kind === 'plain' && !been ? icon('place', 34) : ''}${cs.length > 1 ? `<span class="cnt">×${cs.length}</span>` : ''}${been ? '' : '<span class="yetpill">まだ</span>'}${p.kind === 'photo' || p.kind === 'plain' ? '<span class="kari-s">仮</span>' : ''}${(DEBUG || st.inside) && p !== (nst?.inside ? near : null) ? `<button class="go" data-arrive="${p.id}" aria-label="${esc(p.name)}に到着する">${icon('camera', 18)}<span>到着</span></button>` : ''}</div>
+      <div class="tk-b"><b>${esc(p.name)}</b><small>${esc(p.city.replace(/[^市]*$/, '') || p.city)}${st.known ? ` ・ <span class="d">${fmtDist(st.d)}</span>` : ''}</small></div>`;
     grid.append(el);
     placeArt(p, el.querySelector('.art'), cs);
   }
   wrap.onclick = async e => {
     const btn = e.target.closest('[data-arrive]'); if (!btn) return;
-    const p = placeById(btn.dataset.arrive); if (!statusOf(p).inside) return;
-    btn.disabled = true; btn.textContent = '天気を確かめています…';
+    const p = placeById(btn.dataset.arrive); if (!DEBUG && !statusOf(p).inside) return;   // デバッグ版は、どこにいても到着できる
+    btn.disabled = true; if (btn.classList.contains('cta')) btn.textContent = '天気を確かめています…';
     const v = await conditionsAt(p, current()), r = arrive(p, v); header();
     const act = await playArrival(p, r.card, r, {});
     checkGoals(); header();
