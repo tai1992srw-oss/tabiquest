@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B0E22">
+<!-- 名所の層は 'assets/…' を読むので、app/ を基準にする -->
+<base href="../../">
+<title>エンドロールの試作</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0B0E22;--panel:#161A3A;--line:#2A3066;--text:#EDEBFF;--sub:#A9A6D6;--gold:#FFC857;--teal:#3ED6C4;--coral:#FF6B5A}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:"Zen Maru Gothic",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:8px;padding:10px 16px;position:sticky;top:0;background:var(--bg);z-index:5;border-bottom:1px solid var(--line)}
+header h1{font:16px "DotGothic16",monospace;margin:0;flex:1}
+header a{color:var(--sub);font-size:13px}
+main{max-width:520px;margin:0 auto;padding:0 16px 60px}
+section{margin-top:18px}
+h2{font:15px "DotGothic16",monospace;color:var(--gold);margin:0 0 8px}
+.sub{color:var(--sub);font-size:13px}
+input[type=text],select,button,.btn{font:inherit;font-size:14px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+input[type=text]{width:100%}
+button:disabled{opacity:.4}
+.btn{display:inline-block;text-decoration:none;text-align:center}
+.main{background:var(--gold);color:#221a00;border-color:var(--gold);font-weight:700}
+label.f{display:block;margin-bottom:8px;font-size:13px;color:var(--sub)}
+label.f input,label.f select{margin-top:4px;width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>*{flex:1 1 0;min-width:0}
+ul.cards{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+ul.cards li{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+ul.cards li.off{opacity:.55}
+ul.cards label{flex:1;display:flex;align-items:center;gap:10px;min-width:0}
+ul.cards input{width:20px;height:20px;flex:none}
+ul.cards b{display:block;font-size:15px}
+ul.cards small{display:block;color:var(--sub);font-size:12px}
+.mv{display:flex;gap:4px}
+.mv button{padding:6px 10px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+dt{color:var(--sub)}
+dd{margin:0;word-break:break-all}
+.stage{display:flex;justify-content:center}
+canvas#view{width:min(100%,300px);aspect-ratio:9/16;image-rendering:pixelated;background:#000;border-radius:8px;display:block}
+input[type=range]{width:100%;margin-top:8px}
+.prog{height:8px;background:var(--panel);border-radius:4px;overflow:hidden;margin-top:10px}
+.prog i{display:block;height:100%;width:0;background:var(--teal)}
+#status{font-size:13px;margin-top:6px;min-height:1.4em}
+video{width:min(100%,300px);aspect-ratio:9/16;background:#000;border-radius:8px;display:block;margin:10px auto}
+ul.hist{font-size:12px;color:var(--sub);padding-left:18px;margin:6px 0}
+ul.hist li{margin-bottom:6px;word-break:break-all}
+.note{font-size:13px;line-height:1.7;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.note p{margin:0 0 6px}
+</style>
+</head>
+<body>
+<header><h1>エンドロールの試作 <small id="ver" style="color:var(--sub);font-size:11px"></small></h1><a href="./">アプリへ</a></header>
+<main>
+  <p class="sub">旅の記録を RPG のエンドロールのような縦動画にして、スマホの中だけで書き出す試し。データは仮の旅（横浜の日帰り）。</p>
+
+  <section>
+    <h2>1. 入れるカードを選んで並べる</h2>
+    <ul class="cards" id="cards"></ul>
+    <p class="sub">▲▼で出す順を変える。距離と日数は撮った時刻の順で数える。</p>
+  </section>
+
+  <section>
+    <h2>2. 記録（自動で入る）</h2>
+    <label class="f">旅のタイトル<input type="text" id="title" maxlength="20"></label>
+    <label class="f">旅人の名前<input type="text" id="traveler" maxlength="12"></label>
+    <div id="stats"></div>
+  </section>
+
+  <section>
+    <h2>3. プレビュー</h2>
+    <div class="stage"><canvas id="view"></canvas></div>
+    <input type="range" id="seek" min="0" max="1" value="0" aria-label="再生する位置">
+    <div class="row"><button id="play">▶ 再生</button></div>
+    <p class="sub" id="dur"></p>
+  </section>
+
+  <section>
+    <h2>4. 縦動画に書き出す</h2>
+    <div class="row">
+      <label class="f">流れる速さ<select id="speed"><option value="2">ゆっくり</option><option value="3" selected>ふつう</option><option value="4">はやい</option></select></label>
+      <label class="f">大きさ<select id="res"><option value="720" selected>720×1280</option><option value="1080">1080×1920</option></select></label>
+    </div>
+    <label class="f">作り方<select id="method">
+      <option value="auto" selected>おまかせ（WebCodecs で MP4、だめなら録画）</option>
+      <option value="webcodecs">WebCodecs → MP4（1コマずつ作る）</option>
+      <option value="recorder">MediaRecorder（実時間で録画）</option>
+    </select></label>
+    <button id="export" class="main" style="width:100%">書き出す</button>
+    <div class="prog"><i id="bar"></i></div>
+    <div id="status"></div>
+    <div id="result" hidden>
+      <video id="out" controls playsinline muted></video>
+      <div class="row"><a id="save" class="btn">保存する</a><button id="share">共有する</button></div>
+      <p class="sub" id="shareMsg"></p>
+      <dl id="measure"></dl>
+    </div>
+  </section>
+
+  <section>
+    <h2>この端末でできること</h2>
+    <dl id="probe"><dt>調べ中</dt><dd>…</dd></dl>
+  </section>
+
+  <section>
+    <h2>測った結果</h2>
+    <div class="note" id="pcnote">
+      <p><b>PC（開発機、Claude のブラウザ）</b>：<span id="pcres">WebCodecs→MP4：720×1280・44秒の動画が<b>4.0秒</b>で14.5MB、1080×1920・41秒（カード3枚）が<b>5.5秒</b>で23.1MB。1コマずつ作るのでカクつきなし、出来た MP4 はそのまま再生できた。MediaRecorder は画面が隠れた状態で測ったので数字が使えない（隠れると描くのが1秒に1回まで落ち、コマが飛ぶ）。共有はこのブラウザに無い</span></p>
+      <p><b>Pixel</b>：下の「この端末の記録」に出る。「記録をコピー」で文字にして渡せる。</p>
+    </div>
+    <h2 style="margin-top:12px">この端末の記録</h2>
+    <ul class="hist" id="history"></ul>
+    <button id="copy">記録をコピー</button>
+  </section>
+</main>
+<script src="vendor/three.r128.min.js"></script>
+<script type="module" src="lab/endroll/endroll.js"></script>
+</body>
+</html>

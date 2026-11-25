@@ -53,7 +53,7 @@ export async function conditionsAt(place, pos) {
   return {
     time: renderTime(place, timeReal), timeReal, weather,
     weatherSrc: wantWeather ? 'debug' : w ? `open-meteo:${w.code}` : 'none',
-    season: seasonOf(now), lat: pos?.lat ?? null, lng: pos?.lng ?? null,
+    season: dbg && settings.season && settings.season !== 'auto' ? settings.season : seasonOf(now), lat: pos?.lat ?? null, lng: pos?.lng ?? null,
   };
 }
 

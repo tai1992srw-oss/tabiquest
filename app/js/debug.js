@@ -1,5 +1,5 @@
 // デバッグモード（くりた専用）。設定画面のバージョン表記を7回つづけてタップすると出る
-import { PLACES, LABEL, TIMES, WEATHERS } from './places.js';
+import { PLACES, LABEL, TIMES, WEATHERS, seasonOf } from './places.js';
 import { settings, saveSettings, book, cardsOf, dbg, mode } from './store.js';
 import { conditionsAt } from './conditions.js';
 import { current } from './geo.js';
@@ -7,7 +7,8 @@ import { esc, toast } from './ui.js';
 import { playArrival } from './arrival.js';
 
 const pick = (k, opts) => `<div class="row" data-k="${k}">${opts.map(([v, l]) => `<button data-v="${v}" aria-pressed="${settings[k] === v}">${esc(l)}</button>`).join('')}</div>`;
-let pv = { place: PLACES[0].id, time: 'evening', weather: 'clear' };
+let pv = { place: PLACES[0].id, time: 'evening', weather: 'clear', season: seasonOf() };
+const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
 
 export function renderDebug(box, refresh) {
   const on = mode() === 'debug', b = book('debug');
@@ -20,6 +21,7 @@ export function renderDebug(box, refresh) {
     <span class="lab">いる場所（位置の上書き）</span>
     <select class="sel" data-sel="loc"><option value="none">上書きしない</option>${PLACES.map(p => `<option value="${p.id}" ${settings.loc === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}<option value="nowhere" ${settings.loc === 'nowhere' ? 'selected' : ''}>どこでもない</option></select>
     <span class="lab">到着したときの時間帯（自動＝時刻と日の出・日の入りから）</span>${pick('time', [['auto', '自動'], ...TIMES.map(t => [t, LABEL.time[t]])])}
+    <span class="lab">到着したときの季節（自動＝今日の日付から）</span>${pick('season', [['auto', '自動'], ...SEASONS.map(s => [s, LABEL.season[s]])])}
     <span class="lab">到着したときの天気（自動＝Open-Meteo から）</span>${pick('weather', [['auto', '自動'], ...WEATHERS.map(w => [w, LABEL.weather[w]]), ['unknown', '不明']])}
     <span class="lab">到着演出の再生（記録はしない）</span>
     <div class="line"><select class="sel" data-play-place>${PLACES.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select><button data-play="1">初めて</button><button data-play="0">再訪</button></div>
@@ -27,6 +29,7 @@ export function renderDebug(box, refresh) {
     <div class="line"><select class="sel" data-pv="place">${PLACES.map(p => `<option value="${p.id}" ${pv.place === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
       <select class="sel" data-pv="time">${pp.times.map(t => `<option value="${t}" ${pv.time === t ? 'selected' : ''}>${LABEL.time[t]}</option>`).join('')}</select>
       <select class="sel" data-pv="weather">${WEATHERS.map(w => `<option value="${w}" ${pv.weather === w ? 'selected' : ''}>${LABEL.weather[w]}</option>`).join('')}</select>
+      <select class="sel" data-pv="season">${SEASONS.map(s => `<option value="${s}" ${pv.season === s ? 'selected' : ''}>${LABEL.season[s]}</option>`).join('')}</select>
       <button data-a="preview">見る</button></div>
     <span class="lab">スタイル研究（見本の加工を変えて4つ並べて比べる）</span>
     <div class="line"><a class="btn" href="lab/style/">スタイルの比べる場をひらく</a></div>
@@ -50,7 +53,7 @@ export function renderDebug(box, refresh) {
     if (d.a === 'toggle') { settings.debugOn = !on; saveSettings(); toast(settings.debugOn ? 'デバッグ用の記録に切り替えました' : '本番の記録に戻しました'); return refresh(); }
     if (d.a === 'hide') { settings.debugUnlocked = false; settings.debugOn = false; saveSettings(); toast('デバッグを隠しました'); return refresh(); }
     if (d.a === 'reset') { if (confirm('デバッグ用の記録（カード・アイテム・ポイント）を全部消します。本番の記録は消えません。よろしいですか？')) { dbg.reset(); toast('デバッグの記録を消しました'); refresh(); } return; }
-    if (d.a === 'preview') { location.hash = `#/preview/${pv.place}/${pv.time}/${pv.weather}`; return; }
+    if (d.a === 'preview') { location.hash = `#/preview/${pv.place}/${pv.time}/${pv.weather}/${pv.season}`; return; }
     if (d.play) {
       const p = P(box.querySelector('[data-play-place]').value), first = d.play === '1', n = cardsOf(p.id, 'debug').length;
       btn.disabled = true; const v = await conditionsAt(p, current()); btn.disabled = false;
