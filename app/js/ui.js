@@ -102,6 +102,7 @@ const ICONS = {
   hanger: '<path d="M10 6a2 2 0 1 1 3 1.7c-.6.4-1 .8-1 1.5V10"/><path d="M12 10l-9 7h18z"/>',
   gift: '<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 13h18M12 9v12M12 9c-2-4-6-4-6-1s6 1 6 1c2-4 6-4 6-1s-6 1-6 1"/>',
   drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',
+  close: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>', undo: '<path d="M5 9h9.5a5 5 0 0 1 0 10H9"/><path d="M8.5 5.5L5 9l3.5 3.5"/>',
 };
 export const icon = (k, size = 20) => `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k] || ''}</svg>`;
 

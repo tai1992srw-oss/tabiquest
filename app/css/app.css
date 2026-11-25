@@ -261,15 +261,78 @@ dl.rec dd{margin:0}
 .viewer.story .side button{display:flex;flex-direction:column;align-items:center;gap:3px;width:56px;min-height:auto;padding:7px 4px;background:rgba(10,12,30,.5);border:none;border-radius:14px;font:400 11px var(--dot);color:#fff;backdrop-filter:blur(4px)}
 .viewer.story .side i{font-style:normal;font-size:20px;line-height:1}
 .viewer.story .side button[aria-pressed="true"]{background:var(--gold);color:#221a00}
-.viewer.story.posing .side{bottom:12%}
 .viewer.story.posing .card .hud{opacity:0}
-.viewer.story .sheet{position:absolute;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 66px);z-index:6;display:flex;flex-direction:column;gap:8px;padding:10px;background:rgba(10,12,30,.8);border-radius:16px;backdrop-filter:blur(8px)}
-.viewer.story .sheet[hidden]{display:none}
-.viewer.story .sheet .hint{margin:0;font-size:12px;color:#ddd;text-align:center}
-.viewer.story .sheet .seg{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center}
-.viewer.story .sheet .lab{font-size:12px;color:var(--sub);margin-right:2px}
-.viewer.story .sheet button{min-height:38px;padding:4px 10px;font-size:13px;border-radius:10px}
-.viewer.story .sheet button[aria-pressed="true"]{background:var(--gold);color:#221a00;border-color:var(--gold)}
+/* 撮影（2026-11-26 案B「カメラ」）：カードを画面の上につめ、あいた下の所に、暗いすける操作を置く。カードの外は景色をぼかした色
+   --bar：カードの上下のあまり（たて長の画面だけ）。撮影中はカードをそのぶん上げるので、下に 2×--bar あく */
+.viewer.story{--bar:max(0px,calc((100dvh - 100vw / .5625) / 2))}
+.viewer.story .bgblur{position:absolute;inset:-48px;background:center/cover no-repeat;filter:blur(30px) brightness(.5) saturate(1.15);opacity:0;transition:opacity .3s;pointer-events:none}
+.viewer.story.posing .bgblur{opacity:1}
+.viewer.story.posing .frame{transform:translateY(calc(var(--pull,0px) - var(--bar)))}
+.viewer.story.posing .top,.viewer.story.posing .side{display:none}
+.viewer .camf button,.viewer .cam button{font-family:var(--sans);min-height:0;padding:0;border:0;background:none;border-radius:0;color:inherit}
+.viewer.story .camf{position:absolute;inset:0;z-index:6;pointer-events:none;color:#FFFDF8}
+.viewer.story .camf[hidden],.viewer.story .cam[hidden]{display:none}
+.camf .mk{position:absolute;width:20px;height:20px;border:0 solid rgba(255,253,248,.8)}
+.camf .mk.tl,.camf .mk.tr{top:calc(env(safe-area-inset-top) + 14px)}
+.camf .mk.bl,.camf .mk.br{bottom:max(14px,calc(env(safe-area-inset-bottom) + 236px - var(--bar) * 2));transition:bottom .2s}
+.camf .mk.tl,.camf .mk.bl{left:14px}
+.camf .mk.tr,.camf .mk.br{right:14px}
+.camf .mk.tl{border-width:2px 0 0 2px;border-radius:5px 0 0 0}
+.camf .mk.tr{border-width:2px 2px 0 0;border-radius:0 5px 0 0}
+.camf .mk.bl{border-width:0 0 2px 2px;border-radius:0 0 0 5px}
+.camf .mk.br{border-width:0 2px 2px 0;border-radius:0 0 5px 0}
+.viewer.story.camhide .camf .mk.bl,.viewer.story.camhide .camf .mk.br{bottom:14px}
+.viewer .camf .cx{position:absolute;left:26px;top:calc(env(safe-area-inset-top) + 26px);width:44px;height:44px;border-radius:50%;background:rgba(20,19,41,.5);border:1px solid rgba(255,253,248,.28);display:grid;place-items:center;pointer-events:auto;transition:opacity .2s}
+.camf .coach{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 84px);margin:0;text-align:center;animation:camCoach 4.2s both}
+.camf .coach span{display:inline-block;font-size:12px;font-weight:700;background:rgba(20,19,41,.62);padding:7px 14px;border-radius:999px;letter-spacing:.5px}
+@keyframes camCoach{0%{opacity:0;transform:translateY(-6px)}8%,84%{opacity:1;transform:none}100%{opacity:0}}
+.viewer.story .cam{position:absolute;left:50%;bottom:0;z-index:7;width:min(100vw,calc(100dvh * .5625));transform:translateX(-50%);padding:44px 0 calc(env(safe-area-inset-bottom) + 14px);display:flex;flex-direction:column;gap:10px;
+  background:linear-gradient(rgba(20,19,41,0),rgba(20,19,41,.66) 64px,rgba(20,19,41,.66) 122px,rgba(20,19,41,.3) 200px);color:#FFFDF8;text-shadow:0 1px 3px rgba(20,19,41,.75);pointer-events:none;transition:opacity .2s,transform .2s}
+.viewer.story .cam>*{pointer-events:auto}
+.viewer.story.camhide .cam{opacity:0;transform:translate(-50%,14px)}
+.viewer.story.camhide .cam>*,.viewer.story.camhide .camf .cx{pointer-events:none}
+.viewer.story.camhide .camf .cx{opacity:0}
+.cam .strip{display:flex;gap:11px;padding:3px 18px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x;min-height:75px}
+.cam .strip::-webkit-scrollbar{display:none}
+.viewer .cam .opt{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;width:52px;font-size:11px;font-weight:700;line-height:1.2;color:rgba(255,253,248,.85);white-space:nowrap}
+.cam .opt i{display:block;flex:none;width:52px;height:52px;border-radius:17px;overflow:hidden;position:relative;background:rgba(20,19,41,.45);box-shadow:0 0 0 1px rgba(255,253,248,.35)}
+.cam .opt.pose i,.cam .opt.face i{background:rgba(255,253,248,.2)}
+.viewer .cam .opt[aria-pressed="true"]{color:#FFD66B;font-weight:900;background:none}
+.cam .opt[aria-pressed="true"] i{box-shadow:0 0 0 2.5px #FFD66B}
+.cam .opt.pose[aria-pressed="true"] i,.cam .opt.face[aria-pressed="true"] i{background:rgba(255,253,248,.92)}
+.cam .opt canvas{position:absolute;display:block}
+.cam .opt.pose canvas{left:50%;top:-1px;height:92px;transform:translateX(-50%)}
+.cam .opt.face canvas{left:0;top:0;width:52px;height:52px}
+.cam .gl{flex:none;align-self:flex-start;height:52px;writing-mode:vertical-rl;text-align:center;font-size:10px;font-weight:700;line-height:1;color:rgba(255,253,248,.6);letter-spacing:1px;margin:0 -4px 0 2px}
+.cam .gl:first-child{margin-left:-6px}
+.cam .orb{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%}
+.cam .orb.r0{background:#B9B2D9}
+.cam .orb.r3{background:radial-gradient(circle at 35% 30%,#fff,#FFD66B 48%,#C79A3C)}
+.cam .orb.r1{background:#4A4870;box-shadow:inset -7px -1px 0 -1px #FFD66B}
+.cam .orb.r2{background:#34325A;box-shadow:0 0 0 2.5px #FFD66B,0 0 10px 3px rgba(255,214,107,.75)}
+.cam .orb.g0,.cam .orb.g1,.cam .orb.g2{width:14px;height:14px;margin:-7px 0 0 -7px;background:#FFFDF8}
+.cam .orb.g1{box-shadow:0 0 8px 3px rgba(255,253,248,.7)}
+.cam .orb.g2{box-shadow:0 0 12px 8px rgba(255,253,248,.85)}
+.cam .orb.lb{background:#FFFDF8}
+.cam .orb.ln{background:linear-gradient(160deg,#8A6CE0,#E2667A)}
+.cam .modes{display:flex;justify-content:center;gap:4px}
+.viewer .cam .modes button{position:relative;min-height:40px;padding:0 12px;font-size:13px;font-weight:700;color:rgba(255,253,248,.62)}
+.viewer .cam .modes button[aria-pressed="true"]{font-size:14px;font-weight:900;color:#FFD66B;background:none}
+.cam .modes button[aria-pressed="true"]::after{content:"";position:absolute;left:50%;bottom:3px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:#FFD66B}
+.cam .cbar{display:flex;align-items:flex-start;justify-content:center;gap:44px}
+.viewer .cam .sb{display:flex;flex-direction:column;align-items:center;gap:4px;width:60px;font-size:10px;font-weight:700;color:rgba(255,253,248,.85);white-space:nowrap}
+.cam .sb i{width:46px;height:46px;border-radius:50%;background:rgba(20,19,41,.5);border:1px solid rgba(255,253,248,.28);display:grid;place-items:center}
+.viewer .cam .shut{width:74px;height:74px;border-radius:50%;border:3px solid #FFFDF8;display:grid;place-items:center}
+.cam .shut span{width:58px;height:58px;border-radius:50%;background:#FFFDF8;color:#2B2A4C;text-shadow:none;font-size:14px;font-weight:900;display:grid;place-items:center;transition:transform .1s}
+.cam .shut:active span{transform:scale(.9)}
+.viewer.story .cflash{position:absolute;inset:0;z-index:9;background:#fff;opacity:0;pointer-events:none}
+.viewer.story .cflash.on{animation:camFlash .35s}
+@keyframes camFlash{0%{opacity:.8}100%{opacity:0}}
+/* たてが短い画面（16:9 など）：カードの下にあまりがなく、操作がぜんぶカードに重なるので、下まで暗くして、少しつめる */
+@media (min-aspect-ratio:1/2){.viewer.story .cam{gap:6px;padding-bottom:calc(env(safe-area-inset-bottom) + 10px);background:linear-gradient(rgba(20,19,41,0),rgba(20,19,41,.66) 64px,rgba(20,19,41,.74))}
+  .viewer .cam .modes button{min-height:36px;color:rgba(255,253,248,.8)}.viewer .cam .shut{width:64px;height:64px}.cam .shut span{width:50px;height:50px}.cam .sb i{width:42px;height:42px}
+  .camf .mk.bl,.camf .mk.br{bottom:max(14px,calc(env(safe-area-inset-bottom) + 212px - var(--bar) * 2))}}
+@media (prefers-reduced-motion:reduce){.camf .coach,.viewer.story .cflash.on{animation:none}.viewer.story .frame,.viewer.story .cam,.camf .mk{transition:none}}
 .viewer.story .tap{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);border:0}
 
 /* カードの画面では、上の細い行は出さない（上に日付と閉じるボタンがあるため）。題字はそのぶん下げる */
@@ -530,13 +593,6 @@ ul.medals .sub{font:400 10px var(--dot);color:#9C98BF}
 .chrow .hairbtn[aria-pressed="true"]{background:var(--ink);color:#fff}
 .chrow .reset[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 
-/* 撮影のお着替え（2026-11-26）：色の丸を並べる */
-.viewer.story .sheet .pane{display:flex;flex-direction:column;gap:8px}
-.viewer.story .sheet .pane[hidden]{display:none}
-.viewer.story .sheet .dress .sw{min-height:0;width:30px;height:30px;padding:0;border-radius:50%;border:2px solid rgba(255,255,255,.55)}
-.viewer.story .sheet .dress .sw[aria-pressed="true"]{outline:3px solid var(--gold);outline-offset:2px;border-color:#fff}
-.viewer.story .sheet .dress .pick{display:inline-flex;width:30px;height:30px;border-radius:50%;border:2px dashed rgba(255,255,255,.6);overflow:hidden;align-items:center;justify-content:center}
-.viewer.story .sheet .dress .pick input{width:40px;height:40px;border:0;padding:0;background:none;cursor:pointer}
 
 /* ホーム（2026-11-26、キャラが主役・案B2）：後ろにきょうの名所の絵をぼかして敷き、まん中にキャラを大きく */
 main.homemode{max-width:none;padding:0}

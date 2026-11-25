@@ -6,8 +6,11 @@ const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さ
 import { book, cardsOf, cardById, setPhoto, defaultLook } from './store.js';
 import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS } from './card.js';
-import { PARTS, charaColors } from './characolor.js';
-import { loadParts, hairList, charaHair, outfitList, charaOutfit, faceList } from './charaparts.js';
+import { charaColors } from './characolor.js';
+import { charaHair, charaOutfit, faceList } from './charaparts.js';
+import { loadThumbData, drawPose, drawFace } from './camthumb.js';
+// 撮影でえらぶもの（下の列に出す。着替えは、お着替えの画面をひらく）
+const MODES = [['pose', 'ポーズ'], ['face', '表情'], ['light', '光']];
 import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast, icon } from './ui.js';
 
 // 図鑑・旅の記録・称号の上に出す切り替え（同じ図鑑タブの中の3つの見方）
@@ -123,7 +126,9 @@ export function renderPlace(view, id) {
 
 // 1枚のカードを全画面で見る（ストーリーズのような見せ方）
 //   カードは画面いっぱい。上にバー（同じ名所のカードの何枚目か）と名前・×、右に縦のボタン（撮影・文字・保存）
-//   左右のタップで前後のカード、下へのスワイプで閉じる。撮影の操作はカードの上に重なるシート
+//   左右のタップで前後のカード、下へのスワイプで閉じる
+//   撮影（2026-11-26 案B「カメラ」）：カードを画面の上につめ、下に暗いすける操作を置く。下から「えらぶ列（絵つき）／ポーズ・表情・光・着替え／位置を戻す・残す（丸いボタン）・保存」
+//     左上の × でやめる（変えていたら確かめてから元に戻す）。カードを1回たたくと、操作をかくす・出す
 //   preview は デバッグの「試し見」（記録ではない仮のカード）
 export function openViewer({ cardId, preview, onClose, posing = false }) {
   const first = preview ? { ...preview, at: new Date().toISOString(), n: 0 } : cardById(cardId);
@@ -132,7 +137,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   const list = preview ? [first] : cardsOf(p0.id).slice().reverse();   // 古い順
   let idx = Math.max(0, list.findIndex(c => c.id === first.id)), card = first, p = p0, el = null, ph = null, lk = {}, lh = '', lo = '';
   const root = document.createElement('div'); root.className = 'viewer story'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
-  root.innerHTML = `<div class="frame">
+  root.innerHTML = `<div class="bgblur"></div><div class="frame">
       <div class="stage"></div>
       <button class="tap prev" aria-label="前のカード"></button><button class="tap next" aria-label="次のカード"></button>
       <div class="top"><div class="bars"></div><div class="who"><span class="nm"></span><span class="when"></span><button class="x" data-a="close" aria-label="とじる">×</button></div></div>
@@ -142,23 +147,48 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
         <button data-a="clean" aria-pressed="false"><i aria-hidden="true">Aa</i>文字</button>
         <button data-a="save"><i aria-hidden="true">↓</i>保存</button>
       </div>
-      <div class="sheet" hidden>
-        <div class="pane" data-pane="pose">
-        <p class="hint">指でなぞると動く（下へはみ出せます）。二本指で広げる・つまむと大きさ、ひねると角度が変わります</p>
-        <div class="seg" role="group" aria-label="キャラの明るさ"><span class="lab">明るさ</span><button data-light="bright">明るいまま</button><button data-light="blend">景色になじませる</button></div>
-        <div class="seg" role="group" aria-label="光の当て方"><span class="lab">光</span><button data-rim="0">無光</button><button data-rim="3">順光</button><button data-rim="1">半逆光</button><button data-rim="2">逆光</button></div>
-        <div class="seg" role="group" aria-label="光のにじみ"><span class="lab">グロー</span><button data-glow="0">なし</button><button data-glow="1">弱い</button><button data-glow="2">強い</button></div>
-        <div class="seg" role="group" aria-label="ポーズ"><span class="lab">ポーズ</span>${POSES.map(([i, n]) => `<button data-pose="${i}">${n}</button>`).join('')}</div>
-        <div class="seg faces" role="group" aria-label="表情"><span class="lab">表情</span></div>
-        </div>
-        <div class="seg"><button data-a="center">元に戻す</button>${preview ? '' : '<button class="primary" data-a="keep">この配置を残す</button>'}<button data-a="photo">とじる</button></div>
+      <div class="camf" hidden>
+        <i class="mk tl"></i><i class="mk tr"></i><i class="mk bl"></i><i class="mk br"></i>
+        <button class="cx" data-a="quit" aria-label="撮影をやめる">${icon('close', 20)}</button>
+        <p class="coach" role="status"><span>${matchMedia('(pointer:fine)').matches ? 'ドラッグで動かす ・ ホイールで大きさ' : '指で動かす ・ 2本指で大きさと角度'}</span></p>
       </div>
-    </div>`;
+    </div>
+    <div class="cam" hidden>
+      <div class="strip" role="group"></div>
+      <div class="modes" role="group" aria-label="えらぶもの">${MODES.map(([k, n]) => `<button data-mode="${k}" aria-pressed="false">${n}</button>`).join('')}<button data-a="dress">着替え</button></div>
+      <div class="cbar">
+        <button class="sb" data-a="center"><i aria-hidden="true">${icon('undo', 21)}</i>位置を戻す</button>
+        <button class="shut" data-a="keep" aria-label="${preview ? '撮影をおわる（試し見なので、カードには残りません）' : 'この配置をカードに残す'}"><span>${preview ? 'OK' : '残す'}</span></button>
+        <button class="sb" data-a="save"><i aria-hidden="true">${icon('down', 21)}</i>保存</button>
+      </div>
+    </div>
+    <div class="cflash"></div>`;
   document.body.append(root);
-  const stage = root.querySelector('.stage'), sheet = root.querySelector('.sheet');
-  loadParts().then(P => { sheet.querySelector('.faces').insertAdjacentHTML('beforeend', faceList(P).map(q => `<button data-face="${q.id}" aria-pressed="${q.id === (ph?.face || '')}">${q.name}</button>`).join('')); }).catch(() => {});   // 表情（その撮影だけ）
-  loadParts().then(P => { sheet.querySelector('.hairs').insertAdjacentHTML('beforeend', hairList(P).map(h => `<button data-hair="${h.id}" aria-pressed="${h.id === lh}">${h.name}</button>`).join(''));
-    sheet.querySelector('.wears').insertAdjacentHTML('beforeend', outfitList(P).map(u => `<button data-wear="${u.id}" aria-pressed="${u.id === lo}">${u.name}</button>`).join('')); }).catch(() => {});
+  const stage = root.querySelector('.stage'), cam = root.querySelector('.cam'), camf = root.querySelector('.camf'), strip = cam.querySelector('.strip');
+  let mode = 'pose', snap0 = '', env = null, coachT = 0;
+  const look = () => ({ colors: { ...lk }, hair: lh, outfit: lo });
+  // 下の列：ポーズと表情は、いまの見た目のままの小さな絵。光は記号（光・グロー・明るさを1列に並べる）
+  const opt = (attr, v, name, inner, cls = '') => `<button class="opt ${cls}" data-${attr}="${v}" aria-pressed="false"><i aria-hidden="true">${inner}</i>${name}</button>`;
+  const orbs = (attr, list) => list.map(([v, n, c]) => opt(attr, v, n, `<b class="orb ${c}"></b>`)).join('');
+  function fillStrip() {
+    strip.setAttribute('aria-label', MODES.find(m => m[0] === mode)[1]);
+    cam.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    strip.innerHTML = mode === 'pose' ? POSES.map(([i, n]) => opt('pose', i, n, '<canvas></canvas>', 'pose')).join('')
+      : mode === 'face' ? (env ? faceList(env.P).map(q => opt('face', q.id, q.name, '<canvas></canvas>', 'face')).join('') : '')
+      : `<span class="gl">光</span>${orbs('rim', [[0, '無光', 'r0'], [3, '順光', 'r3'], [1, '半逆光', 'r1'], [2, '逆光', 'r2']])}<span class="gl">グロー</span>${orbs('glow', [[0, 'なし', 'g0'], [1, '弱い', 'g1'], [2, '強い', 'g2']])}<span class="gl">明るさ</span>${orbs('light', [['bright', '明るいまま', 'lb'], ['blend', 'なじませる', 'ln']])}`;
+    strip.scrollLeft = 0; paint(); marks();
+  }
+  function paint() {   // 小さな絵を描き直す（列を作ったとき、お着替えで見た目が変わったとき）
+    if (!env) return; const L = look();
+    strip.querySelectorAll('.opt.pose').forEach((b, i) => drawPose(b.querySelector('canvas'), env, L, ph.face || '', i));
+    strip.querySelectorAll('.opt.face').forEach(b => drawFace(b.querySelector('canvas'), env, L, b.dataset.face));
+  }
+  const marks = () => {   // えらんでいるものに印
+    const on = (sel, f) => strip.querySelectorAll(sel).forEach(b => b.setAttribute('aria-pressed', String(f(b.dataset))));
+    on('[data-pose]', d => +d.pose === ph.pose); on('[data-face]', d => d.face === (ph.face || '')); on('[data-light]', d => d.light === ph.light);
+    on('[data-rim]', d => +d.rim === (ph.rim | 0)); on('[data-glow]', d => +d.glow === (ph.glow | 0));
+  };
+  loadThumbData().then(v => { env = v; if (!cam.hidden) fillStrip(); }).catch(() => {});
   const btn = a => root.querySelector(`.side [data-a="${a}"]`);
 
   function load(i) {
@@ -178,20 +208,15 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     if (!preview && location.hash !== `#/card/${card.id}`) history.replaceState(null, '', `#/card/${card.id}`);
     setPosing(false);
   }
-  const sync = () => {
-    engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh, outfit: lo } });
-    sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; });
-    sheet.querySelectorAll('[data-hair]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.hair === lh)));
-    sheet.querySelectorAll('[data-wear]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.wear === lo)));
-    sheet.querySelectorAll('[data-light]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.light === ph.light)));
-    sheet.querySelectorAll('[data-rim]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.rim === (ph.rim | 0))));
-    sheet.querySelectorAll('[data-glow]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.glow === (ph.glow | 0))));
-    sheet.querySelectorAll('[data-pose]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.pose === ph.pose)));
-    sheet.querySelectorAll('[data-face]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.face === (ph.face || ''))));
-  };
+  const sync = () => { engine.setState({ ...card, photo: { ...ph }, look: look() }); marks(); };
+  const dirty = () => JSON.stringify([ph, lk, lh, lo]) !== snap0;
   function setPosing(on) {
-    sheet.hidden = !on; root.classList.toggle('posing', on); btn('photo').setAttribute('aria-pressed', String(on));
-    el?.classList.toggle('posing', on); if (on) sync();
+    cam.hidden = camf.hidden = !on; root.classList.toggle('posing', on); root.classList.remove('camhide'); btn('photo').setAttribute('aria-pressed', String(on));
+    el?.classList.toggle('posing', on); clearTimeout(coachT);
+    if (!on) return;
+    snap0 = JSON.stringify([ph, lk, lh, lo]); fillStrip(); sync();   // snap0：入ったときの配置（× でやめたら、ここへ戻す）
+    const c = camf.querySelector('.coach'); c.hidden = false; coachT = setTimeout(() => { c.hidden = true; }, 4200);   // 動かし方は、入ったときに数秒だけ出す
+    snapshot(p.scene, { ...card, photo: { x: 9 } }).then(u => { root.querySelector('.bgblur').style.backgroundImage = `url("${u}")`; }).catch(() => {});   // カードの外は、景色をぼかした色でうめる
   }
 
   // 指の操作：撮影中は、一本指でキャラを動かし、二本指で大きさを変える。それ以外は、下へのスワイプで閉じる
@@ -207,21 +232,19 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
     if (pinch && pts.size === 2) {   // 二本指：広げる・つまむで大きさ、ひねると角度（画面で右回りにひねると、キャラも右回り）
       ph.s = Math.max(.4, Math.min(6, pinch.s * pdist() / pinch.d)); ph.r = pinch.r - (pang() - pinch.a);
-      engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh, outfit: lo } });
-    sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; }); return;
+      engine.setState({ ...card, photo: { ...ph }, look: look() }); return;
     }
     if (!drag) return; const r = stage.getBoundingClientRect(), dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
     if (root.classList.contains('posing')) {
       ph.x = Math.max(-.75, Math.min(.75, drag.px + dx / r.width));   // 左右も少しカードの外へはみ出せる
       ph.y = Math.max(-1.5, Math.min(.5, drag.py - dy / r.height));   // 指の動きどおり。下はカードの外まで
-      engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh, outfit: lo } });
-    sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; });
+      engine.setState({ ...card, photo: { ...ph }, look: look() });
     } else if (dy > 0) root.style.setProperty('--pull', `${Math.min(dy, 200)}px`);
   });
   const endDrag = e => {
     pts.delete(e.pointerId); if (pts.size < 2) pinch = null;
     if (!drag) return; const dy = e.clientY - drag.y, r = stage.getBoundingClientRect(), moved = drag.moved; drag = null; root.style.removeProperty('--pull');
-    if (root.classList.contains('posing')) return;
+    if (root.classList.contains('posing')) { if (moved < 8 && !pts.size) root.classList.toggle('camhide'); return; }   // 撮影中：動かさずにたたいたら、操作をかくす・出す
     if (dy > 90) { close(); onClose(); return; }
     if (moved < 10) { const x = (e.clientX - r.left) / r.width; if (x < .3 && idx > 0) load(idx - 1); else if (x > .7 && idx < list.length - 1) load(idx + 1); }
   };
@@ -229,8 +252,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   // パソコンでは、ホイールで大きさ、Shift＋ホイールで角度を変える
   stage.addEventListener('wheel', e => { if (!root.classList.contains('posing')) return; e.preventDefault();
     if (e.shiftKey) ph.r += (e.deltaY < 0 ? 1 : -1) * .06; else ph.s = Math.max(.4, Math.min(6, ph.s * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
-    engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh, outfit: lo } });
-    sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; }); }, { passive: false });
+    engine.setState({ ...card, photo: { ...ph }, look: look() }); }, { passive: false });
 
   async function saveImage() {
     const src = engine.canvas, k = Math.max(1, Math.round(4 / RS)), c = document.createElement('canvas'); c.width = src.width * k; c.height = src.height * k;
@@ -240,35 +262,40 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: p.name }); return; } catch (e) { if (e.name === 'AbortError') return; } }
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
-  const onKey = e => { if (e.key === 'Escape') { close(); onClose(); } else if (e.key === 'ArrowLeft' && idx > 0) load(idx - 1); else if (e.key === 'ArrowRight' && idx < list.length - 1) load(idx + 1); };
-  const close = () => { document.removeEventListener('keydown', onKey); engine.stop(); root.remove(); };
+  // キー：お着替えの画面が出ている間は何もしない。撮影中の Esc は撮影をやめるだけ、左右のキーは使わない
+  const onKey = e => { if (document.querySelector('.dressup')) return; const posingNow = root.classList.contains('posing');
+    if (e.key === 'Escape') { if (posingNow) quit(); else { close(); onClose(); } } else if (posingNow) return;
+    else if (e.key === 'ArrowLeft' && idx > 0) load(idx - 1); else if (e.key === 'ArrowRight' && idx < list.length - 1) load(idx + 1); };
+  const close = () => { document.removeEventListener('keydown', onKey); clearTimeout(coachT); engine.stop(); root.remove(); };
+  // 撮影をやめる：変えていたら確かめてから、入ったときの配置に戻す
+  function quit() { if (dirty()) { if (!confirm('この配置をやめて、とじますか？')) return; [ph, lk, lh, lo] = JSON.parse(snap0); sync(); } setPosing(false); }
   root.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.classList.contains('tap')) { if (b.classList.contains('prev') && idx > 0) load(idx - 1); else if (b.classList.contains('next') && idx < list.length - 1) load(idx + 1); return; }
     const a = b.dataset.a;
     if (a === 'close') { close(); onClose(); }
     else if (a === 'clean') b.setAttribute('aria-pressed', String(el.classList.toggle('clean')));
-    else if (a === 'photo') setPosing(sheet.hidden);
+    else if (a === 'photo') setPosing(cam.hidden);
+    else if (a === 'quit') quit();
     else if (a === 'save') saveImage();
-    else if (a === 'dress') {   // この撮影だけのお着替え。決定で、このカードに残す（試し見は残さない）
-      const before = { colors: { ...lk }, hair: lh, outfit: lo }, apply = L => { lk = { ...L.colors }; lh = L.hair || ''; lo = L.outfit || ''; sync(); };
-      openDress({ look: before, home: defaultLook(), title: 'お着替え', note: preview ? '試し見なので、残りません' : 'この撮影だけ。ホームのお着替えは変わりません',
-        onChange: apply, onSave: L => { apply(L); if (!preview) { const look = { colors: { ...lk }, hair: lh, outfit: lo }; setPhoto(card.id, card.photo ?? null, look); card.look = look; clearSnaps(); toast('このカードのお着替えを残しました'); } } });
+    else if (a === 'dress') {   // この撮影だけのお着替え。カードの画面からひらいたときは、決定でこのカードに残す。撮影の中からひらいたときは、「残す」を押すまで残さない（試し見は残さない）
+      const inCam = root.classList.contains('posing'), before = look(), apply = L => { lk = { ...L.colors }; lh = L.hair || ''; lo = L.outfit || ''; sync(); if (inCam) paint(); };
+      openDress({ look: before, home: defaultLook(), title: 'お着替え', note: preview ? '試し見なので、残りません' : inCam ? '「残す」を押すと、このカードに残ります' : 'この撮影だけ。ホームのお着替えは変わりません',
+        onChange: apply, onSave: L => { apply(L); if (!preview && !inCam) { const k = look(); setPhoto(card.id, card.photo ?? null, k); card.look = k; clearSnaps(); toast('このカードのお着替えを残しました'); } } });
     }
+    else if (b.dataset.mode) { mode = b.dataset.mode; fillStrip(); }
     else if (b.dataset.light) { ph.light = b.dataset.light; sync(); }
-    else if (b.dataset.tab) { sheet.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); sheet.querySelectorAll('.pane').forEach(x => { x.hidden = x.dataset.pane !== b.dataset.tab; }); }
-    else if (b.dataset.c) { lk[b.closest('.dress').dataset.k] = b.dataset.c; sync(); }
-    else if (a === 'homelook') { lk = { ...charaColors() }; lh = charaHair(); lo = charaOutfit(); sync(); }
-    else if (b.dataset.wear !== undefined) { lo = b.dataset.wear; sync(); }
-    else if (b.dataset.hair !== undefined) { lh = b.dataset.hair; sync(); }
     else if (b.dataset.rim) { ph.rim = +b.dataset.rim; sync(); }
     else if (b.dataset.glow) { ph.glow = +b.dataset.glow; sync(); }
     else if (b.dataset.pose) { ph.pose = +b.dataset.pose; sync(); }
     else if (b.dataset.face !== undefined) { ph.face = b.dataset.face; sync(); }
     else if (a === 'center') { ph.x = 0; ph.y = 0; ph.s = 1; ph.r = 0; sync(); }
-    else if (a === 'keep') { setPhoto(card.id, { ...ph }, { colors: { ...lk }, hair: lh, outfit: lo }); card.photo = { ...ph }; card.look = { colors: { ...lk }, hair: lh, outfit: lo }; clearSnaps(); toast('この配置をカードに残しました'); setPosing(false); }
+    else if (a === 'keep') {   // まん中の丸いボタン：この配置（とお着替え）をカードに残して、撮影をおわる
+      if (preview) toast('試し見なので、カードには残りません');
+      else { const k = look(); setPhoto(card.id, { ...ph }, k); card.photo = { ...ph }; card.look = k; clearSnaps(); toast('この配置をカードに残しました'); }
+      const f = root.querySelector('.cflash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); setPosing(false);
+    }
   });
-  sheet.addEventListener('input', e => { const row = e.target.closest('.dress'); if (row && e.target.type === 'color') { lk[row.dataset.k] = e.target.value; sync(); } });
   document.addEventListener('keydown', onKey);
   load(idx);
   if (posing) setPosing(true);
