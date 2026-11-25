@@ -47,6 +47,15 @@ export const saveBook = (m = mode()) => save(m);
 const dayKey = d => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 export const cardsOf = (placeId, m = mode()) => books[m].cards.filter(c => c.placeId === placeId).sort((a, z) => z.n - a.n);
 export const cardById = (id, m = mode()) => books[m].cards.find(c => c.id === id);
+// お気に入り：名所ごとに1枚だけ（card.fav）。その名所の「いちばん上」に出すカード（図鑑・名所のページ・一覧の絵）。なければ、いちばん新しいカード
+//   shown：お気に入りを先頭にした並び（のこりは新しい順）。cover：いちばん上に出す1枚
+export const shown = (placeId, m = mode()) => { const cs = cardsOf(placeId, m), f = cs.find(c => c.fav); return f ? [f, ...cs.filter(c => c !== f)] : cs; };
+export const cover = (placeId, m = mode()) => shown(placeId, m)[0] || null;
+export function setFav(cardId, on, m = mode()) {
+  const c = books[m].cards.find(x => x.id === cardId); if (!c) return false;
+  for (const x of books[m].cards) if (x.placeId === c.placeId) delete x.fav;
+  if (on) c.fav = true; save(m); return true;
+}
 export const visited = (placeId, m = mode()) => books[m].cards.some(c => c.placeId === placeId);
 
 // 到着を記録して、新しいカードを1枚つくる。v：時間帯・天気・季節・位置

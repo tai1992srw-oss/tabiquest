@@ -39,7 +39,7 @@ export function renderTimeline(view) {
     li.innerHTML = `<div class="tl-date"><b>${d.getDate()}</b><span class="${d.getDay() === 0 ? 'sun' : d.getDay() === 6 ? 'sat' : ''}">${WD[d.getDay()]}</span></div>
       <div class="tl-body"><p class="tl-head">${n > 1 ? `この日 ${n} か所` : '1 か所'}${g ? `<span class="gap">${g}</span>` : ''}</p></div>`;
     const body = li.querySelector('.tl-body');
-    for (const c of cs.slice().reverse()) {   // 1日の中は、朝から順に
+    for (const c of cs) {   // 1日の中も、新しい到着が上（2026-11-26 くりた「時間も最新が上がいい」）
       const p = placeById(c.placeId); if (!p) continue;
       const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.className = 'tl-card'; a.setAttribute('aria-label', `${p.name}のカードを開く`);
       a.innerHTML = `<div class="art"></div><div class="t"><span class="tm">${fmtTime(c.at)}</span><b>${esc(p.name)}</b><small>${LABEL.time[c.time] || ''}・${LABEL.weather[c.weather] || ''} ・ ${esc(prefCity(p))}</small></div>`;

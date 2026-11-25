@@ -49,9 +49,9 @@ h2{margin:0;font:900 16px var(--sans);color:var(--ink)}
 .card.clean .hud{opacity:0}
 .hud.top{top:0;height:100%;font-family:var(--sans);color:#FFFDF8}
 .hud.top.t-bright::before{content:'';position:absolute;left:0;right:0;top:0;height:82cqw;background:linear-gradient(rgba(20,19,41,.34),rgba(20,19,41,0))}
-.cap{position:absolute;left:5.6cqw;right:5.6cqw;top:4cqw;display:flex;align-items:center;gap:2.6cqw;font:700 2.8cqw/1.4 var(--sans);letter-spacing:.5cqw;opacity:.9}
-.cap i{flex:1;height:1px;background:rgba(255,253,248,.4)}
-.cap .no{font:400 3.1cqw/1.4 var(--dot);letter-spacing:0}
+.hud .cap{position:absolute;left:5.6cqw;right:5.6cqw;top:4cqw;display:flex;align-items:center;gap:2.6cqw;font:700 2.8cqw/1.4 var(--sans);letter-spacing:.5cqw;opacity:.9}
+.hud .cap i{flex:1;height:1px;background:rgba(255,253,248,.4)}
+.hud .cap .no{font:400 3.1cqw/1.4 var(--dot);letter-spacing:0}
 .kari{font:900 2.8cqw/1.5 var(--sans);letter-spacing:0;background:#E2667A;color:#2B2A4C;padding:0 2cqw;border-radius:99px;text-shadow:none}
 .ttl{position:absolute;left:0;right:0;top:calc(var(--ty,9.5cqw) + 16cqw);margin:0;font:900 var(--ts,21.5cqw)/1 var(--sans);letter-spacing:-.025em}
 .ttl .ln{display:block;white-space:nowrap}
@@ -261,6 +261,8 @@ dl.rec dd{margin:0}
 .viewer.story .side button{display:flex;flex-direction:column;align-items:center;gap:3px;width:56px;min-height:auto;padding:7px 4px;background:rgba(10,12,30,.5);border:none;border-radius:14px;font:400 11px var(--dot);color:#fff;backdrop-filter:blur(4px)}
 .viewer.story .side i{font-style:normal;font-size:20px;line-height:1}
 .viewer.story .side button[aria-pressed="true"]{background:var(--gold);color:#221a00}
+.viewer.story .side button.fav{font-size:10px;letter-spacing:-1px}
+.viewer.story .side button.fav i{letter-spacing:0}
 .viewer.story.posing .card .hud{opacity:0}
 /* 撮影（2026-11-26 案B「カメラ」）：カードを画面の上につめ、あいた下の所に、暗いすける操作を置く。カードの外は景色をぼかした色
    --bar：カードの上下のあまり（たて長の画面だけ）。撮影中はカードをそのぶん上げるので、下に 2×--bar あく */
@@ -437,9 +439,13 @@ h3.range.can{color:var(--teal)}
 .pola .tape{position:absolute;left:50%;top:-8px;width:44px;height:14px;margin-left:-22px;background:var(--tape,rgba(255,182,206,.8));transform:rotate(calc(var(--rot,0deg) * -1.4));z-index:2}
 .pola .pic{position:relative;aspect-ratio:3/4;overflow:hidden;background:var(--paper2)}
 .pola .pic img.snap{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 70%;image-rendering:pixelated;display:block}
-.pola .cap{display:block;font:700 11px/1.3 var(--sans);text-align:center;padding:5px 2px 7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pola.sm .cap{white-space:normal;font-size:10px;color:var(--sub)}
+/* 下の文字：名前は2行まで出す（長い名前が「…」で切れないように）。どのポラロイドも同じ高さにそろえる */
+.pola .cap{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font:700 11px/1.3 var(--sans);text-align:center;margin:5px 2px 7px;height:2.6em;overflow:hidden;text-wrap:balance;line-break:strict}
+.pola.sm .cap{font-size:10px;color:var(--sub)}
 .pola .cnt{top:10px;right:10px}
+/* お気に入りの印（その名所でいちばん上に出すカード）：絵の左上に小さな星 */
+.pola .favm{position:absolute;left:10px;top:10px;z-index:3;width:22px;height:22px;border-radius:50%;background:var(--ink);color:var(--gold);font-size:13px;line-height:22px;text-align:center;pointer-events:none}
+.pola.sm .favm{left:8px;top:8px;width:20px;height:20px;font-size:12px;line-height:20px}
 .yetslot{aspect-ratio:3/4.4;border:2px dashed #D3CCE8;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#9C98BF;font-family:var(--dot)}
 .yetslot .q{font-size:22px;line-height:1}
 .yetslot .no{font-size:11px}

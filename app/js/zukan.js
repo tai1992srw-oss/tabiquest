@@ -3,7 +3,7 @@ import { PLACES, placeById, LABEL, TIMES, WEATHERS, PLAIN_BG } from './places.js
 // キャラのポーズ（コマの順。assets の data.json の charaPoses と同じ）
 //   体は1つで、腕を差し替える（2026-11-26）。番号は前の13ポーズのまま。なくなったポーズ（ジャンプ・撮る・ながめる・歩く・ハート・地図・自撮り）のカードは、立ちで出る
 const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さし'], [4, '手をふる'], [7, '持つ']];
-import { book, cardsOf, cardById, setPhoto, defaultLook } from './store.js';
+import { book, cardsOf, cardById, setPhoto, defaultLook, shown, setFav } from './store.js';
 import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS } from './card.js';
 import { charaColors } from './characolor.js';
@@ -74,7 +74,8 @@ export function renderZukan(view) {
     }
     const a = document.createElement('a'); a.href = `#/place/${p.id}`; a.className = 'pola'; a.style.setProperty('--rot', ROT[i % ROT.length] + 'deg'); a.style.setProperty('--tape', TAPE[i % TAPE.length]);
     a.setAttribute('aria-label', `${p.name}のアルバムを開く（${cs.length}まい）`);
-    a.append(art(p, cs[0]));
+    const top = cs.find(c => c.fav) || cs[0];   // お気に入りのカードがあればそれ、なければいちばん新しいカード
+    a.append(art(p, top)); if (top.fav) a.insertAdjacentHTML('beforeend', '<span class="favm" aria-hidden="true">★</span>');
     a.insertAdjacentHTML('afterbegin', '<span class="tape" aria-hidden="true"></span>');
     a.insertAdjacentHTML('beforeend', `${cs.length > 1 ? `<span class="cnt">×${cs.length}</span>` : ''}<span class="cap">${esc(p.name)}</span>`);
     grid.append(a);
@@ -85,7 +86,8 @@ export function renderZukan(view) {
 const WICON = { clear: 'sun', cloudy: 'cloud', rain: 'rain', snow: 'snow' };
 export function renderPlace(view, id) {
   const p = placeById(id); if (!p) { location.hash = '#/zukan'; return; }
-  const cs = cardsOf(p.id), have = new Set(cs.map(c => c.time + '|' + c.weather)), times = TIMES.filter(t => p.times.includes(t));
+  const all = cardsOf(p.id), cs = shown(p.id), have = new Set(cs.map(c => c.time + '|' + c.weather)),   // cs：お気に入りを先頭にした並び（上の大きな絵は cs[0]）。all：新しい順
+        times = TIMES.filter(t => p.times.includes(t));
   const total = times.length * WEATHERS.length, n = times.reduce((s, t) => s + WEATHERS.filter(w => have.has(t + '|' + w)).length, 0);
   const stamps = `<div class="stamps" style="--cols:${times.length}" role="table" aria-label="集めた時間帯と天気">
     <span role="columnheader"></span>${times.map(t => `<span class="th" role="columnheader">${LABEL.time[t]}</span>`).join('')}
@@ -96,7 +98,7 @@ export function renderPlace(view, id) {
   view.innerHTML = `<div class="pview">
     <div class="pv-hero${cs.length ? '' : ' yet'}">
       <a class="pv-back" href="#/zukan" aria-label="図鑑にもどる">${icon('back', 20)}</a>
-      ${cs.length ? `<span class="pv-when">${LABEL.time[cs[0].time] || ''}・${LABEL.weather[cs[0].weather] || ''}　${fmtDate(cs[0].at, '/').slice(5)}</span>
+      ${cs.length ? `<span class="pv-when">${cs[0].fav ? '★ ' : ''}${LABEL.time[cs[0].time] || ''}・${LABEL.weather[cs[0].weather] || ''}　${fmtDate(cs[0].at, '/').slice(5)}</span>
         <a class="pv-big" href="#/card/${cs[0].id}">${icon('expand', 16)}大きく見る</a>` : '<span class="pv-when">まだ到着していません</span>'}
     </div>
     <section class="pv-sheet">
@@ -104,7 +106,7 @@ export function renderPlace(view, id) {
         <div class="pv-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}</div></div>
         ${cs.length ? `<a class="pv-stack" href="#/card/${cs[0].id}" aria-label="集めたカード ${cs.length}まい"><span class="n">${cs.length}まい</span></a>` : ''}</div>
       ${p.blurb ? `<p class="note blurb">${esc(p.blurb)}</p>` : ''}
-      ${cs.length ? `<div class="lhead"><h2>集めたカード</h2><span class="prog">はじめての到着 ${fmtDate(cs.at(-1).at)}</span></div><div class="shelf three"></div>` : ''}
+      ${cs.length ? `<div class="lhead"><h2>集めたカード</h2><span class="prog">はじめての到着 ${fmtDate(all.at(-1).at)}</span></div><div class="shelf three"></div>` : ''}
       <div class="lhead"><h2>時間と天気のスタンプ</h2><span class="prog"><b>${n}</b> / ${total}</span></div>
       ${stamps}
       <p class="note tip">ちがう時間帯や天気の日に来ると、ちがうカードが手に入ります。</p>
@@ -119,8 +121,8 @@ export function renderPlace(view, id) {
   if (stack) cs.slice(0, 3).reverse().forEach((c, i, arr) => snapshot(p.scene, c).then(u => { const im = img(u, ''); im.style.setProperty('--i', arr.length - 1 - i); stack.prepend(im); }));
   const grid = view.querySelector('.shelf');
   cs.forEach((c, i) => {
-    const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.className = 'pola sm'; a.style.setProperty('--rot', ROT[i % ROT.length] * .6 + 'deg'); a.setAttribute('aria-label', `${cardNo(p, c)} を開く`);
-    a.append(art(p, c)); a.insertAdjacentHTML('beforeend', `<span class="cap">${LABEL.time[c.time] || ''}・${LABEL.weather[c.weather] || ''}<br>${fmtDate(c.at, '/').slice(5)}</span>`); grid.append(a);
+    const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.className = 'pola sm'; a.style.setProperty('--rot', ROT[i % ROT.length] * .6 + 'deg'); a.setAttribute('aria-label', `${cardNo(p, c)}${c.fav ? '（お気に入り）' : ''} を開く`);
+    a.append(art(p, c)); a.insertAdjacentHTML('beforeend', `${c.fav ? '<span class="favm" aria-hidden="true">★</span>' : ''}<span class="cap">${LABEL.time[c.time] || ''}・${LABEL.weather[c.weather] || ''}<br>${fmtDate(c.at, '/').slice(5)}</span>`); grid.append(a);
   });
 }
 
@@ -144,6 +146,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
       <div class="side">
         <button data-a="photo" aria-pressed="false"><i aria-hidden="true">◎</i>撮影</button>
         <button data-a="dress"><i aria-hidden="true">♥</i>着替え</button>
+        ${preview ? '' : '<button class="fav" data-a="fav" aria-pressed="false"><i aria-hidden="true">★</i>お気に入り</button>'}
         <button data-a="clean" aria-pressed="false"><i aria-hidden="true">Aa</i>文字</button>
         <button data-a="save"><i aria-hidden="true">↓</i>保存</button>
       </div>
@@ -199,6 +202,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     lk = { ...(card.look?.colors || charaColors()) };   // この撮影のお着替え（色）。残すまではカードに書かない
     stage.innerHTML = ''; el = cardEl(p, card); stage.append(el);
     if (btn('clean').getAttribute('aria-pressed') === 'true') el.classList.add('clean');
+    btn('fav')?.setAttribute('aria-pressed', String(!!card.fav));
     root.setAttribute('aria-label', `${p.name}のカード`);
     root.querySelector('.bars').innerHTML = list.map((_, j) => `<i class="${j < idx ? 'seen' : j === idx ? 'now' : ''}"></i>`).join('');
     root.querySelector('.nm').textContent = p.name;
@@ -277,6 +281,10 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     else if (a === 'clean') b.setAttribute('aria-pressed', String(el.classList.toggle('clean')));
     else if (a === 'photo') setPosing(cam.hidden);
     else if (a === 'quit') quit();
+    else if (a === 'fav') {   // お気に入り：この名所で1枚だけ。図鑑・名所のページ・一覧で、いちばん上に出るカードになる
+      const on = !card.fav; setFav(card.id, on); b.setAttribute('aria-pressed', String(on));
+      toast(on ? 'お気に入りにしました。この名所のいちばん上に出ます' : 'お気に入りをはずしました');
+    }
     else if (a === 'save') saveImage();
     else if (a === 'dress') {   // この撮影だけのお着替え。カードの画面からひらいたときは、決定でこのカードに残す。撮影の中からひらいたときは、「残す」を押すまで残さない（試し見は残さない）
       const inCam = root.classList.contains('posing'), before = look(), apply = L => { lk = { ...L.colors }; lh = L.hair || ''; lo = L.outfit || ''; sync(); if (inCam) paint(); };

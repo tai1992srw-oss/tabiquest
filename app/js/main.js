@@ -91,7 +91,7 @@ const RANGES = [['can', 'いま到着できます'], [2000, '近く（2km以内�
 function placeArt(p, el, cs = cardsOf(p.id), noChara = false) {
   const off = st => noChara ? { ...st, photo: { ...(st.photo || {}), x: 9 } } : st;
   if (p.kind === 'plain' && !cs.length) el.prepend(img(PLAIN_BG, ''));
-  else if (cs.length) snapshot(p.scene, off(cs[0])).then(u => el.prepend(img(u, p.alt)));
+  else if (cs.length) snapshot(p.scene, off(cs.find(c => c.fav) || cs[0])).then(u => el.prepend(img(u, p.alt)));   // お気に入りのカードがあればそれ、なければいちばん新しいカード
   else if (p.kind === 'photo' && !noChara) el.prepend(img(p.photo.src, ''));
   else snapshot(p.scene, off({ time: renderTime(p, timeOfDay(new Date())), weather: 'clear' })).then(u => el.prepend(img(u, '')));
 }
