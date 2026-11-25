@@ -349,28 +349,34 @@ export function mountVoxelRoom(opts) {
   const C = new THREE.Vector3(NV / 2 - 10, 30, NV / 2 - 10);
   cam.position.set(C.x + 300, C.y + 245, C.z + 300); cam.lookAt(C);
 
-  // キャラ：ドット絵の板。床に影を落とす（いつもカメラのほうを向く）
+  // キャラ：ドット絵の板。床に影を落とす
+  //   板はカメラにまっすぐ向ける（立てたままだと、上から見下ろすぶん縦に縮んで、ずんぐり見えるため）。足もとを床につけたまま後ろへ倒す
   //   大きさと光は見比べて決めた（2026-11-25、くりた「3とC」）：背は 180cm（部屋の家具より少し大きめでキャラが主役に見える）、
   //   光は元の色を大事にして、時間帯とでんきの色だけ少し乗せる（部屋の光をそのまま受けると夜に暗く沈むため）
-  const CV = { h: 180, lit: 'soft' };
-  const CH = CV.h * CM; let chara = null, tex = null;
-  const me = { x: opts.me.i + .5, z: opts.me.j + .5, tx: null, tz: null, jump: 0, flip: false };
-  const rimmed = c => { const o = document.createElement('canvas'); o.width = c.width + 2; o.height = c.height + 2; const g = o.getContext('2d');
-    const m = document.createElement('canvas'); m.width = c.width; m.height = c.height; const mg = m.getContext('2d'); mg.drawImage(c, 0, 0); mg.globalCompositeOperation = 'source-in'; mg.fillStyle = '#FFF6FA'; mg.fillRect(0, 0, c.width, c.height);
-    for (const [dx, dy] of [[0, 1], [2, 1], [1, 0], [1, 2]]) g.drawImage(m, dx, dy); g.drawImage(c, 1, 1); return o; };
-  opts.chara.then(c0 => {
-    const c = CV.lit === 'rim' ? rimmed(c0) : c0;
-    tex = new THREE.CanvasTexture(c); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.wrapS = THREE.RepeatWrapping;
-    const H = CH * c.height / c0.height, mat = CV.lit === 'room' ? new THREE.MeshLambertMaterial({ map: tex, alphaTest: .5, side: THREE.DoubleSide }) : new THREE.MeshBasicMaterial({ map: tex, alphaTest: .5, side: THREE.DoubleSide });
-    chara = new THREE.Mesh(new THREE.PlaneGeometry(H * c.width / c.height, H).translate(0, H / 2 - (H - CH) / 2, 0), mat);
+  //   ポーズ：ふだんは「立ち」（ときどきまばたき・手をふる）、歩くと「歩く」、押すと喜ぶ（ハート・ばんざい・ピース・ジャンプのどれか）
+  const CH = 180 * CM; let chara = null, tex = null, cinfo = null;
+  const me = { x: opts.me.i + .5, z: opts.me.j + .5, tx: null, tz: null, jump: 0, flip: false, joy: null, joyT: 0, wave: 0, nextWave: 6000 };
+  const camQ = new THREE.Quaternion(); cam.getWorldQuaternion(camQ);
+  opts.chara.then(c => {
+    cinfo = c; const fr = c.frames || 1, cw = c.fw || c.width;
+    tex = new THREE.CanvasTexture(c); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.wrapS = THREE.RepeatWrapping; tex.repeat.x = 1 / fr;
+    chara = new THREE.Mesh(new THREE.PlaneGeometry(CH * cw / c.height, CH).translate(0, CH / 2, 0), new THREE.MeshBasicMaterial({ map: tex, alphaTest: .5, side: THREE.DoubleSide }));
     chara.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: .5 });
-    chara.castShadow = true; chara.rotation.y = Math.PI / 4; scene.add(chara);
+    chara.castShadow = true; chara.quaternion.copy(camQ); scene.add(chara);
   });
+  const poseNo = name => { const k = cinfo?.poses?.indexOf(name); return k >= 0 ? k : 0; };
+  const JOYS = ['両手でハート', 'ばんざい', 'ピース', 'ジャンプ'];
+  const blinkNow = t => { const f = Math.floor(t / 83), q = f % 52; return q < 2 || (f % 156 >= 104 && q >= 5 && q < 7); };   // カードと同じ、約4秒に1回
+  function setPose(name, t) {
+    if (!cinfo) return; const fr = cinfo.frames || 1; let i = poseNo(name);
+    if (cinfo.blink && !me.tx && blinkNow(t)) i += cinfo.blink;
+    i = Math.min(fr - 1, i); tex.repeat.x = (me.flip ? -1 : 1) / fr; tex.offset.x = (me.flip ? i + 1 : i) / fr;
+  }
   // 足もとのまるい影（いつも。夜で日ざしの影がなくても浮いて見えないように）
   const footTex = spriteTex((g, n) => { const r = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); r.addColorStop(0, 'rgba(90,40,60,.55)'); r.addColorStop(.6, 'rgba(90,40,60,.3)'); r.addColorStop(1, 'rgba(90,40,60,0)'); g.fillStyle = r; g.fillRect(0, 0, n, n); });
   const foot = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: footTex, transparent: true, depthWrite: false }));
-  foot.renderOrder = 3; foot.visible = CV.lit !== 'room'; scene.add(foot);
-  // soft・rim：元の色を大事にして、時間帯とでんきの色だけ少し乗せる
+  foot.renderOrder = 3; scene.add(foot);
+  // 元の色を大事にして、時間帯とでんきの色だけ少し乗せる
   const charaTint = (n, L) => { const day = [1, .98, .96], dark = [.66, .66, .86], lamp = [1, .9, .84], k = n * (L ? .5 : 1), t = L ? lamp : dark; return day.map((d, i) => d + (t[i] - d) * k); };
 
   // 大きさ：ステージの高さに合わせ、横は少し広く（横にスクロール）。描く1ドット＝画面の1.5px
@@ -412,7 +418,7 @@ export function mountVoxelRoom(opts) {
   cv.addEventListener('click', e => {
     const r = cv.getBoundingClientRect(); nd.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(nd, cam);
     // キャラを押したか：画面の上で、足もとから頭までの四角に入っているか
-    const onChara = () => { if (!chara) return false; const p0 = new THREE.Vector3(chara.position.x, chara.position.y, chara.position.z).project(cam), p1 = new THREE.Vector3(chara.position.x, chara.position.y + CH, chara.position.z).project(cam);
+    const onChara = () => { if (!chara) return false; const p0 = new THREE.Vector3(chara.position.x, chara.position.y, chara.position.z).project(cam), p1 = new THREE.Vector3(0, CH, 0).applyQuaternion(camQ).add(chara.position).project(cam);
       const hw = (CH * .2) / ((cam.right - cam.left) / 2); return Math.abs(nd.x - p0.x) < hw && nd.y > p0.y && nd.y < p1.y; };
     const fh = ray.intersectObjects([...furn.values()].map(e => e.mesh))[0], fo = fh?.object.userData.o, ff = fo && opts.furn(fo.id);
     if (edit) {   // 模様がえ：写真の枠 → 家具 → 床のマス
@@ -422,12 +428,12 @@ export function mountVoxelRoom(opts) {
       if (!ray.ray.intersectPlane(floor, hit)) return; const i = Math.floor(hit.x / V), j = Math.floor(hit.z / V);
       if (i >= 0 && j >= 0 && i < 10 && j < 10) opts.onTapTile?.(i, j); return;
     }
-    if (onChara()) { if (!me.jump) me.jump = 1; popHearts(me.x * V, CH * 1.05, me.z * V); return; }
+    if (onChara()) { me.joy = JOYS[Math.floor(Math.random() * JOYS.length)]; me.joyT = 1500; if (me.joy === 'ジャンプ' || me.joy === 'ばんざい') me.jump = 1; popHearts(me.x * V, CH * 1.05, me.z * V); return; }
     if (ff?.light) { light = !light; opts.onLight?.(light); return; }
     if (ff?.art === 'bear') { popHearts(fh.point.x, fh.point.y + 10, fh.point.z); return; }
     if (!ray.ray.intersectPlane(floor, hit)) return; const i = Math.floor(hit.x / V), j = Math.floor(hit.z / V);
     if (i < 0 || j < 0 || i >= 10 || j >= 10 || opts.blocked(i, j)) return;
-    me.tx = i + .5; me.tz = j + .5; opts.onMove(i, j);
+    me.tx = i + .5; me.tz = j + .5; me.joy = null; opts.onMove(i, j);
   });
 
   let raf = 0, last = performance.now();
@@ -436,11 +442,14 @@ export function mountVoxelRoom(opts) {
     if (me.tx != null) { const dx = me.tx - me.x, dz = me.tz - me.z, d = Math.hypot(dx, dz), sp = .0035 * dt; if (d <= sp) { me.x = me.tx; me.z = me.tz; me.tx = null; } else { me.x += dx / d * sp; me.z += dz / d * sp; if (Math.abs(dx - dz) > .01) me.flip = dx - dz < 0; } }
     if (me.jump > 0) me.jump = Math.max(0, me.jump - dt / 520);
     const bob = me.tx != null ? Math.abs(Math.sin(t / 90)) * 1.5 : Math.sin(t / 700) * .3, jy = me.jump > 0 ? Math.sin(me.jump * Math.PI) * 14 : 0;
-    if (chara) { chara.position.set(me.x * V, bob + jy, me.z * V); tex.repeat.x = me.flip ? -1 : 1; tex.offset.x = me.flip ? 1 : 0; }
+    if (me.joyT > 0) { me.joyT -= dt; if (me.joyT <= 0) me.joy = null; }
+    if (!me.tx && !me.joy) { me.nextWave -= dt; if (me.nextWave <= 0) { me.wave = 1400; me.nextWave = 9000 + Math.random() * 8000; } }
+    if (me.wave > 0) me.wave -= dt;
+    if (chara) { chara.position.set(me.x * V, bob + jy, me.z * V); setPose(me.tx != null ? '歩く' : me.joy || (me.wave > 0 ? '手をふる' : '立ち'), t); }
     // 明るさ：昼（1-n）と夜（n）、でんき（L）
     const n = opts.night(), day = 1 - n, L = light ? 1 : 0;
     foot.position.set(me.x * V, .5, me.z * V); foot.scale.setScalar(CH * .42 * (1 - jy / 40));
-    if (chara && (CV.lit === 'soft' || CV.lit === 'rim')) chara.material.color.setRGB(...charaTint(n, L));
+    if (chara) chara.material.color.setRGB(...charaTint(n, L));
     hemi.intensity = .28 + .42 * day + .3 * L * n; sun.intensity = .48 * day;
     hemi.color.setHex(n > .7 ? (L ? 0xffe6dc : 0x9aa0e8) : n > .2 ? 0xffd8d0 : 0xfff3f8); hemi.groundColor.setHex(n > .7 && !L ? 0x504878 : 0xffd9c4);
     roomLight.intensity = .35 * L * n; for (const e of furn.values()) if (e.p) { e.p.intensity = L * (.25 + .6 * n); e.gl.visible = fx.glow && !!L; e.gl.material.opacity = .22 + .18 * n; }

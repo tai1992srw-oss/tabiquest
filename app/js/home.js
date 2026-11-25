@@ -92,13 +92,15 @@ function homeScene(now) {
 const GREET = { morning: 'おはよう', day: 'こんにちは', evening: 'おつかれさま', night: 'こんばんは' };
 const WEEK = '日月火水木金土';
 
-// 分身キャラの立ち姿：カードと同じ絵（色番号の絵＋色の表）を、ふつうの色の絵にもどす
+// 分身キャラ：カードと同じ絵（色番号の絵＋色の表）を、ふつうの色の絵にもどす
 let charaImg = null;
 function loadChara() {
   return charaImg || (charaImg = (async () => {
     const base = 'assets/kamakura/', D = await (await fetch(base + 'data.json')).json();
     const im = new Image(); im.src = base + 'chara.png'; await im.decode();
-    const [w, h] = D.charaTex || D.chara, c = document.createElement('canvas'); c.width = w; c.height = h;
+    // ポーズのコマ（横に並んだ全部）をそのまま使う。fw＝1コマの幅、frames＝コマの数、blink＝まばたきのコマがいくつうしろか、poses＝ポーズの名前
+    const [fw, h] = D.charaTex || D.chara, w = im.width, c = document.createElement('canvas'); c.width = w; c.height = h;
+    Object.assign(c, { fw, frames: D.charaFrames || 1, blink: D.charaBlink || 0, poses: D.charaPoses || ['立ち'] });
     const x = c.getContext('2d'); x.drawImage(im, 0, 0, w, h, 0, 0, w, h);
     const d = x.getImageData(0, 0, w, h), pal = D.pal.chara.map((c, i) => recolorChara(c, i, D));   // 設定の「キャラの色」を反映
     for (let k = 0; k < d.data.length; k += 4) { if (d.data[k + 3] < 128) { d.data[k + 3] = 0; continue; } const p = pal[d.data[k]] || [255, 0, 255]; d.data[k] = p[0]; d.data[k + 1] = p[1]; d.data[k + 2] = p[2]; d.data[k + 3] = 255; }
