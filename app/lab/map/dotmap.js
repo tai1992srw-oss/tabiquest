@@ -1,11 +1,11 @@
 // 案A：ドットの地図
-// data/ の段（日本：8km・2km・1km、神奈川・東京のまわり：1km・250m・100m・50m のマス）を、拡大の度合いに合わせて切り替えて描く
-// 1マスが画面で最低 MIN_CELL px になる、いちばん細かい段を使う。色はパレットでぬる（行った市区町村・県は金色）。細かい段には線路と駅も入っている
+// data/ の段（日本：8km・2km・1km、神奈川・東京のまわり：1km・250m・100m・50m、名所のまわりだけ 20m のマス）を、拡大の度合いに合わせて切り替えて描く
+// 1マスが画面で最低 MIN_CELL px になる、いちばん細かい段を使う。色はパレットでぬる（行った市区町村・県は金色）。線路と高速道路は、ボタンで出す・消すを切り替えられる
 import { LAB_PLACES } from './places_lab.js';
 import { isVisited, toggleVisited, onVisitedChange, pinCanvas } from './common.js';
 
-const MIN_CELL = 4;          // css px
-const S_MIN = 0.12, S_MAX = 480; // css px / km
+const MIN_CELL = 3;          // css px
+const S_MIN = 0.12, S_MAX = 1200; // css px / km
 export const stats = { bytes: {}, loadMs: {}, paintMs: {}, firstDrawMs: 0, draws: [], gaps: [] };
 
 const hex = h => { const n = parseInt(h.slice(1), 16); return 0xff000000 | ((n & 255) << 16) | (n & 0xff00) | (n >> 16); }; // ABGR
@@ -16,14 +16,15 @@ const P = {
   muni: hex('#38564F'), muniV: hex('#9A6A3A'),
   pref: hex('#B9C99A'), prefV: hex('#FFF0C0'),
   coast: hex('#A9C2B2'), coastV: hex('#FFE6A6'),
-  rail: hex('#1B1628'), station: hex('#F2EEFF'),
+  rail: hex('#1B1628'), hw: hex('#F07850'),
 };
-export const PALETTE = ['#10183E', '#131C46', '#48685C', '#4E705F', '#44645A', '#D2A458', '#DBAE62', '#38564F', '#9A6A3A', '#B9C99A', '#FFF0C0', '#A9C2B2', '#FFE6A6', '#1B1628', '#F2EEFF'];
+export const PALETTE = ['#10183E', '#131C46', '#48685C', '#4E705F', '#44645A', '#D2A458', '#DBAE62', '#38564F', '#9A6A3A', '#B9C99A', '#FFF0C0', '#A9C2B2', '#FFE6A6', '#1B1628', '#F07850'];
 
 let meta, lv = {}, el, cv, ctx, dpr = 1, Wc = 0, Hc = 0;
 let cx = 1500, cy = 1200, s = 0.17;  // 画面の真ん中（km）と拡大率（css px / km）
 let dirty = true, pinRects = [], interacting = false, lastDraw = 0, sel = null;
 const vPrefs = new Set(), vMunis = new Set();
+export const layers = { rail: true, hw: true };
 
 const proj = (lng, lat) => [(lng - meta.proj.lon0) * meta.proj.kx, (meta.proj.lat0 - lat) * meta.proj.ky];
 
@@ -64,15 +65,15 @@ function updateVisited() {
 }
 
 function paint(v) {
-  const set = v.L.kind === 'pref' ? vPrefs : vMunis, key = [...set].sort().join(',');
+  const set = v.L.kind === 'pref' ? vPrefs : vMunis, key = [...set].sort().join(',') + '|' + layers.rail + layers.hw;
   if (v.key === key) return;
   const t0 = performance.now(), { W, H } = v.L, r = v.raw;
   const img = v.ctx.createImageData(W, H), o = new Uint32Array(img.data.buffer);
   for (let y = 0, i = 0; y < H; y++) for (let x = 0; x < W; x++, i++) {
-    const j = i << 2, id = (r[j] << 8) | r[j + 1], f = r[j + 2];
+    const j = i << 2, id = (r[j] << 8) | r[j + 1], b = r[j + 2], f = b & 3;
     let c;
-    if (f === 4) c = P.rail;                                    // 線路・駅（細かい段だけ）
-    else if (f === 5) c = P.station;
+    if (b & 8 && layers.hw) c = P.hw;                          // 高速道路
+    else if (b & 4 && layers.rail) c = P.rail;                 // 線路（250m より細かい段だけ）
     else if (!id) c = ((x >> 1) + (y >> 1)) & 1 ? P.seaB : P.seaA;   // 海：2マスごとの市松で、ドットの手ざわり
     else {
       const vv = set.has(id);
@@ -90,11 +91,10 @@ function pickLevels() {
   const vis = id => lv[id] && lv[id].L.cell * s >= MIN_CELL;
   const jp = ['jp1', 'jp2', 'jp8'].find(vis) || (lv.jp8 ? 'jp8' : null);
   const hw = Wc / 2 / s, hh = Hc / 2 / s;
-  const kt = ['kt50', 'kt100', 'kt250', 'kt1000'].find(id => {
-    if (!vis(id)) return false; const L = lv[id].L;
-    return cx + hw > L.x0 && cx - hw < L.x0 + L.W * L.cell && cy + hh > L.y0 && cy - hh < L.y0 + L.H * L.cell;
-  });
-  return [jp, kt].filter(Boolean);
+  const inView = id => { const L = lv[id].L; return cx + hw > L.x0 && cx - hw < L.x0 + L.W * L.cell && cy + hh > L.y0 && cy - hh < L.y0 + L.H * L.cell; };
+  const kt = ['kt50', 'kt100', 'kt250', 'kt1000'].find(id => vis(id) && inView(id));
+  const near = Object.keys(lv).filter(id => id.startsWith('near') && vis(id) && inView(id));  // 名所のまわりの 20m（いくつでも重ねる）
+  return [jp, kt, ...near].filter(Boolean);
 }
 
 function blit(v, sd) {
@@ -109,7 +109,7 @@ function blit(v, sd) {
 }
 
 const pinCache = {};
-function pinSprite(visited, px) { const k = visited + ':' + px; return pinCache[k] || (pinCache[k] = pinCanvas(visited, px)); }
+function pinSprite(visited, px, kind) { const k = visited + ':' + px + kind; return pinCache[k] || (pinCache[k] = pinCanvas(visited, px, kind)); }
 
 function draw(now) {
   const t0 = performance.now();
@@ -146,7 +146,7 @@ function drawPins(sd) {
   pinRects = [];
   ctx.font = `${Math.round(11 * dpr)}px DotGothic16, monospace`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
   for (const g of groups) {
-    const v = g.items.some(q => isVisited(q.p.id)), sp = pinSprite(v, px);
+    const v = g.items.some(q => isVisited(q.p.id)), sp = pinSprite(v, px, g.items.every(q => q.p.kind === 'sapa') ? 'sapa' : '');
     const x = Math.round(g.x - w / 2), y = Math.round(g.y - h);
     if (x > cv.width || y > cv.height || x + w < 0 || y + h < 0) continue;
     if (sel && g.items.some(q => q.p.id === sel)) { ctx.fillStyle = '#FFFFFF'; ctx.fillRect(x - px, y - px, w + 2 * px, h + 2 * px); }
@@ -217,7 +217,7 @@ function bindInput() {
   const pts = new Map(); let tap = null, lastTap = 0, pinch = null;
   const pos = e => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
   cv.addEventListener('pointerdown', e => {
-    cv.setPointerCapture(e.pointerId); flyAnim++;
+    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* 合成のイベントなど */ } flyAnim++;
     const p = pos(e); pts.set(e.pointerId, p); interacting = true;
     tap = pts.size === 1 ? { ...p, t: performance.now(), moved: false } : null;
     if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; }
@@ -278,7 +278,7 @@ function showInfo(p) {
     <div class="dm-btns"><button data-a="tog">${v ? '「まだ」に戻す' : '行ったことにする'}</button><button data-a="near">まわりを見る</button></div>`;
   box.hidden = false;
   box.querySelector('[data-a=tog]').onclick = () => { toggleVisited(p.id); };
-  box.querySelector('[data-a=near]').onclick = () => flyTo(p.lng, p.lat, 12 / 0.05);
+  box.querySelector('[data-a=near]').onclick = () => flyTo(p.lng, p.lat, 12 / 0.02);
 }
 
 export async function initDotMap(root) {
@@ -293,14 +293,18 @@ export async function initDotMap(root) {
   updateVisited();
   bindInput(); requestAnimationFrame(loop);
   stats.firstDrawMs = Math.round(performance.now() - t0);
-  Promise.all(['kt100', 'kt50'].map(id => loadLevel(L(id)))).then(() => { stats.allMs = Math.round(performance.now() - t0); updateVisited(); });
+  Promise.all(['kt100', 'kt50', ...meta.levels.filter(l => l.id.startsWith('near')).map(l => l.id)].map(id => loadLevel(L(id)))).then(() => { stats.allMs = Math.round(performance.now() - t0); updateVisited(); });
   onVisitedChange(() => { updateVisited(); if (sel) showInfo(LAB_PLACES.find(p => p.id === sel)); });
   el.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
     const g = b.dataset.go;
     if (g === 'jp') flyTo(137.2, 37.2, null, 2000);
-    if (g === 'kanto') flyTo(139.6, 35.9, null, 260);
+    if (g === 'kanto') flyTo(139.5, 35.75, null, 190);
     if (g === 'kana') flyTo(139.35, 35.42, null, 75);
-    if (g === 'spot') flyTo(139.636, 35.4556, 12 / 0.05);
+    if (g === 'spot') flyTo(139.636, 35.4556, 12 / 0.02);
+  });
+  el.querySelectorAll('[data-layer]').forEach(b => b.onclick = () => {
+    const k = b.dataset.layer; layers[k] = !layers[k]; b.classList.toggle('on', layers[k]);
+    Object.values(lv).forEach(paint); dirty = true;
   });
   el.querySelectorAll('[data-z]').forEach(b => b.onclick = () => { zoomAbout(Wc / 2, Hc / 2, b.dataset.z === '1' ? 2 : 0.5); settle(); });
   return meta;
@@ -311,7 +315,7 @@ export const redraw = () => { resize(); dirty = true; };
 export function bench() {
   const keep = [cx, cy, s], was = interacting, out = {};
   interacting = false;
-  const views = { 日本: [137.2, 37.2, null, 2000], 関東: [139.6, 35.9, null, 260], 神奈川: [139.35, 35.42, null, 75], 名所のまわり: [139.636, 35.4556, 240] };
+  const views = { 日本: [137.2, 37.2, null, 2000], 関東: [139.5, 35.75, null, 190], 神奈川: [139.35, 35.42, null, 75], 名所のまわり: [139.636, 35.4556, 600] };
   for (const [name, [lng, lat, px, km]] of Object.entries(views)) {
     [cx, cy] = proj(lng, lat); s = km ? Math.min(Wc, Hc) / km : px; settle();
     const t0 = performance.now();

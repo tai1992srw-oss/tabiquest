@@ -13,7 +13,7 @@ let map, layer, base = 'pale', dotty = false;
 const markers = {};
 export const rstats = { tiles: 0, tileBytes: 0, firstTileMs: 0 };
 
-const icon = v => L.divIcon({ className: 'rm-pin', html: `<img src="${pinURL(v)}" alt="">`, iconSize: [24, 27], iconAnchor: [12, 27], popupAnchor: [0, -26] });
+const icon = (v, kind) => L.divIcon({ className: 'rm-pin', html: `<img src="${pinURL(v, kind)}" alt="">`, iconSize: [24, 27], iconAnchor: [12, 27], popupAnchor: [0, -26] });
 
 function setBase() {
   if (layer) map.removeLayer(layer);
@@ -42,10 +42,10 @@ export function initRealMap(root) {
   map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
   setBase();
   for (const p of LAB_PLACES) {
-    markers[p.id] = L.marker([p.lat, p.lng], { icon: icon(isVisited(p.id)) }).addTo(map).bindPopup(() => popup(p));
+    markers[p.id] = L.marker([p.lat, p.lng], { icon: icon(isVisited(p.id), p.kind) }).addTo(map).bindPopup(() => popup(p));
   }
   onVisitedChange(() => {
-    for (const p of LAB_PLACES) markers[p.id].setIcon(icon(isVisited(p.id)));
+    for (const p of LAB_PLACES) markers[p.id].setIcon(icon(isVisited(p.id), p.kind));
     const open = LAB_PLACES.find(p => markers[p.id].isPopupOpen());
     if (open) markers[open.id].setPopupContent(popup(open));
   });

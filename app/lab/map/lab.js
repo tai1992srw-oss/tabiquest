@@ -27,7 +27,7 @@ function memo() {
   $('#memo').innerHTML = FINDINGS + `
   <h2>この端末で測った数字（いま）</h2>
   <table><tr><th>段</th><th>大きさ</th><th>読み込み</th><th>色ぬり</th></tr>
-  ${['jp8', 'jp2', 'jp1', 'kt1000', 'kt250', 'kt100', 'kt50'].map(levelsRow).join('')}
+  ${Object.keys(stats.loadMs).map(levelsRow).join('')}
   <tr><td>levels.json</td><td>${stats.bytes.levels ? kb(stats.bytes.levels) : '-'}</td><td></td><td></td></tr>
   <tr><th>合計</th><th>${kb(total)}</th><th colspan="2">最初の表示 ${stats.firstDrawMs}ms・全部 ${stats.allMs ?? '-'}ms</th></tr></table>
   <p><small>案A を指で動かしたときの1回の描画：平均 ${avg(stats.draws).toFixed(1)}ms／最大 ${Math.max(0, ...stats.draws).toFixed(1)}ms（直近${stats.draws.length}回）。
