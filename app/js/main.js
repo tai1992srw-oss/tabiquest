@@ -11,6 +11,7 @@ import { renderDebug } from './debug.js';
 import { renderMap } from './map.js';
 import { renderGoals, checkGoals } from './goals.js';
 import { renderTimeline } from './calendar.js';
+import { renderHome, renderShop } from './home.js';
 import * as minatomirai from './scenes/minatomirai.js';
 import * as chukagai from './scenes/chukagai.js';
 import * as kamakura from './scenes/kamakura.js';
@@ -37,6 +38,12 @@ function header() {
 function route() {
   closeViewer?.(); closeViewer = null;
   const [name, ...args] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
+  if (name === 'home' || name === 'shop') {   // ホーム（マイルーム）とショップ
+    document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.tab === 'home') a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    header(); view.classList.remove('mapmode');
+    if (name === 'home') closeViewer = renderHome(view, { header }); else renderShop(view, { header });
+    window.scrollTo(0, 0); return;
+  }
   const tab = ['zukan', 'place', 'card', 'preview', 'goals', 'calendar', 'timeline'].includes(name) ? 'zukan' : ['settings', 'map'].includes(name) ? name : 'list';
   document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   header();
@@ -181,4 +188,5 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 }
 
 persist();
+if (!location.hash) history.replaceState(null, '', '#/home');   // 開いたときはホーム
 route();
