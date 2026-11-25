@@ -25,13 +25,13 @@ const TABS = [
     // 一覧：セット（上下そろい）と、部位ごと（'top:u01' のように「部位:番号」。番号なし＝その部位はインナー・なし）
     items: P => [...outfitList(P).map(u => ({ type: 'set', id: 'set:' + u.id, name: u.id ? u.name + 'セット' : 'ぜんぶインナー' })),
       ...WEAR_KEYS.flatMap(k => [{ type: k, id: k + ':', name: NONE[k] }, ...(P.J.wear?.[k] || []).map(u => ({ type: k, id: k + ':' + u.id, name: u.name }))])],
-    get: L => 'set:' + (L.outfit || ''), on: (L, v) => { const [k, id] = v.split(':'), W = wearOf(L.outfit); return k === 'set' ? WEAR_KEYS.every(q => W[q] === id) : W[k] === id; },
+    get: L => 'set:' + (L.outfit || ''), on: (L, v) => { const [k, id] = v.split(':'), W = wearOf(L.outfit); return k === 'set' ? JSON.stringify(W) === JSON.stringify(wearOf(id)) : W[k] === id; },
     set: (L, v) => { const [k, id] = v.split(':'); if (k === 'set') L.outfit = id; else { const W = wearOf(L.outfit); W[k] = id; L.outfit = packWear(W); } },
     colorNote: L => (wearOf(L.outfit).top && wearOf(L.outfit).bottom ? '服の色は、インナーの見えている所だけ変わります' : ''),
-    filters: [['all', 'すべて'], ['set', 'セット'], ['top', 'トップス'], ['bottom', 'ボトムス'], ['socks', 'くつ下'], ['shoes', 'くつ']] },
+    filters: [['all', 'すべて'], ['set', 'セット'], ['top', 'トップス'], ['bottom', 'ボトムス'], ['socks', 'くつ下'], ['shoes', 'くつ'], ['acc', '装飾品']] },
   { id: 'coord', name: 'コーデ', icon: '★', kind: 'coord', focus: 'body', colors: [] },
 ];
-const NONE = { top: 'インナー（上）', bottom: 'インナー（下）', socks: 'くつ下なし', shoes: 'はだし' };
+const NONE = { top: 'インナー（上）', bottom: 'インナー（下）', socks: 'くつ下なし', shoes: 'はだし', acc: '装飾品なし' };
 const clone = L => ({ colors: { ...(L?.colors || {}) }, hair: L?.hair || '', outfit: L?.outfit || '' });
 const same = (a, b) => JSON.stringify(clone(a)) === JSON.stringify(clone(b));
 
