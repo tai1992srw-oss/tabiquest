@@ -349,15 +349,29 @@ export function mountVoxelRoom(opts) {
   const C = new THREE.Vector3(NV / 2 - 10, 30, NV / 2 - 10);
   cam.position.set(C.x + 300, C.y + 245, C.z + 300); cam.lookAt(C);
 
-  // キャラ：ドット絵の板。部屋と同じ光で照らされ、床に影を落とす（いつもカメラのほうを向く）
-  const CH = 155 * CM; let chara = null, tex = null;
+  // キャラ：ドット絵の板。床に影を落とす（いつもカメラのほうを向く）
+  //   大きさと光は見比べて決めた（2026-11-25、くりた「3とC」）：背は 180cm（部屋の家具より少し大きめでキャラが主役に見える）、
+  //   光は元の色を大事にして、時間帯とでんきの色だけ少し乗せる（部屋の光をそのまま受けると夜に暗く沈むため）
+  const CV = { h: 180, lit: 'soft' };
+  const CH = CV.h * CM; let chara = null, tex = null;
   const me = { x: opts.me.i + .5, z: opts.me.j + .5, tx: null, tz: null, jump: 0, flip: false };
-  opts.chara.then(c => {
+  const rimmed = c => { const o = document.createElement('canvas'); o.width = c.width + 2; o.height = c.height + 2; const g = o.getContext('2d');
+    const m = document.createElement('canvas'); m.width = c.width; m.height = c.height; const mg = m.getContext('2d'); mg.drawImage(c, 0, 0); mg.globalCompositeOperation = 'source-in'; mg.fillStyle = '#FFF6FA'; mg.fillRect(0, 0, c.width, c.height);
+    for (const [dx, dy] of [[0, 1], [2, 1], [1, 0], [1, 2]]) g.drawImage(m, dx, dy); g.drawImage(c, 1, 1); return o; };
+  opts.chara.then(c0 => {
+    const c = CV.lit === 'rim' ? rimmed(c0) : c0;
     tex = new THREE.CanvasTexture(c); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.wrapS = THREE.RepeatWrapping;
-    chara = new THREE.Mesh(new THREE.PlaneGeometry(CH * c.width / c.height, CH).translate(0, CH / 2, 0), new THREE.MeshLambertMaterial({ map: tex, alphaTest: .5, side: THREE.DoubleSide }));
+    const H = CH * c.height / c0.height, mat = CV.lit === 'room' ? new THREE.MeshLambertMaterial({ map: tex, alphaTest: .5, side: THREE.DoubleSide }) : new THREE.MeshBasicMaterial({ map: tex, alphaTest: .5, side: THREE.DoubleSide });
+    chara = new THREE.Mesh(new THREE.PlaneGeometry(H * c.width / c.height, H).translate(0, H / 2 - (H - CH) / 2, 0), mat);
     chara.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: .5 });
     chara.castShadow = true; chara.rotation.y = Math.PI / 4; scene.add(chara);
   });
+  // 足もとのまるい影（いつも。夜で日ざしの影がなくても浮いて見えないように）
+  const footTex = spriteTex((g, n) => { const r = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); r.addColorStop(0, 'rgba(90,40,60,.55)'); r.addColorStop(.6, 'rgba(90,40,60,.3)'); r.addColorStop(1, 'rgba(90,40,60,0)'); g.fillStyle = r; g.fillRect(0, 0, n, n); });
+  const foot = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: footTex, transparent: true, depthWrite: false }));
+  foot.renderOrder = 3; foot.visible = CV.lit !== 'room'; scene.add(foot);
+  // soft・rim：元の色を大事にして、時間帯とでんきの色だけ少し乗せる
+  const charaTint = (n, L) => { const day = [1, .98, .96], dark = [.66, .66, .86], lamp = [1, .9, .84], k = n * (L ? .5 : 1), t = L ? lamp : dark; return day.map((d, i) => d + (t[i] - d) * k); };
 
   // 大きさ：ステージの高さに合わせ、横は少し広く（横にスクロール）。描く1ドット＝画面の1.5px
   const SCALE = 1.5;
@@ -424,6 +438,8 @@ export function mountVoxelRoom(opts) {
     if (chara) { chara.position.set(me.x * V, bob + jy, me.z * V); tex.repeat.x = me.flip ? -1 : 1; tex.offset.x = me.flip ? 1 : 0; }
     // 明るさ：昼（1-n）と夜（n）、でんき（L）
     const n = opts.night(), day = 1 - n, L = light ? 1 : 0;
+    foot.position.set(me.x * V, .5, me.z * V); foot.scale.setScalar(CH * .42 * (1 - jy / 40));
+    if (chara && (CV.lit === 'soft' || CV.lit === 'rim')) chara.material.color.setRGB(...charaTint(n, L));
     hemi.intensity = .28 + .42 * day + .3 * L * n; sun.intensity = .48 * day;
     hemi.color.setHex(n > .7 ? (L ? 0xffe6dc : 0x9aa0e8) : n > .2 ? 0xffd8d0 : 0xfff3f8); hemi.groundColor.setHex(n > .7 && !L ? 0x504878 : 0xffd9c4);
     roomLight.intensity = .35 * L * n; for (const e of furn.values()) if (e.p) { e.p.intensity = L * (.25 + .6 * n); e.gl.visible = fx.glow && !!L; e.gl.material.opacity = .22 + .18 * n; }

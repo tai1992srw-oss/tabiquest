@@ -512,33 +512,33 @@ main.homemode{max-width:none;padding:0}
 .hm-engine .card{width:9px}
 .hm-btn{flex:none;display:flex;align-items:center;min-height:44px;padding:4px 14px;border-radius:14px;background:#20265A;border:2px solid var(--line);font:400 14px var(--dot);color:var(--ink);text-decoration:none}
 .hm-btn.go{background:var(--gold);color:#14122E;border-color:var(--gold);font-size:15px}
-.hm-pick .opt.obj{position:relative;min-height:84px;padding:18px 4px 6px;border-radius:12px;background:#1B2147;border:2px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;text-align:center}
-.hm-pick .opt.obj b{font:400 12px/1.25 var(--dot)}
-.hm-pick .opt.obj small{font:400 10px/1.3 var(--dot);color:var(--sub)}
+.hm-pick .opt.obj{position:relative;min-height:84px;padding:18px 4px 6px;border-radius:16px;background:var(--paper2);color:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;text-align:center}
+.hm-pick .opt.obj b{font:900 12px/1.3 var(--sans)}
+.hm-pick .opt.obj small{font:500 10px/1.35 var(--sans);color:var(--sub)}
 .hm-pick .opt.obj .kari-s{left:4px;top:3px;font-size:9px;border-radius:4px}
 
 /* 選ぶシート（下から） */
 .hm-pick{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
-.hm-pick .in{width:min(560px,100%);max-height:78dvh;display:flex;flex-direction:column;gap:10px;padding:12px 14px calc(env(safe-area-inset-bottom) + 14px);background:var(--paper);border-radius:22px 22px 0 0;border:2px solid var(--line);border-bottom:none}
+.hm-pick .in{width:min(560px,100%);max-height:78dvh;display:flex;flex-direction:column;gap:10px;padding:12px 14px calc(env(safe-area-inset-bottom) + 14px);background:var(--paper);color:var(--ink);border-radius:28px 28px 0 0;box-shadow:var(--shadow)}
 .hm-pick .hd{display:flex;align-items:center;justify-content:space-between}
-.hm-pick .hd b{font:400 17px var(--dot)}
+.hm-pick .hd b{font:900 16px var(--sans)}
 .hm-pick .x{min-height:40px;width:40px;padding:0;border-radius:50%;font-size:20px}
 .hm-pick .bd{overflow-y:auto}
 .hm-pick .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .hm-pick .grid3 .note{grid-column:1/-1}
 .hm-pick .opt.pic{position:relative;aspect-ratio:9/16;min-height:0;padding:0;border-radius:12px;overflow:hidden;border:2px solid var(--gold);background:#000}
 .hm-pick .opt.pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
-.hm-pick .opt.pic .cap{position:absolute;left:0;right:0;bottom:0;padding:16px 4px 5px;background:linear-gradient(transparent,rgba(8,8,28,.92));font:400 10px/1.3 var(--dot)}
+.hm-pick .opt.pic .cap{color:#FFF4E0;position:absolute;left:0;right:0;bottom:0;padding:16px 4px 5px;background:linear-gradient(transparent,rgba(8,8,28,.92));font:400 10px/1.3 var(--dot)}
 .hm-pick .opt.used{opacity:.55}
 .hm-pick .rm{border-radius:14px;min-height:46px}
 
 /* ショップ */
 ul.hm-goods{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-ul.hm-goods li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:var(--paper);border:2px solid var(--line)}
+ul.hm-goods li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:18px;background:var(--paper);box-shadow:var(--shadow)}
 ul.hm-goods .t{flex:1;display:flex;flex-direction:column}
-ul.hm-goods b{font:400 17px var(--dot)}
-ul.hm-goods small{font:400 13px var(--dot);color:var(--gold)}
-ul.hm-goods .own{font:400 13px var(--dot);color:var(--teal)}
+ul.hm-goods b{font:900 16px var(--sans)}
+ul.hm-goods small{font:400 13px var(--dot);color:var(--sub)}
+ul.hm-goods .own{font:700 13px var(--sans);color:var(--teal)}
 .hm-iso.vox{aspect-ratio:auto;image-rendering:pixelated;image-rendering:crisp-edges}
 .hm-stage.vox{background:linear-gradient(#FDE7EF,#F3DDF6 55%,#E2E4FA)}
 .hm-stage.vox .hm-ov.top{background:linear-gradient(rgba(120,60,90,.28),transparent)}
