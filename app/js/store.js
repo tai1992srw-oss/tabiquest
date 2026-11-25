@@ -29,8 +29,8 @@ export const saveSettings = () => write(KEY.settings, settings);
 const books = { real: migrate(read(KEY.real)), debug: migrate(read(KEY.debug)) };
 // お着替え（キャラの見た目）：ホームで決めたものが「ふだんの見た目」（settings.charaColors など）。カードには、できたときの見た目を look として残す
 //   look：{ colors: { skin, cloth, eye, hair } }（髪型・衣装が入ったら、ここに足す）。前に作ったカードには、いまの見た目を1回だけ写して、これ以上変わらないようにする
-//   hair：髪型の番号（'' ＝ 元のごく短い髪。charaparts.js）
-export const defaultLook = () => ({ colors: { ...(settings.charaColors || {}) }, hair: settings.charaHair || '' });
+//   hair：髪型の番号（'' ＝ 元のごく短い髪）、outfit：衣装の番号（'' ＝ 元のインナー）。charaparts.js
+export const defaultLook = () => ({ colors: { ...(settings.charaColors || {}) }, hair: settings.charaHair || '', outfit: settings.charaOutfit || '' });
 for (const b of Object.values(books)) for (const c of b.cards) if (!c.look) c.look = defaultLook();
 write(KEY.real, books.real); write(KEY.debug, books.debug);
 export const mode = () => (settings.debugUnlocked && settings.debugOn ? 'debug' : 'real');

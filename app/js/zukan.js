@@ -6,7 +6,7 @@ const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さ
 import { book, cardsOf, cardById, setPhoto } from './store.js';
 import { engine, snapshot, clearSnaps, RS } from './card.js';
 import { PARTS, charaColors } from './characolor.js';
-import { loadParts, hairList, charaHair } from './charaparts.js';
+import { loadParts, hairList, charaHair, outfitList, charaOutfit } from './charaparts.js';
 import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast, icon } from './ui.js';
 
 // 図鑑・旅の記録・称号の上に出す切り替え（同じ図鑑タブの中の3つの見方）
@@ -129,7 +129,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   const p0 = first && placeById(first.placeId);
   if (!p0) { onClose(); return () => {}; }
   const list = preview ? [first] : cardsOf(p0.id).slice().reverse();   // 古い順
-  let idx = Math.max(0, list.findIndex(c => c.id === first.id)), card = first, p = p0, el = null, ph = null, lk = {}, lh = '';
+  let idx = Math.max(0, list.findIndex(c => c.id === first.id)), card = first, p = p0, el = null, ph = null, lk = {}, lh = '', lo = '';
   const root = document.createElement('div'); root.className = 'viewer story'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
   root.innerHTML = `<div class="frame">
       <div class="stage"></div>
@@ -152,6 +152,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
         <div class="pane" data-pane="dress" hidden>
           <p class="hint">この撮影だけのお着替えです。ホームのお着替えは変わりません</p>
           <div class="seg hairs" role="group" aria-label="髪型"><span class="lab">髪型</span></div>
+          <div class="seg wears" role="group" aria-label="衣装"><span class="lab">衣装</span></div>
           ${PARTS.map(pt => `<div class="seg dress" data-k="${pt.k}"><span class="lab">${pt.name}</span>${pt.presets.map(h => `<button class="sw" data-c="${h}" style="background:${h}" aria-label="${pt.name}を ${h} に"></button>`).join('')}<label class="pick" aria-label="${pt.name}の色を自由にえらぶ"><input type="color"></label></div>`).join('')}
           <div class="seg"><button data-a="homelook">ホームのお着替えに合わせる</button></div>
         </div>
@@ -160,12 +161,14 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     </div>`;
   document.body.append(root);
   const stage = root.querySelector('.stage'), sheet = root.querySelector('.sheet');
-  loadParts().then(P => { sheet.querySelector('.hairs').insertAdjacentHTML('beforeend', hairList(P).map(h => `<button data-hair="${h.id}" aria-pressed="${h.id === lh}">${h.name}</button>`).join('')); }).catch(() => {});
+  loadParts().then(P => { sheet.querySelector('.hairs').insertAdjacentHTML('beforeend', hairList(P).map(h => `<button data-hair="${h.id}" aria-pressed="${h.id === lh}">${h.name}</button>`).join(''));
+    sheet.querySelector('.wears').insertAdjacentHTML('beforeend', outfitList(P).map(u => `<button data-wear="${u.id}" aria-pressed="${u.id === lo}">${u.name}</button>`).join('')); }).catch(() => {});
   const btn = a => root.querySelector(`.side [data-a="${a}"]`);
 
   function load(i) {
     idx = i; card = list[i]; p = placeById(card.placeId);
     ph = { x: 0, y: 0, s: 1, r: 0, light: 'bright', pose: 0, rim: 0, glow: 0, ...(card.photo || {}) };
+    lo = card.look ? card.look.outfit || '' : charaOutfit();   // この撮影の衣装
     lh = card.look ? card.look.hair || '' : charaHair();   // この撮影の髪型（前に撮ったカードで髪型がなければ、元の短い髪）
     lk = { ...(card.look?.colors || charaColors()) };   // この撮影のお着替え（色）。残すまではカードに書かない
     stage.innerHTML = ''; el = cardEl(p, card); stage.append(el);
@@ -180,9 +183,10 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     setPosing(false);
   }
   const sync = () => {
-    engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh } });
+    engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh, outfit: lo } });
     sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; });
     sheet.querySelectorAll('[data-hair]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.hair === lh)));
+    sheet.querySelectorAll('[data-wear]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.wear === lo)));
     sheet.querySelectorAll('[data-light]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.light === ph.light)));
     sheet.querySelectorAll('[data-rim]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.rim === (ph.rim | 0))));
     sheet.querySelectorAll('[data-glow]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.glow === (ph.glow | 0))));
@@ -206,14 +210,14 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
     if (pinch && pts.size === 2) {   // 二本指：広げる・つまむで大きさ、ひねると角度（画面で右回りにひねると、キャラも右回り）
       ph.s = Math.max(.4, Math.min(6, pinch.s * pdist() / pinch.d)); ph.r = pinch.r - (pang() - pinch.a);
-      engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh } });
+      engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh, outfit: lo } });
     sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; }); return;
     }
     if (!drag) return; const r = stage.getBoundingClientRect(), dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
     if (root.classList.contains('posing')) {
       ph.x = Math.max(-.75, Math.min(.75, drag.px + dx / r.width));   // 左右も少しカードの外へはみ出せる
       ph.y = Math.max(-1.5, Math.min(.5, drag.py - dy / r.height));   // 指の動きどおり。下はカードの外まで
-      engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh } });
+      engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh, outfit: lo } });
     sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; });
     } else if (dy > 0) root.style.setProperty('--pull', `${Math.min(dy, 200)}px`);
   });
@@ -228,7 +232,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   // パソコンでは、ホイールで大きさ、Shift＋ホイールで角度を変える
   stage.addEventListener('wheel', e => { if (!root.classList.contains('posing')) return; e.preventDefault();
     if (e.shiftKey) ph.r += (e.deltaY < 0 ? 1 : -1) * .06; else ph.s = Math.max(.4, Math.min(6, ph.s * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
-    engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh } });
+    engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk }, hair: lh, outfit: lo } });
     sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; }); }, { passive: false });
 
   async function saveImage() {
@@ -252,13 +256,14 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     else if (b.dataset.light) { ph.light = b.dataset.light; sync(); }
     else if (b.dataset.tab) { sheet.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); sheet.querySelectorAll('.pane').forEach(x => { x.hidden = x.dataset.pane !== b.dataset.tab; }); }
     else if (b.dataset.c) { lk[b.closest('.dress').dataset.k] = b.dataset.c; sync(); }
-    else if (a === 'homelook') { lk = { ...charaColors() }; lh = charaHair(); sync(); }
+    else if (a === 'homelook') { lk = { ...charaColors() }; lh = charaHair(); lo = charaOutfit(); sync(); }
+    else if (b.dataset.wear !== undefined) { lo = b.dataset.wear; sync(); }
     else if (b.dataset.hair !== undefined) { lh = b.dataset.hair; sync(); }
     else if (b.dataset.rim) { ph.rim = +b.dataset.rim; sync(); }
     else if (b.dataset.glow) { ph.glow = +b.dataset.glow; sync(); }
     else if (b.dataset.pose) { ph.pose = +b.dataset.pose; sync(); }
     else if (a === 'center') { ph.x = 0; ph.y = 0; ph.s = 1; ph.r = 0; sync(); }
-    else if (a === 'keep') { setPhoto(card.id, { ...ph }, { colors: { ...lk }, hair: lh }); card.photo = { ...ph }; card.look = { colors: { ...lk }, hair: lh }; clearSnaps(); toast('この配置をカードに残しました'); setPosing(false); }
+    else if (a === 'keep') { setPhoto(card.id, { ...ph }, { colors: { ...lk }, hair: lh, outfit: lo }); card.photo = { ...ph }; card.look = { colors: { ...lk }, hair: lh, outfit: lo }; clearSnaps(); toast('この配置をカードに残しました'); setPosing(false); }
   });
   sheet.addEventListener('input', e => { const row = e.target.closest('.dress'); if (row && e.target.type === 'color') { lk[row.dataset.k] = e.target.value; sync(); } });
   document.addEventListener('keydown', onKey);

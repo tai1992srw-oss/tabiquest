@@ -9,7 +9,7 @@ import { PLACES, placeById, LABEL, seasonOf } from './places.js';
 import { book, mode, settings, saveBook } from './store.js';
 import { engine, snapshot, clearSnaps, reduceMotion } from './card.js';
 import { recolorChara, renderCharaColors } from './characolor.js';
-import { loadParts, sheet as partsSheet, charaHair } from './charaparts.js';
+import { loadParts, sheet as partsSheet, charaHair, charaOutfit } from './charaparts.js';
 import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, img, cardEl, fmtDate, toast } from './ui.js';
@@ -98,7 +98,7 @@ let charaImg = null;
 function loadChara() {
   return charaImg || (charaImg = (async () => {
     const base = 'assets/kamakura/', D = await (await fetch(base + 'data.json')).json();
-    const P = await loadParts(), im = partsSheet(P, charaHair(), 'normal');   // いまの髪型で重ねた絵（ふだん用）
+    const P = await loadParts(), im = partsSheet(P, charaHair(), 'normal', charaOutfit());   // いまの髪型で重ねた絵（ふだん用）
     // ポーズのコマ（横に並んだ全部）をそのまま使う。fw＝1コマの幅、frames＝コマの数、blink＝まばたきのコマがいくつうしろか、poses＝ポーズの名前
     const [fw, h] = D.charaTex || D.chara, w = im.width, c = document.createElement('canvas'); c.width = w; c.height = h;
     Object.assign(c, { fw, frames: D.charaFrames || 1, blink: D.charaBlink || 0, poses: D.charaPoses || ['立ち'] });

@@ -3,7 +3,7 @@
 // 選んだ色に合わせて、その部位の色だけを書き換える。明るさの段（影・光）は元の絵のまま残す。
 // 絵は描き足さない。パレットの色を変えるだけ。
 import { settings, saveSettings } from './store.js';
-import { loadParts, sheet, hairList, charaHair, setCharaHair } from './charaparts.js';
+import { loadParts, sheet, hairList, charaHair, setCharaHair, outfitList, charaOutfit, setCharaOutfit } from './charaparts.js';
 
 export const PARTS = [
   { k: 'skin', name: '肌', presets: ['#f7d6bf', '#f1c4a0', '#d9a074', '#a86c48', '#6b4330'] },
@@ -65,7 +65,7 @@ async function loadSample() {
 }
 function drawSample(cv, S) {
   const pal = S.D.pal.chara.map((c, i) => recolorChara(c, i, S.D));
-  const src = sheet(S.P, charaHair(), 'close').px, p = src.data, out = new ImageData(S.fw, S.fh), o = out.data;
+  const src = sheet(S.P, charaHair(), 'close', charaOutfit()).px, p = src.data, out = new ImageData(S.fw, S.fh), o = out.data;
   for (let y = 0; y < S.fh; y++) for (let x = 0; x < S.fw; x++) { const q = (y * src.width + x) * 4, k = (y * S.fw + x) * 4; if (p[q + 3] < 128) continue; const c = pal[p[q]] || [255, 0, 255]; o[k] = c[0]; o[k + 1] = c[1]; o[k + 2] = c[2]; o[k + 3] = 255; }
   const t = document.createElement('canvas'); t.width = S.fw; t.height = S.fh; t.getContext('2d').putImageData(out, 0, 0);
   const z = Math.max(1, Math.floor(260 / S.fh)) || 1, x = cv.getContext('2d');
@@ -73,9 +73,9 @@ function drawSample(cv, S) {
 }
 export async function renderCharaColors(box, onChange) {
   const cur = charaColors();
-  box.innerHTML = `<h2>キャラの髪型と色（ふだんのお着替え）</h2>
+  box.innerHTML = `<h2>キャラの髪型・衣装・色（ふだんのお着替え）</h2>
     <div class="chcol"><canvas class="chprev" aria-label="キャラの見本"></canvas>
-      <div class="chrows"><div class="chrow chhair"><span class="lab">髪型</span></div>${PARTS.map(p => `<div class="chrow" data-k="${p.k}"><span class="lab">${p.name}</span>
+      <div class="chrows"><div class="chrow chhair"><span class="lab">髪型</span></div><div class="chrow chwear"><span class="lab">衣装</span></div>${PARTS.map(p => `<div class="chrow" data-k="${p.k}"><span class="lab">${p.name}</span>
         ${p.presets.map(h => `<button class="sw" data-c="${h}" style="background:${h}" aria-label="${p.name}を ${h} に" aria-pressed="${cur[p.k] === h}"></button>`).join('')}
         <label class="pick" aria-label="${p.name}の色を自由にえらぶ"><input type="color" value="${cur[p.k] || p.presets[0]}"></label>
         <button class="reset" data-c="" aria-pressed="${!cur[p.k]}">元の色</button></div>`).join('')}</div></div>
@@ -85,6 +85,8 @@ export async function renderCharaColors(box, onChange) {
   loadParts().then(P => {
     const row = box.querySelector('.chhair'); row.insertAdjacentHTML('beforeend', hairList(P).map(h => `<button class="hairbtn" data-hair="${h.id}" aria-pressed="${h.id === charaHair()}">${h.name}</button>`).join(''));
     row.querySelectorAll('[data-hair]').forEach(b => b.onclick = () => { setCharaHair(b.dataset.hair); row.querySelectorAll('[data-hair]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); loadSample().then(S => drawSample(cv, S)).catch(() => {}); onChange?.(); });
+    const wr = box.querySelector('.chwear'); wr.insertAdjacentHTML('beforeend', outfitList(P).map(u => `<button class="hairbtn" data-wear="${u.id}" aria-pressed="${u.id === charaOutfit()}">${u.name}</button>`).join(''));
+    wr.querySelectorAll('[data-wear]').forEach(b => b.onclick = () => { setCharaOutfit(b.dataset.wear); wr.querySelectorAll('[data-wear]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); loadSample().then(S => drawSample(cv, S)).catch(() => {}); onChange?.(); });
   }).catch(() => {});
   try { drawSample(cv, await loadSample()); } catch (e) { cv.replaceWith(Object.assign(document.createElement('p'), { className: 'note', textContent: 'キャラの見本を読みこめませんでした' })); }
   const set = (k, hex) => {
