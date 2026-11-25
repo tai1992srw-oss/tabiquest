@@ -1,7 +1,7 @@
 // 仮の名所：写真を背景にして、キャラを重ねる（ドット絵ができるまでのつなぎ）
 // 写真の形は変えず、時間帯・天気は色づけだけで表す。背景を描き足さない
 import { gradeChara, charaPlace, placeChara } from './look.js';
-import { near, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
+import { near, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
 const THREE = window.THREE;
 
 let charaData = null;
@@ -9,7 +9,7 @@ async function chara() {
   if (!charaData) charaData = (async () => {
     const D = await (await fetch('assets/minatomirai/data.json')).json();
     const t = near(await new THREE.TextureLoader().loadAsync('assets/minatomirai/chara.png'));
-    return { size: D.chara, pal: D.pal.chara, tex: t, frames: D.charaFrames || 1 };
+    return { size: D.chara, pal: D.pal.chara, tex: t, frames: D.charaFrames || 1, lods: await charaLods('assets/minatomirai/', D, t) };
   })();
   return charaData;
 }
@@ -46,7 +46,7 @@ export async function build(place) {
   photo.material.needsUpdate = true;
 
   const ch = makeChara(scene, C.size, 0x100a26, .45, C.frames);
-  ch.chara.material.uniforms.tIdx.value = C.tex;
+  ch.chara.material.uniforms.tIdx.value = C.tex; ch.setLods(C.lods);
   const parts = makeParticles(scene, [Math.round(560 * k), H - 4]);
 
   const self = {

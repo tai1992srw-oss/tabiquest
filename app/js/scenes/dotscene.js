@@ -3,7 +3,7 @@
 //   層：空／景色／手前（動く物より前にあるもの）／キャラ
 //   差分：昼の絵・夜の絵・雪の絵（どれも同じ位置）と、空（朝・夕暮れ・夜・曇り・冬）を組み合わせる
 //   印（景色の G）：1＝海のきらめき 2＝街灯の灯り 3＝窓（夜にまたたく） 5＝観覧車の輪（夜に色が回る。B＝角度） 6＝提灯（夕暮れ・夜に灯る）
-import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
+import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
 import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara, charaPlace, placeChara } from './look.js';
 const THREE = window.THREE;
 
@@ -56,6 +56,7 @@ export async function buildDot(cfg) {
   for (const g of gulls) g.material.uniforms.tIdx.value = tex.gulls;
   const [GW] = D.sprites?.gull || [0];
   const ch = makeChara(scene, D.chara, 0x1a2a44, .35, D.charaFrames || 1); ch.chara.material.uniforms.tIdx.value = tex.chara;
+  ch.setLods(await charaLods(base, D, tex.chara));
   const parts = makeParticles(scene, [Math.round(H * .74), H - 4]);
 
   function skyOf(st) {

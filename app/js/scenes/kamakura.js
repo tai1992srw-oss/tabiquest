@@ -4,7 +4,7 @@
 //   コード    ：時間帯・天気の色づけ、季節の色の差し替え（葉・あじさい）、夜の窓と灯台の明かり、
 //               海のきらめき、踏切のランプ、電車とカモメの動き、雨・雪・落ち葉の粒、濡れた道の光
 // 絵はコードで描き足さない（形が変わるものは Codex の絵を使う）
-import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
+import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
 import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara, charaPlace, placeChara } from './look.js';
 const THREE = window.THREE;
 
@@ -51,6 +51,7 @@ export async function build() {
   const parts = makeParticles(scene, [Math.round(H * .72), H - 4]);
 
   train.material.uniforms.tIdx.value = tex.train; for (const g of gulls) g.material.uniforms.tIdx.value = tex.gulls; ch.chara.material.uniforms.tIdx.value = tex.chara;
+  ch.setLods(await charaLods(base, D, tex.chara));
 
   // どの空を使うか：曇り・雨・雪は曇り空、晴れは時間帯の空（冬の昼は富士山の見える空）
   function skyOf(st) {

@@ -70,7 +70,7 @@ export function charaPlace(st, W, H, ground) {
 }
 // キャラを置く（大きさ s のときは足もとをそろえる。角度 r はキャラのまん中を軸に回す）。回したときは影を消す
 export function placeChara(ch, cx, feet, s, H, drop, r = 0) {
-  const hh = ch.CH * s / 2;
+  const hh = ch.CH * s / 2; ch.pickLod?.(s);
   ch.chara.scale.set(s, s, 1); ch.chara.rotation.z = r;
   ch.chara.position.set(Math.round(cx), H - feet + drop + hh, 4);
   ch.shadow.scale.set(30 * s, 5 * s, 1); ch.shadow.position.set(Math.round(cx), H - feet + 1, 3); ch.shadow.visible = Math.abs(r) < .2 && feet < H;

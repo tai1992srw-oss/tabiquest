@@ -52,7 +52,22 @@ export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1) {
   const setPose = i => { chara.material.uniforms.uPose.value = Math.min(frames - 1, Math.max(0, i)); };
   const shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: shadowColor, transparent: true, opacity: shadowOpacity, depthTest: false }));
   shadow.scale.set(30, 5, 1); shadow.renderOrder = 3; scene.add(shadow);
-  return { chara, shadow, CW, CH, shadowOpacity, setPose, frames };
+  // 細かさの段階：大きさ s に合わせて、いちばん合う絵に切り替える（小さいとき用・ふだん用・寄り用）
+  //   lods：[{ s：その絵がちょうどよい大きさ, tex, size：[1コマの幅, 高さ] }]。ふだん用は s＝1
+  let lods = [], cur = null;
+  const setLods = l => { lods = l.slice().sort((a, b) => a.s - b.s); cur = null; };
+  const pickLod = s => {
+    if (!lods.length) return; let best = lods[0];
+    for (const l of lods) if (Math.abs(Math.log(l.s / s)) < Math.abs(Math.log(best.s / s))) best = l;
+    if (best === cur) return; cur = best;
+    chara.material.uniforms.tIdx.value = best.tex; chara.material.uniforms.uSize.value.set(best.size[0], best.size[1]);
+  };
+  return { chara, shadow, CW, CH, shadowOpacity, setPose, frames, setLods, pickLod };
+}
+// キャラの細かさの段階を読む（data.json の charaLods）。ふだん用（chara.png）も入れて返す
+export async function charaLods(base, D, baseTex) {
+  const ls = D.charaLods || [], tex = ls.length ? await loadTextures(base, ls.map(l => l.file)) : {};
+  return [{ s: 1, tex: baseTex, size: D.chara }, ...ls.map(l => ({ s: l.s, tex: tex[l.file], size: l.size }))];
 }
 
 // 雨・雪の粒（コードで動かすもの）。splash は雨のはね返りを出す高さの範囲
