@@ -13,6 +13,7 @@ import { loadParts, sheet as partsSheet, charaHair, charaOutfit } from './charap
 import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, toast, icon } from './ui.js';
+import { serifuOf } from './serifu.js';
 
 const DOTS = PLACES.filter(p => p.kind === 'dot');
 const dayNo = d => Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000);
@@ -104,9 +105,12 @@ export function renderHome(view, { header } = {}) {
 
   // ふきだし：次にやることを話す
   const lines = () => {
-    const pos = current(), L = [];
-    if (pos) { const n = [...PLACES].sort((a, z) => distance(pos, a) - distance(pos, z))[0], m = distance(pos, n);
-      L.push(m < 1000 ? `${n.name}がすぐそこ！行ってみる？` : `${n.name}まで ${(m / 1000).toFixed(m < 10000 ? 1 : 0)}km。きょう行ってみる？`); }
+    const pos = current(), L = [], when = { time: timeReal, season: st.season };
+    let near = null;
+    if (pos) { near = [...PLACES].sort((a, z) => distance(pos, a) - distance(pos, z))[0]; const m = distance(pos, near);
+      L.push(m < 1000 ? `${near.name}がすぐそこ！行ってみる？` : `${near.name}まで ${(m / 1000).toFixed(m < 10000 ? 1 : 0)}km。きょう行ってみる？`); }
+    L.push(...serifuOf(scene.id, when));   // 後ろの景色の名所のセリフ
+    if (near && near.id !== scene.id) L.push(...serifuOf(near.id, when));   // いちばん近い名所のセリフ
     if (!b.cards.length) L.push('近くの名所に行って、さいしょのカードを手に入れよう！');
     else L.push('撮ったカード、図鑑で見かえしてみない？', 'お着替えして、写真を撮りなおすのもいいね');
     if (!lg.got) L.push(`ログインボーナス、${lg.next}日めだよ！`);
