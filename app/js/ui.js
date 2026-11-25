@@ -7,16 +7,74 @@ export const fmtTime = iso => { const d = new Date(iso); return `${d.getHours()}
 export const cardNo = (place, card) => `No.${place.no}${card?.n ? '-' + String(card.n).padStart(3, '0') : ''}`;
 export const prefCity = place => `${place.pref} ${place.city.replace(/[^市]*$/, '') || place.city}`;
 
+// 題字（「ようこそ、○○へ！」）：名前を大きく、段ちがいに折って絵の手前に出す
+// 折り方：名所に title.lines があればそれ、なければ言葉の切れ目で自動（〜4文字は1行、〜8文字は2行、それより長ければ3行）
+// 大きさ・位置の単位は cqw（カードの幅の100分の1）。名所ごとに title.size / x / top で決め打ちもできる
+const seg = (() => { try { return new Intl.Segmenter('ja', { granularity: 'word' }); } catch (e) { return null; } })();
+const KATA = /^[゠-ヿ]+$/, HIRA = /^[぀-ゟ]+$/, TAIL = '城寺社宮園山島湖駅前橋堤里村街港台谷川丘群屋門坂浜池岳峠滝塔館町通';
+const FIXED_LINES = { '首都圏外郭放水路': '首都圏/外郭放水路', '東武動物公園': '東武/動物公園' };   // 自動ではうまく折れない名前
+const wide = t => [...t].reduce((n, c) => n + (c.charCodeAt(0) < 0x2000 ? .6 : 1), 0);   // 半角は 0.6 文字ぶん
+export function titleLines(place) {
+  const m = (place.welcome || '').match(/^ようこそ、(.+)へ！$/);
+  let name = m ? m[1] : place.name, sub = '';
+  const pm = name.match(/^(.+?)（(.+)）$/); if (pm) { name = pm[1]; sub = pm[2]; }   // （ ）の中は小さく下に出す
+  if (place.title?.lines) return { lines: place.title.lines, sub };
+  if (FIXED_LINES[name]) return { lines: FIXED_LINES[name].split('/'), sub };
+  const units = name.split(/[\s　・]+/).filter(Boolean).flatMap(part => {
+    let ws = seg ? [...seg.segment(part)].map(x => x.segment) : [part];
+    // カタカナどうし・ひらがなどうしは、7文字までなら1つの言葉としてつなぐ（シー＋パラダイス、ゆう＋えん＋ち）
+    ws = ws.reduce((a, w) => { const p = a.at(-1), same = p && ((KATA.test(p) && KATA.test(w)) || (HIRA.test(p) && HIRA.test(w) && p !== 'の' && w !== 'の'));
+      if (same && [...p + w].length <= 7) a[a.length - 1] += w; else a.push(w); return a; }, []);
+    // 1文字だけの切れはし：続いていればまとめる（阿＋夫＋利）。1つだけなら、「城・寺・山・の」などは前に、それ以外（東・皇・お）は後ろにつなぐ
+    ws = ws.reduce((a, w) => { const p = a.at(-1); if (p && p.one && [...w].length === 1) { p.t += w; p.run = true; } else a.push({ t: w, one: [...w].length === 1 }); return a; }, []);
+    const out = [];
+    ws.forEach((u, i) => {
+      if (!u.one || u.run) return void out.push(u.t);
+      if (out.length && (TAIL.includes(u.t) || HIRA.test(u.t) || i === ws.length - 1)) out[out.length - 1] += u.t;
+      else if (ws[i + 1]) ws[i + 1] = { ...ws[i + 1], t: u.t + ws[i + 1].t, one: false };
+      else out.push(u.t);
+    });
+    return out;
+  });
+  const n = wide(units.join('')), k = Math.min(units.length, n <= 4 ? 1 : n <= 8 ? 2 : 3);
+  let best = null;
+  const walk = (i, acc) => {   // 行の分け方をぜんぶ試して、いちばん長い行が短いもの（同じなら最後の行が短いもの）を選ぶ
+    if (acc.length === k - 1) {
+      const ls = [...acc, units.slice(i).join('')], sc = Math.max(...ls.map(wide)) * 100 + wide(ls.at(-1));
+      if (!best || sc < best.sc) best = { ls, sc }; return;
+    }
+    for (let j = i + 1; j <= units.length - (k - 1 - acc.length); j++) walk(j, [...acc, units.slice(i, j).join('')]);
+  };
+  walk(0, []);
+  return { lines: best.ls, sub };
+}
+const HE = 14.5, STEP = .46;   // 「へ！」の幅、段ちがいの1段ぶん（文字の大きさに対して）
+function titleHTML(place) {
+  const T = place.title || {}, label = esc(place.welcome);
+  if (T.tate) {   // たて書きで主役の両わきに置く（東京タワーなど、主役がまん中に立つ絵）
+    return `<h2 class="ttl tate" style="--ty:${T.top}cqw" aria-label="${label}"><span class="yk" style="left:${T.yk[0]}cqw;top:${T.yk[1]}cqw">ようこそ、</span>
+      ${T.tate.map(([t, x, size], i) => `<span class="col" style="left:${x}cqw;font-size:${size}cqw;--i:${i}">${esc(t)}</span>`).join('')}<span class="he" style="left:${T.he[0]}cqw;top:${T.he[1]}cqw">へ！</span></h2>`;
+  }
+  const { lines, sub } = titleLines(place), k = lines.length, last = k - 1;
+  const size = T.size || Math.min(k === 1 ? 26 : 21.5, ...lines.map((l, i) => (88 - (i === last ? HE : 0)) / (wide(l) * .975 + STEP * i)));
+  const w = lines.map((l, i) => STEP * i * size + wide(l) * .975 * size + (i === last ? HE : 0));
+  const left = Math.max(6, (100 - Math.max(...w)) / 2), x = T.x || lines.map((l, i) => left + STEP * i * size);
+  const r = v => Math.round(v * 10) / 10;
+  return `<h2 class="ttl" style="--ts:${r(size)}cqw${T.top ? `;--ty:${T.top}cqw` : ''}" aria-label="${label}"><span class="yk" style="left:${r(x[0] + .5)}cqw">ようこそ、</span>
+    ${lines.map((l, i) => `<span class="ln" style="padding-left:${r(x[i])}cqw;--i:${i}">${esc(l)}${i === last ? '<span class="he">へ！</span>' : ''}</span>`).join('')}
+    ${sub ? `<span class="sub" style="padding-left:${r(x[last] + .5)}cqw">${esc(sub)}</span>` : ''}</h2>`;
+}
+
 // カードの枠（絵は engine か img をあとから先頭に入れる）
 // card：{ time, weather, season, at, n }（到着ごとのカード、または試し見の仮のカード）
-export function cardEl(place, card, { stamp = true, welcome = true } = {}) {
+// 上：県・市と番号の細い行、その下に題字。下：名所の名前・番号・日付と、時間帯・天気・季節
+export function cardEl(place, card, { welcome = true } = {}) {
   const el = document.createElement('div'); el.className = 'card' + (place.kind === 'photo' ? ' photo' : '');
-  const w = place.welcome, i = w.indexOf('、'), [w1, w2] = i >= 0 ? [w.slice(0, i + 1), w.slice(i + 1)] : ['', w];
   const chips = [[LABEL.time[card.time], CHIP_COLOR.time], [LABEL.weather[card.weather] || '天気不明', CHIP_COLOR.weather], [LABEL.season[card.season || seasonOf(new Date(card.at || Date.now()))], CHIP_COLOR.season]];
+  const kari = place.kind === 'plain' ? '<span class="kari" title="この名所の絵はまだです">絵はまだ</span>' : place.kind === 'photo' ? '<span class="kari" title="ドット絵ができるまでの仮の写真">仮</span>' : '';
   el.innerHTML = `
-    <div class="hud top"><span class="pref">${esc(prefCity(place))}</span>${welcome ? `<span class="wel1">${esc(w1)}</span><span class="wel2">${esc(w2)}</span>` : ''}</div>
-    ${place.kind === 'plain' ? '<span class="kari" title="この名所の絵はまだです">絵はまだ</span>' : ''}${place.kind === 'photo' ? `<span class="kari" title="ドット絵ができるまでの仮の写真">仮</span><span class="credit">写真：${esc(place.photo.author)}／${esc(place.photo.license)}</span>` : ''}
-    ${stamp ? `<div class="stamp" aria-hidden="true"><b>到着</b><small>${fmtDate(card.at)}</small></div>` : ''}
+    <div class="hud top ${['evening', 'night'].includes(card.time) ? 't-dark' : 't-bright'}">${welcome ? `<div class="cap"><span class="pref">${esc(prefCity(place))}</span>${kari}<i></i><span class="no">No.${esc(place.no)}</span></div>${titleHTML(place)}` : ''}</div>
+    ${place.kind === 'photo' ? `<span class="credit">写真：${esc(place.photo.author)}／${esc(place.photo.license)}</span>` : ''}
     <div class="hud bot"><div><div class="place">${esc(place.name)}</div><div class="meta">${cardNo(place, card)} ／ ${fmtDate(card.at)}</div></div>
       <div class="chips">${chips.map(([a, c]) => `<span class="chip" style="background:${c}">${esc(a)}</span>`).join('')}</div></div>`;
   return el;

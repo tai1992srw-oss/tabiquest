@@ -12,6 +12,7 @@ const DOT = [
     lat: 35.4556, lng: 139.6360, radius: 500, categories: ['街並み・港', '夜景'],
     scene: 'minatomirai', times: ['day', 'morning', 'evening', 'night'],
     welcome: 'ようこそ、みなとみらいへ！',
+    title: { lines: ['みなと', 'みらい'], size: 20, x: [35.4, 25.6] },   // 題字：ランドマークタワーにかからないよう右に寄せる（単位は cqw。ui.js の titleHTML）
     item: { id: 'mm-wheel', name: '観覧車のミニチュア（仮）' },
     alt: 'みなとみらいの海ぞいの遊歩道に分身キャラが立つ、動くドット絵カード',
   },
@@ -20,6 +21,7 @@ const DOT = [
     lat: 35.4437, lng: 139.6466, radius: 400, categories: ['食・市場', '街並み・港'],
     scene: 'chukagai', times: ['day', 'morning', 'evening', 'night'],
     welcome: 'ようこそ、横浜中華街へ！',
+    title: { lines: ['横浜中華街'], top: 6.6 },   // 題字：門にかからないよう、1行にして空のところへ
     item: { id: 'ck-nikuman', name: 'ほかほか肉まん（仮）' },
     alt: '横浜中華街の門の前に分身キャラが立つ、動くドット絵カード',
   },
@@ -29,6 +31,7 @@ const DOT = [
     lat: 35.3067, lng: 139.5003, radius: 250, categories: ['自然・絶景', '街並み・港'],
     scene: 'kamakura', times: ['day', 'morning', 'evening', 'night'],
     welcome: 'ようこそ、鎌倉高校前へ！',
+    title: { lines: ['鎌倉', '高校前'] },
     item: { id: 'kk-signal', name: '踏切のキーホルダー（仮）' },
     alt: '海の見える鎌倉高校前の踏切の坂に分身キャラが立つ、動くドット絵カード',
   },
@@ -39,6 +42,7 @@ const DOT = [
     scene: 'tokyotower', times: ['day', 'morning', 'evening', 'night'],
     blurb: '1958年にできた高さ333mの電波塔。夜のライトアップが見どころ',
     welcome: 'ようこそ、東京タワーへ！',
+    title: { tate: [['東京', 13.3, 21.5], ['タワー', 63.6, 16.9]], top: 12, yk: [7.7, -11.3], he: [78.5, 42] },   // 題字：主役がまん中に立つので、たて書きで両わきに（[文字, 左, 大きさ]）
     item: { id: 'tokyotower-omiyage', name: '東京タワーのおみやげ（仮）' },
     alt: '芝生から見上げる東京タワーの前に分身キャラが立つ、動くドット絵カード',
   },

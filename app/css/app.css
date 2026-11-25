@@ -43,23 +43,36 @@ h2{margin:0;font:900 16px var(--sans);color:var(--ink)}
 /* ---- カード ---- */
 .card{position:relative;aspect-ratio:9/16;background:#000;border:3px solid var(--ink);box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--gold),0 22px 50px rgba(0,0,0,.6);overflow:hidden;container-type:inline-size;touch-action:pan-y}
 .card canvas,.card img.snap{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+/* カードの上の文字：県・市と番号の細い行、その下に題字「ようこそ、○○へ！」（到着C案「ポスター」）。単位は cqw＝カードの幅の100分の1
+   文字はいつも絵の手前。暗い絵（夕・夜）は月色のにじみ、明るい絵（朝・昼）は墨の影で読ませる */
 .hud{position:absolute;left:0;right:0;pointer-events:none;font-family:var(--dot);transition:opacity .3s}
-.card.clean .hud,.card.clean .stamp{opacity:0}
-.hud.top{top:4%;text-align:center;text-shadow:0 2px 0 var(--deep),2px 0 0 var(--deep),-2px 0 0 var(--deep),0 -2px 0 var(--deep),2px 2px 0 var(--deep)}
-.pref{display:inline-block;font-size:3.2cqw;padding:.2cqw 2.6cqw;background:var(--deep);color:var(--ink);text-shadow:none;letter-spacing:.08em}
-.wel1{display:block;margin-top:1.6cqw;font-size:6cqw;line-height:1.1;color:var(--ink)}
-.wel2{display:block;font-size:10cqw;line-height:1.05;color:var(--gold)}
+.card.clean .hud{opacity:0}
+.hud.top{top:0;height:100%;font-family:var(--sans);color:#FFFDF8}
+.hud.top.t-bright::before{content:'';position:absolute;left:0;right:0;top:0;height:82cqw;background:linear-gradient(rgba(20,19,41,.34),rgba(20,19,41,0))}
+.cap{position:absolute;left:5.6cqw;right:5.6cqw;top:4cqw;display:flex;align-items:center;gap:2.6cqw;font:700 2.8cqw/1.4 var(--sans);letter-spacing:.5cqw;opacity:.9}
+.cap i{flex:1;height:1px;background:rgba(255,253,248,.4)}
+.cap .no{font:400 3.1cqw/1.4 var(--dot);letter-spacing:0}
+.kari{font:900 2.8cqw/1.5 var(--sans);letter-spacing:0;background:#E2667A;color:#2B2A4C;padding:0 2cqw;border-radius:99px;text-shadow:none}
+.ttl{position:absolute;left:0;right:0;top:calc(var(--ty,9.5cqw) + 16cqw);margin:0;font:900 var(--ts,21.5cqw)/1 var(--sans);letter-spacing:-.025em}
+.ttl .ln{display:block;white-space:nowrap}
+.ttl .ln+.ln{margin-top:.5cqw}
+.ttl .he{display:inline-block;font-size:6.2cqw;color:#FFD66B;margin-left:1.5cqw;letter-spacing:0}
+.ttl .yk{position:absolute;bottom:calc(100% + 3.4cqw);font-size:5.1cqw;line-height:1.2;letter-spacing:2cqw;color:#FFD66B;white-space:nowrap}
+.ttl .sub{display:block;margin-top:2cqw;font-size:4.4cqw;line-height:1.2;letter-spacing:.3cqw}
+.ttl.tate .col{position:absolute;top:0;writing-mode:vertical-rl;white-space:nowrap}
+.ttl.tate .yk{bottom:auto}
+.ttl.tate .he{position:absolute;margin:0}
+.t-dark .ttl{text-shadow:0 0 6.7cqw rgba(255,214,107,.55),0 .8cqw 0 rgba(10,8,40,.4)}
+.t-bright .ttl{text-shadow:0 .8cqw 0 rgba(43,42,76,.85),0 0 4.6cqw rgba(43,42,76,.55),0 0 1cqw rgba(43,42,76,.5)}
+.t-dark .ttl .yk,.t-dark .ttl .he,.t-dark .cap{text-shadow:0 .5cqw 0 rgba(10,8,40,.5)}
+.t-bright .ttl .yk,.t-bright .ttl .he,.t-bright .ttl .sub,.t-bright .cap{text-shadow:0 .5cqw 0 rgba(43,42,76,.85),0 0 2.6cqw rgba(43,42,76,.5)}
 .hud.bot{bottom:0;padding:7cqw 3.2cqw 2.6cqw;background:linear-gradient(transparent,rgba(10,8,30,.82) 55%);display:flex;justify-content:space-between;align-items:flex-end;gap:2cqw}
 .place{font-size:6cqw;line-height:1.1}
 .meta{font-size:2.9cqw;color:#D8D0F0;margin-top:.8cqw}
 .chips{display:flex;gap:1cqw;flex:none}
 .chip{font-size:3.1cqw;padding:.4cqw 1.8cqw;color:#14122E}
-.stamp{position:absolute;right:5%;bottom:17%;width:27cqw;aspect-ratio:1;border:1.3cqw double #E8473A;border-radius:50%;color:#E8473A;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--dot);transform:rotate(-14deg);background:rgba(255,244,224,.12);text-shadow:0 0 1px rgba(255,244,224,.5);pointer-events:none;transition:opacity .3s}
-.stamp b{font-weight:400;font-size:7.5cqw;line-height:1}
-.stamp small{font-size:2.6cqw;line-height:1.2;margin-top:.6cqw}
-.kari{position:absolute;left:3cqw;top:3cqw;font:400 4cqw var(--dot);background:var(--coral);color:#14122E;padding:.2cqw 1.6cqw;pointer-events:none}
 .credit{position:absolute;left:3cqw;bottom:18cqw;max-width:58%;font:400 2.3cqw/1.2 var(--sans);color:rgba(255,244,224,.85);text-shadow:0 1px 2px #000;pointer-events:none}
-.card.clean .kari,.card.clean .credit{opacity:.7}
+.card.clean .credit{opacity:.7}
 .card.locked{display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#11163A 0 6px,#0E1230 6px 12px);border-color:var(--line);box-shadow:0 0 0 3px var(--bg),0 0 0 5px var(--line)}
 .card.locked .q{font:400 22cqw var(--dot);color:#2E3570}
 .card.locked .no{position:absolute;bottom:4cqw;left:0;right:0;text-align:center;font:400 5cqw var(--dot);color:#4A5294}
@@ -148,36 +161,45 @@ table.combo .no{color:#3A4180}
 .viewer .row{justify-content:center}
 .viewer .vars button{min-height:38px;font-size:13px;padding:4px 10px}
 
-/* ---- 到着演出 ---- */
-.arrival{position:fixed;inset:0;z-index:50;background:radial-gradient(circle at 50% 45%,#1C2258,#07091A 70%);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;padding:calc(env(safe-area-inset-top) + 52px) 16px calc(env(safe-area-inset-bottom) + 14px);overflow:hidden}
-.arrival .stage{position:relative;display:flex;justify-content:center}
-.arrival .card{width:min(432px,calc(100vw - 32px),calc((100dvh - 270px) * .5625));z-index:2}
-.arrival .card.pre .hud,.arrival .card.pre .stamp{opacity:0}
-.arrival .card .stamp{transition:none}
-.arrival .card:not(.stamped) .stamp{opacity:0}
-.arrival .card.stamped .stamp{animation:stampIn .26s cubic-bezier(.3,1.6,.5,1) both}
+/* ---- 到着演出 ---- カードは画面いっぱい（9:16）。上下のあまりは同じ絵をぼかした色でうめ、文字とボタンは絵の上に重ねる */
+.arrival{position:fixed;inset:0;z-index:50;background:#141329;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;--bar:max(0px,calc((100dvh - 100vw * 16 / 9) / 2));--fade:min(46px,var(--bar))}
+.arrival .bgblur{position:absolute;inset:-48px;background:center/cover no-repeat;filter:blur(30px) brightness(.5) saturate(1.15);opacity:0;transition:opacity 1.8s}
+.arrival.go .bgblur{opacity:1}
+.arrival .stage{position:relative;display:flex;justify-content:center;width:min(100vw,calc(100dvh * .5625));height:min(100dvh,calc(100vw / .5625))}
+.arrival .card{width:100%;height:100%;border:none;box-shadow:none;aspect-ratio:auto;background:none;overflow:visible;z-index:2}
+.arrival .card canvas{-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade) * 1.8),transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 var(--fade),#000 calc(100% - var(--fade) * 1.8),transparent 100%)}
+.arrival .card.pre .hud{opacity:0}
+.arrival .card .hud.bot{display:none}
+.arrival .card .cap{top:calc(env(safe-area-inset-top) + 26px - var(--bar))}
+.arrival .card .ttl{top:calc(var(--ty,9.5cqw) + max(0px,env(safe-area-inset-top) + 62px - var(--bar)))}
 .arrival .card.shake{animation:shake .32s steps(6) both}
-.arrival .card.lit .wel1,.arrival .card.lit .wel2{animation:pop .7s cubic-bezier(.2,1.7,.4,1) both}
-.rays{position:absolute;left:50%;top:50%;width:230vmax;height:230vmax;transform:translate(-50%,-50%);opacity:0;z-index:1;pointer-events:none;
-  background:repeating-conic-gradient(from 0deg,rgba(255,200,87,.20) 0 6deg,transparent 6deg 18deg);-webkit-mask:radial-gradient(circle,#000 8%,transparent 42%);mask:radial-gradient(circle,#000 8%,transparent 42%)}
-.arrival.lit .rays{opacity:1;transition:opacity .6s;animation:spin 18s linear infinite}
+/* 題字の出かた：細い行 →「ようこそ、」が左から → 名前が1行ずつ下からはねて →「へ！」がぽんと出る */
+.arrival .card.lit .cap{animation:tFade .5s both}
+.arrival .card.lit .ttl .yk{animation:tSlide .45s .1s cubic-bezier(.2,1,.3,1) both}
+.arrival .card.lit .ttl .ln,.arrival .card.lit .ttl .col,.arrival .card.lit .ttl .sub{animation:tRise .6s calc(.25s + var(--i,2) * .14s) cubic-bezier(.2,1.5,.4,1) both}
+.arrival .card.lit .ttl .he{animation:tPop .45s .8s cubic-bezier(.3,1.8,.5,1) both}
+.arrival .card.still .hud *{animation:none}
 .flash{position:absolute;inset:0;background:#FFF8E6;opacity:0;pointer-events:none;z-index:4}
 .flash.on{animation:flash .65s ease-out both}
 .confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;image-rendering:pixelated}
-.band{position:absolute;left:0;right:0;top:50%;z-index:6;transform:translateX(-110%);pointer-events:none;display:flex;justify-content:center}
-.band span{display:block;width:100%;text-align:center;font:400 clamp(22px,7vw,32px)/1 var(--dot);color:#14122E;background:var(--gold);padding:14px 10px;border-top:4px solid var(--ink);border-bottom:4px solid var(--ink);box-shadow:0 0 0 4px var(--deep)}
-.band.in{transform:translateX(0);transition:transform .35s cubic-bezier(.2,1.2,.4,1)}
-.band.up{top:auto;bottom:calc(env(safe-area-inset-bottom) + 126px);transition:transform .35s cubic-bezier(.2,1.2,.4,1),bottom .4s}
-.after{position:absolute;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 14px);min-height:100px;justify-content:flex-end;z-index:7;display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;transform:translateY(10px);pointer-events:none}
-.after.on{opacity:1;transform:none;transition:.35s;pointer-events:auto}
-.after .gain{font:400 14px var(--dot);color:var(--ink);text-align:center}
-.after .gain em{font-style:normal;color:var(--gold)}
-.skip{position:absolute;right:12px;top:calc(env(safe-area-inset-top) + 10px);z-index:8;min-height:36px;font-size:13px;background:rgba(21,26,56,.8)}
-@keyframes pop{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+.after{position:absolute;left:0;right:0;bottom:0;z-index:7;display:flex;flex-direction:column;gap:3px;padding:min(110px,13dvh) 18px calc(env(safe-area-inset-bottom) + 24px);background:linear-gradient(rgba(20,19,41,0),rgba(20,19,41,.88) 48%,#141329);color:#FFFDF8;opacity:0;transform:translateY(14px);pointer-events:none}
+.after.on{opacity:1;transform:none;transition:opacity .35s,transform .35s;pointer-events:auto}
+.after .got{display:flex;align-items:center;gap:8px}
+.after .got b{font:900 19px/1.3 var(--sans)}
+.after .got .pt{margin-left:auto;font:400 14px/1.4 var(--dot);color:#2B2A4C;background:#FFD66B;padding:3px 11px;border-radius:99px}
+.after .gsub{margin:0;font:700 12px/1.5 var(--sans);opacity:.9}
+.after .row{display:flex;flex-wrap:nowrap;gap:10px;margin-top:9px}
+.arrival .after button{height:54px;min-height:0;border:0;border-radius:18px;padding:0;font-family:var(--sans)}
+.arrival .after .go{flex:1.6;background:#FFFDF8;color:#2B2A4C;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px}
+.arrival .after .go .ic{color:#8A6CE0}
+.arrival .after .later{flex:1;background:rgba(255,253,248,.16);color:#FFFDF8;font-weight:700;font-size:14px}
+.arrival .skip{position:absolute;right:14px;bottom:calc(env(safe-area-inset-bottom) + 18px);z-index:8;height:36px;min-height:0;border:0;border-radius:99px;padding:0 14px;font:700 12px var(--sans);background:rgba(20,19,41,.6);color:#FFFDF8}
+@keyframes tFade{from{opacity:0}}
+@keyframes tSlide{from{opacity:0;transform:translateX(-4cqw)}}
+@keyframes tRise{from{opacity:0;transform:translateY(38%) scale(.94)}}
+@keyframes tPop{from{opacity:0;transform:scale(.2) rotate(-18deg)}}
 @keyframes flash{0%{opacity:0}15%{opacity:.95}100%{opacity:0}}
-@keyframes stampIn{0%{transform:rotate(-14deg) scale(3.2);opacity:0}100%{transform:rotate(-14deg) scale(1);opacity:1}}
 @keyframes shake{0%{transform:translate(0,0)}20%{transform:translate(-4px,3px)}40%{transform:translate(4px,-2px)}60%{transform:translate(-3px,-3px)}80%{transform:translate(2px,2px)}100%{transform:translate(0,0)}}
-@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
 
 /* ---- デバッグ ---- */
 .dbg{border-color:#7A2B3A}
@@ -193,8 +215,8 @@ dl.rec dt{color:var(--sub)}
 dl.rec dd{margin:0}
 
 @media (prefers-reduced-motion:reduce){
-  .arrival .card.lit .wel1,.arrival .card.lit .wel2,.arrival .card.stamped .stamp,.arrival .card.shake,.flash.on{animation:none}
-  .arrival.lit .rays{animation:none}
+  .arrival .card.lit .hud *,.arrival .card.shake,.flash.on{animation:none}
+  .arrival .bgblur{transition:none}
 }
 
 /* 撮影：キャラの置き場所・明るさ・ポーズ */
@@ -240,7 +262,7 @@ dl.rec dd{margin:0}
 .viewer.story .side i{font-style:normal;font-size:20px;line-height:1}
 .viewer.story .side button[aria-pressed="true"]{background:var(--gold);color:#221a00}
 .viewer.story.posing .side{bottom:12%}
-.viewer.story.posing .card .hud,.viewer.story.posing .card .stamp{opacity:0}
+.viewer.story.posing .card .hud{opacity:0}
 .viewer.story .sheet{position:absolute;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 66px);z-index:6;display:flex;flex-direction:column;gap:8px;padding:10px;background:rgba(10,12,30,.8);border-radius:16px;backdrop-filter:blur(8px)}
 .viewer.story .sheet[hidden]{display:none}
 .viewer.story .sheet .hint{margin:0;font-size:12px;color:#ddd;text-align:center}
@@ -250,14 +272,9 @@ dl.rec dd{margin:0}
 .viewer.story .sheet button[aria-pressed="true"]{background:var(--gold);color:#221a00;border-color:var(--gold)}
 .viewer.story .tap{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);border:0}
 
-/* 到着の画面も、カードの画面と同じく画面いっぱい。最後の操作はカードの下に重ねる */
-.arrival{padding:0;justify-content:center;gap:0;background:#000}
-.arrival .stage{width:min(100vw,calc(100dvh * .5625));height:min(100dvh,calc(100vw / .5625))}
-.arrival .card{width:100%;height:100%;border:none;box-shadow:none;aspect-ratio:auto}
-.arrival .band.up{top:calc(env(safe-area-inset-top) + 12%);bottom:auto}
-.arrival .after{left:0;right:0;bottom:0;padding:56px 16px calc(env(safe-area-inset-bottom) + 18px);background:linear-gradient(transparent,rgba(5,6,20,.88) 45%)}
-.arrival.done .card .hud.bot,.arrival.done .card .stamp{opacity:0;transition:opacity .3s}
-.viewer.story .card .hud.top{top:calc(4% + 58px)}
+/* カードの画面では、上の細い行は出さない（上に日付と閉じるボタンがあるため）。題字はそのぶん下げる */
+.viewer.story .card .cap{display:none}
+.viewer.story .card .ttl{top:calc(var(--ty,9.5cqw) + 74px)}
 .viewer.story .card.posing{outline:none}
 
 /* ==== 名所・図鑑・設定（v1.0 案3「推しと旅するアルバム」） ====
