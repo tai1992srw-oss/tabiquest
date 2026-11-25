@@ -4,7 +4,7 @@
 //   右のかべの窓：いまの時間帯・天気・季節のドット絵の名所が動いて見える（名所の絵をそのまま使う）
 //   左のかべ：手に入れたカードを写真として貼る。床：家具（見本・ご当地アイテム・ショップの品）を置く
 //   ボタンや文字は、ストーリーズのように部屋の上に重ねる
-//   部屋と家具の絵は room_art.js でコードで描く（女の子らしい部屋。2026-11-25、マイルームはコードで描いてよいと決まった）
+//   部屋と家具は room_voxel.js でボクセルの立体としてコードで作る（女の子らしい部屋。2026-11-25、マイルームはコードで描いてよい・全部ボクセルでいくと決まった）
 import { PLACES, placeById, LABEL, seasonOf } from './places.js';
 import { book, mode, settings, saveBook } from './store.js';
 import { engine, snapshot, reduceMotion } from './card.js';
@@ -13,13 +13,13 @@ import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, img, cardEl, fmtDate, toast } from './ui.js';
 import { mountVoxelRoom, V as VOX, WH as VWH, FX } from './room_voxel.js';
-import { S, N, TW, TH, OX, OY, RW, RH, P, LEFT, RIGHT, PHOTO_SLOTS, WINDOW, onWall as wallAt, buildRoom, drawGarland, furnSprite } from './room_art.js';
 
 const DOTS = PLACES.filter(p => p.kind === 'dot');
 const dayNo = d => Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000);
 
-const K = 2;      // 画面では論理の大きさの K 倍の細かさで描く
-const CS = .8;   // キャラの大きさ（部屋に対して小さめに）
+const N = 10;   // 部屋は 10×10 マス
+// 左のかべの写真の枠（3つ）。z は部屋の奥からの位置、y は床からの高さ（ボクセルの単位）
+const PHOTO_SLOTS = [[210, 150], [300, 166], [390, 150]].map(([u, v]) => { const k = N * VOX / 560, vy = VWH / 300; return { z: N * VOX - u * k, w: 70 * k, y: v * vy, h: 90 * vy }; });
 
 // 家具：w・d は床で使うマス（右向き・左向き）、h は高さ、flat は上に乗れる敷きもの
 //   見本（demo-）は、絵ができるまでの部屋の感じを見るための仮の家具。いつでも置ける
@@ -116,22 +116,23 @@ export function renderHome(view, { header } = {}) {
     season: dbg && settings.season && settings.season !== 'auto' ? settings.season : seasonOf(now), at: now.toISOString() };
   const lg = loginState(b, now);
   let edit = false, sel = null;   // 模様がえ中か、動かそうとしている家具
-  const voxel = location.hash.startsWith('#/home/voxel');   // ボクセル版（ためし）
-  // ボクセル版：かわいく見せる工夫のオン・オフ（この端末に覚えておく）と、でんき（夕方と夜は、はじめからつける）
+  // かわいく見せる工夫のオン・オフ（この端末に覚えておく）と、でんき（夕方と夜は、はじめからつける）
   const vfx = (() => { try { return Object.assign(Object.fromEntries(FX.map(([k]) => [k, true])), JSON.parse(localStorage.getItem('tabiquest:voxfx') || '{}')); } catch (e) { return Object.fromEntries(FX.map(([k]) => [k, true])); } })();
   let vlight = timeReal === 'night' || timeReal === 'evening';
 
   view.classList.add('homemode');
   view.innerHTML = `
-    <div class="hm-stage">
-      <div class="hm-scroll"><canvas class="hm-iso" width="${RW * K}" height="${RH * K}" role="img" aria-label="マイルーム。分身キャラが部屋に立っている"></canvas></div>
+    <div class="hm-stage vox${st.time === 'night' ? ' night' : ''}">
+      <div class="hm-scroll" role="img" aria-label="マイルーム。分身キャラが部屋に立っている"></div>
       <div class="hm-ov top">
         <div class="hm-greet"><small>${now.getMonth() + 1}月${now.getDate()}日（${WEEK[now.getDay()]}）</small><b>${GREET[timeReal]}</b>
           <span class="chips"><span class="chip t">${LABEL.time[timeReal]}</span><span class="chip w"${wx ? '' : ' hidden'}>${wx ? LABEL.weather[wx] : ''}</span><span class="chip s">${LABEL.season[st.season]}</span></span></div>
         ${lg.got ? '' : `<button class="hm-bonus" data-a="login"><b>ログインボーナス</b><small>${lg.next}日め ・ +${bonusOf(lg.next)}pt を受け取る</small></button>`}
       </div>
       <div class="hm-ov side">
-        ${voxel ? `<button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button><a href="#/home"><i aria-hidden="true">▚</i><span>ドット版</span></a><button data-a="light" aria-pressed="${vlight}"><i aria-hidden="true">💡</i><span>でんき</span></button><button data-a="fx"><i aria-hidden="true">✿</i><span>工夫</span></button>` : '<button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button><a href="#/home/voxel"><i aria-hidden="true">▣</i><span>ボクセル</span></a>'}
+        <button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button>
+        <button data-a="light" aria-pressed="${vlight}"><i aria-hidden="true">💡</i><span>でんき</span></button>
+        <button data-a="fx"><i aria-hidden="true">✿</i><span>工夫</span></button>
         <a href="#/shop"><i aria-hidden="true">¥</i><span>ショップ</span></a>
         <a href="#/zukan"><i aria-hidden="true">▦</i><span>図鑑</span></a>
         <a href="#/list"><i aria-hidden="true">◆</i><span>名所</span></a>
@@ -141,11 +142,11 @@ export function renderHome(view, { header } = {}) {
       <div class="hm-engine" aria-hidden="true"></div>
     </div>`;
 
-  const scroller = view.querySelector('.hm-scroll'), cv = view.querySelector('.hm-iso'), ctx = cv.getContext('2d');
+  const scroller = view.querySelector('.hm-scroll');
   const tip = view.querySelector('.hm-tip'), selbar = view.querySelector('.hm-selbar');
   const setTip = () => {
-    tip.textContent = voxel && !edit ? 'ボクセル版のためし。床を押すと歩きます。ライトを押すとでんき、キャラやくまを押すとハート。' : !edit ? '床を押すと、そこまで歩きます。横にスクロールすると部屋を見わたせます。'
-      : sel ? `「${itemName(sel.id)}」を置きたいマスを押してください。` : 'マスを押すと家具を置けます。家具を押すと動かしたり外したりできます。左のかべの枠には写真を貼れます。';
+    tip.textContent = !edit ? '床を押すと歩きます。ライトを押すとでんき、キャラやくまを押すとハート。横にスクロールすると部屋を見わたせます。'
+      : sel ? `「${itemName(sel.id)}」を置きたいマスを押してください。` : 'マスを押すと家具を置けます。家具を押すと動かしたり回したり外したりできます。左のかべの枠には写真を貼れます。';
     selbar.hidden = !(edit && sel);
   };
   setTip();
@@ -160,165 +161,46 @@ export function renderHome(view, { header } = {}) {
   });
 
   // 写真（左のかべ）
+  let vox = null;
   const photos = PHOTO_SLOTS.map(() => null);
   const loadPhotos = () => r.photos.forEach((id, k) => { photos[k] = null; const c = b.cards.find(x => x.id === id), p = c && placeById(c.placeId); if (p) snapshot(p.scene, c).then(u => { const im = new Image(); im.onload = () => { photos[k] = im; vox?.setPhotos(photos); }; im.src = u; }); });
-  let vox = null;
-  loadPhotos();
 
-  // キャラ（位置は床のマスの単位）
-  let chara = null; loadChara().then(c => { chara = c; }).catch(() => {});
-  const me = { x: r.me.i + .5, y: r.me.j + .5, tx: null, ty: null, flip: false, jump: 0 };
+  // 部屋（Three.js のボクセル）。模様がえ：家具を押して選ぶ → マスを押して動かす。空いたマスで家具を置く。左のかべの枠で写真
+  vox = mountVoxelRoom({ stage: scroller, objects: () => r.objects, furn, dims, me: r.me, blocked: (i, j) => blocked(r, i, j), onMove: (i, j) => { r.me = { i, j }; saveBook(); },
+    chara: loadChara(), engineCanvas: engine.canvas, night: () => (st.time === 'night' ? 1 : st.time === 'evening' ? .55 : 0),
+    onTapFurniture: o => { sel = sel === o ? null : o; vox.setSelected(sel); setTip(); },
+    onTapTile: (i, j) => {
+      if (sel) { if (fits(sel, i, j, r.objects)) { sel.i = i; sel.j = j; saveBook(); sel = null; vox.sync(); vox.setSelected(null); setTip(); } else toast('そこには置けません'); return; }
+      pickObject(b, r, [i, j], () => { saveBook(); vox.sync(); });
+    },
+    onTapPhoto: k => pickPhoto(b, r, k, () => { saveBook(); loadPhotos(); vox.setPhotos(photos); }),
+    fx: vfx, light: vlight, onLight: v => { vlight = v; view.querySelector('[data-a=light]')?.setAttribute('aria-pressed', String(v)); },
+    photoSlots: PHOTO_SLOTS });
+  loadPhotos(); vox.setPhotos(photos);
   // はじめはキャラが画面のまん中に来るようにスクロール
-  requestAnimationFrame(() => { const [sx] = P(me.x, me.y); scroller.scrollLeft = sx / RW * cv.clientWidth - scroller.clientWidth / 2; });
-  if (voxel) {   // ボクセル版：2D の絵のかわりに Three.js の部屋を出す
-    cv.remove(); view.querySelector('.hm-stage').classList.add('vox'); view.querySelector('.hm-stage').classList.toggle('night', st.time === 'night');
-    const NV = 10 * VOX, k = NV / (N * TW / 2), vy = VWH / 300;
-    vox = mountVoxelRoom({ stage: scroller, objects: () => r.objects, furn, dims, me: r.me, blocked: (i, j) => blocked(r, i, j), onMove: (i, j) => { r.me = { i, j }; saveBook(); },
-      chara: loadChara(), engineCanvas: engine.canvas, night: () => (st.time === 'night' ? 1 : st.time === 'evening' ? .55 : 0),
-      // 模様がえ（ドット版と同じ決まり：家具を押して選ぶ → マスを押して動かす。空いたマスで家具を置く。左のかべの枠で写真）
-      onTapFurniture: o => { sel = sel === o ? null : o; vox.setSelected(sel); setTip(); },
-      onTapTile: (i, j) => {
-        if (sel) { if (fits(sel, i, j, r.objects)) { sel.i = i; sel.j = j; saveBook(); sel = null; vox.sync(); vox.setSelected(null); setTip(); } else toast('そこには置けません'); return; }
-        pickObject(b, r, [i, j], () => { saveBook(); vox.sync(); });
-      },
-      onTapPhoto: k => pickPhoto(b, r, k, () => { saveBook(); loadPhotos(); vox.setPhotos(photos); }),
-      fx: vfx, light: vlight, onLight: v => { vlight = v; view.querySelector('[data-a=light]')?.setAttribute('aria-pressed', String(v)); },
-      photoSlots: PHOTO_SLOTS.map(s => ({ z: NV - s.u * k, w: s.w * k, y: s.v * vy, h: s.h * vy })) });
-    vox.setPhotos(photos);
-    requestAnimationFrame(() => { scroller.scrollLeft = vox.screenX() * vox.canvas.clientWidth - scroller.clientWidth / 2; });
-  }
+  requestAnimationFrame(() => { scroller.scrollLeft = vox.screenX() * vox.canvas.clientWidth - scroller.clientWidth / 2; });
 
-  // ---- 描く ----
-  const { bg, front } = buildRoom();
-  const night = () => (st.time === 'night' ? 1 : st.time === 'evening' ? .55 : 0);
-  const poly = (pts, fill, stroke) => { ctx.beginPath(); pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); } };
-
-  function drawRoom() {
-    ctx.drawImage(bg, 0, 0, RW, RH);
-    if (edit) { ctx.lineWidth = 1; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], null, 'rgba(200,90,130,.35)'); }
-    // 窓（右のかべ）：名所の景色の上のほう。そのあとで窓わくとカーテンを重ねる
-    wallAt(ctx, RIGHT, WINDOW.u, WINDOW.v, WINDOW.w, WINDOW.h, (w, h) => {
-      const src = engine.canvas, sw = src.width, sh = src.height * .45, sy = src.height * .04;
-      const k = Math.max(w / sw, h / sh), dw = sw * k, dh = sh * k;
-      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
-      if (src.width) ctx.drawImage(src, 0, sy, sw, sh, (w - dw) / 2, 0, dw, dh);
-      ctx.restore();
-    });
-    ctx.drawImage(front, 0, 0, RW, RH);
-    // 写真（左のかべ）：白いふちとマスキングテープ
-    PHOTO_SLOTS.forEach((s, k) => wallAt(ctx, LEFT, s.u, s.v, s.w, s.h, (w, h) => {
-      const im = photos[k];
-      if (im) {
-        ctx.fillStyle = 'rgba(120,60,80,.18)'; ctx.fillRect(3, 4, w, h);
-        ctx.fillStyle = '#FFFDF8'; ctx.fillRect(0, 0, w, h); const iw = w - 10, ih = h - 22, sw = im.width, sh = sw * ih / iw; ctx.drawImage(im, 0, im.height * .55 - sh / 2, sw, sh, 5, 5, iw, ih);
-        ctx.fillStyle = ['rgba(249,180,200,.85)', 'rgba(195,235,220,.85)', 'rgba(220,200,242,.85)'][k]; ctx.fillRect(w / 2 - 14, -6, 28, 12);
-      } else if (edit) { ctx.setLineDash([5, 4]); ctx.strokeStyle = '#C46A8C'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, w - 2, h - 2); ctx.setLineDash([]); ctx.fillStyle = '#C46A8C'; ctx.font = '400 26px DotGothic16'; ctx.textAlign = 'center'; ctx.fillText('＋', w / 2, h / 2 + 9); }
-    }));
-  }
-  // 家具：room_art.js で描いた絵を置く
-  function drawObj(o) {
-    const f = dims(o), sp = furnSprite(furn(o.id)), [x, y] = P(o.i, o.j), flip = (o.r || 0) % 2 === 1;
-    if (!f.flat) { const [sx, sy] = P(o.i + f.w / 2 + .04, o.j + f.d / 2 + .04); ctx.fillStyle = 'rgba(150,80,90,.16)'; ctx.beginPath(); ctx.ellipse(sx, sy, (f.w + f.d) * TW / 4 * .9, (f.w + f.d) * TH / 4 * .9, 0, 0, Math.PI * 2); ctx.fill(); }   // 足もとのかげ
-    if (!flip) ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.W, sp.H);
-    else {   // ドット版の家具の絵は1方向だけなので、横むきは左右反転で見せる
-      const f0 = furn(o.id), [cx] = P(o.i + f.w / 2, o.j + f.d / 2), sc = sp.ox + (f0.w - f0.d) * TW / 4;
-      ctx.save(); ctx.translate(cx, 0); ctx.scale(-1, 1); ctx.drawImage(sp.c, -sc, y - sp.oy, sp.W, sp.H); ctx.restore();
-    }
-    if (o === sel) { ctx.lineWidth = 3; poly([P(o.i, o.j), P(o.i + f.w, o.j), P(o.i + f.w, o.j + f.d), P(o.i, o.j + f.d)], 'rgba(255,200,87,.25)', '#FFC857'); ctx.lineWidth = 1; }
-    if (edit) {   // 名前（模様がえ中だけ）
-      const [cx, cy] = P(o.i + f.w / 2, o.j + f.d / 2, f.h); ctx.font = '400 13px DotGothic16'; ctx.textAlign = 'center';
-      const nm = itemName(o.id), tw = Math.min(ctx.measureText(nm).width, 120);
-      ctx.fillStyle = 'rgba(90,40,60,.78)'; ctx.fillRect(cx - tw / 2 - 5, cy - 26, tw + 10, 18); ctx.fillStyle = '#FFF4F6'; ctx.fillText(nm, cx, cy - 12, 120);
-    }
-  }
-  // 夜と夕方：部屋を少し暗くして、スタンドライトやランプの明かりをつける（演出）
-  function drawLight(t) {
-    const n = night(); if (!n) return;
-    ctx.fillStyle = `rgba(40,20,70,${.28 * n})`; ctx.fillRect(0, 0, RW, RH);
-    ctx.globalCompositeOperation = 'lighter';
-    for (const o of r.objects) { const f = furn(o.id); if (!f.light) continue; const [x, y] = P(o.i + .5, o.j + .5, f.light - 14), rr = 150;
-      const g = ctx.createRadialGradient(x, y, 0, x, y, rr); g.addColorStop(0, `rgba(255,190,150,${.32 * n})`); g.addColorStop(1, 'rgba(255,190,150,0)'); ctx.fillStyle = g; ctx.fillRect(x - rr, y - rr, rr * 2, rr * 2); }
-    ctx.globalCompositeOperation = 'source-over';
-  }
-  function drawMe(t) {
-    if (!chara) return;
-    const [x, y] = P(me.x, me.y), walking = me.tx != null;
-    const bob = walking ? Math.abs(Math.sin(t / 90)) * 4 : (reduceMotion() ? 0 : Math.sin(t / 600) * 1.2), jy = me.jump > 0 ? Math.sin(me.jump * Math.PI) * 44 : 0;
-    ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(x, y + 2, 24 - jy * .2, 8 - jy * .06, 0, 0, Math.PI * 2); ctx.fill();
-    const w = chara.width * CS, h = chara.height * CS, top = Math.round(y - h - bob - jy);
-    ctx.save(); if (me.flip) { ctx.translate(Math.round(x) * 2, 0); ctx.scale(-1, 1); }
-    ctx.drawImage(chara, Math.round(x - w / 2), top, w, h); ctx.restore();
-  }
-
-  let raf = 0, last = performance.now();
-  function frame(t) {
-    raf = requestAnimationFrame(frame);
-    const dt = Math.min(50, t - last); last = t;
-    if (me.tx != null) {   // 歩く（マスの単位で）
-      const dx = me.tx - me.x, dy = me.ty - me.y, dist = Math.hypot(dx, dy), sp = .0035 * dt;
-      if (dist <= sp) { me.x = me.tx; me.y = me.ty; me.tx = me.ty = null; } else { me.x += dx / dist * sp; me.y += dy / dist * sp; const sx = dx - dy; if (Math.abs(sx) > .01) me.flip = sx < 0; }
-    }
-    if (me.jump > 0) me.jump = Math.max(0, me.jump - dt / 520);
-    ctx.setTransform(K, 0, 0, K, 0, 0); ctx.imageSmoothingEnabled = false; ctx.clearRect(0, 0, RW, RH); ctx.lineWidth = 1;
-    drawRoom();
-    drawGarland(ctx, reduceMotion() ? 0 : t, 0);
-    // 敷きものを先に、そのあと奥のものから順に（家具とキャラ）
-    const flats = r.objects.filter(o => furn(o.id).flat), rest = r.objects.filter(o => !furn(o.id).flat);
-    flats.forEach(drawObj);
-    rest.map(o => { const f = dims(o); return { z: o.i + f.w + o.j + f.d - 1, f: () => drawObj(o) }; }).concat([{ z: me.x + me.y, f: () => drawMe(t) }])
-      .sort((a, z) => a.z - z.z).forEach(x => x.f());
-    drawLight(t);
-    if (night()) drawGarland(ctx, reduceMotion() ? 0 : t, night());   // 夜はガーランドの電球が光る
-  }
-  if (!voxel) raf = requestAnimationFrame(frame);
-
-  // ---- さわる ----
-  const at = e => { const rc = cv.getBoundingClientRect(); return [(e.clientX - rc.left) / rc.width * RW, (e.clientY - rc.top) / rc.height * RH]; };
-  const tileAt = (x, y) => { const a = (x - OX) / (TW / 2), c = (y - OY) / (TH / 2), i = Math.floor((c + a) / 2), j = Math.floor((c - a) / 2); return i >= 0 && j >= 0 && i < N && j < N ? [i, j] : null; };
-  const inWall = (W, s, x, y) => { const u = x - W.x0, v = W.y0 + u * W.k - y; return u >= s.u && u <= s.u + s.w && v >= s.v && v <= s.v + s.h; };
-  // 押した場所にある家具（手前のものから）。箱の上の面・横の面のどこを押してもよい
-  const objAt = (x, y) => [...r.objects].sort((a, z) => (z.i + z.j) - (a.i + a.j)).find(o => {
-    const f = dims(o); for (let z = 0; z <= f.h; z += 8) { const a = (x - OX) / (TW / 2), c = (y + z - OY) / (TH / 2), i = (c + a) / 2, j = (c - a) / 2; if (i >= o.i && i < o.i + f.w && j >= o.j && j < o.j + f.d) return true; } return false; });
-  cv.addEventListener('click', e => {
-    const [x, y] = at(e);
-    if (!edit) {
-      const [mx, my] = P(me.x, me.y);
-      if (chara && Math.abs(x - mx) < 30 && y < my + 6 && y > my - chara.height * CS) { if (!me.jump) me.jump = 1; return; }
-      const tl = tileAt(x, y); if (!tl || blocked(r, ...tl)) return;   // 家具のあるマスには行かない
-      me.tx = tl[0] + .5; me.ty = tl[1] + .5; r.me = { i: tl[0], j: tl[1] }; saveBook(); return;
-    }
-    const ps = PHOTO_SLOTS.findIndex(s => inWall(LEFT, s, x, y)); if (ps >= 0) { pickPhoto(b, r, ps, () => { saveBook(); loadPhotos(); }); return; }
-    const tl = tileAt(x, y);
-    if (sel) {   // 動かす先のマス
-      if (!tl) return; if (fits(sel, tl[0], tl[1], r.objects)) { sel.i = tl[0]; sel.j = tl[1]; saveBook(); sel = null; setTip(); } else toast('そこには置けません');
-      return;
-    }
-    const hit = objAt(x, y); if (hit) { sel = hit; setTip(); return; }
-    if (tl) pickObject(b, r, tl, () => saveBook());
-  });
-
-  const rerender = () => { cleanup(); renderHome(view, { header }); };
   view.onclick = e => {
     const t = e.target.closest('button'); if (!t) return;
     const a = t.dataset.a;
     if (a === 'login') { const pts = claimLogin(b, new Date()); if (pts) { toast(`ログインボーナス +${pts}pt`); header?.(); } t.remove(); }
-    else if (a === 'edit') { edit = !edit; sel = null; t.setAttribute('aria-pressed', String(edit)); t.querySelector('span').textContent = edit ? 'できた' : '模様がえ'; vox?.setEdit(edit); setTip(); }
-    else if (a === 'remove' && sel) { r.objects = r.objects.filter(o => o !== sel); toast(`「${itemName(sel.id)}」を外しました`); sel = null; saveBook(); vox?.sync(); vox?.setSelected(null); setTip(); }
+    else if (a === 'edit') { edit = !edit; sel = null; t.setAttribute('aria-pressed', String(edit)); t.querySelector('span').textContent = edit ? 'できた' : '模様がえ'; vox.setEdit(edit); setTip(); }
+    else if (a === 'remove' && sel) { r.objects = r.objects.filter(o => o !== sel); toast(`「${itemName(sel.id)}」を外しました`); sel = null; saveBook(); vox.sync(); vox.setSelected(null); setTip(); }
     else if (a === 'rotate' && sel) {   // 90度ずつ回す。回したら入らないときは、もとにもどす
       const old = sel.r || 0; sel.r = (old + 1) % 4;
       if (!fits(sel, sel.i, sel.j, r.objects)) { sel.r = old; toast('ここでは回せません（まわりに場所がありません）'); }
-      else { saveBook(); vox?.sync(); vox?.setSelected(sel); }
+      else { saveBook(); vox.sync(); vox.setSelected(sel); }
     }
-    else if (a === 'cancel') { sel = null; vox?.setSelected(null); setTip(); }
-    else if (a === 'light') { vlight = !vlight; vox?.setLight(vlight); t.setAttribute('aria-pressed', String(vlight)); }
+    else if (a === 'cancel') { sel = null; vox.setSelected(null); setTip(); }
+    else if (a === 'light') { vlight = !vlight; vox.setLight(vlight); t.setAttribute('aria-pressed', String(vlight)); }
     else if (a === 'fx') {   // かわいく見せる工夫を、1つずつオン・オフして見比べる
       const box = document.createElement('div'); box.className = 'hm-fx';
       const draw = () => { box.innerHTML = FX.map(([k, l]) => `<button data-k="${k}" aria-pressed="${!!vfx[k]}">${l}</button>`).join('') + '<p class="note">押すと、その工夫を外した見え方になります。ライトやくま、キャラを押してみてください。</p>'; };
-      draw(); box.onclick = e => { const b = e.target.closest('[data-k]'); if (!b) return; vfx[b.dataset.k] = !vfx[b.dataset.k]; try { localStorage.setItem('tabiquest:voxfx', JSON.stringify(vfx)); } catch (err) {} vox?.setFx(vfx); draw(); };
+      draw(); box.onclick = e => { const b = e.target.closest('[data-k]'); if (!b) return; vfx[b.dataset.k] = !vfx[b.dataset.k]; try { localStorage.setItem('tabiquest:voxfx', JSON.stringify(vfx)); } catch (err) {} vox.setFx(vfx); draw(); };
       sheet('かわいく見せる工夫', box);
     }
   };
-  const cleanup = () => { cancelAnimationFrame(raf); vox?.stop(); engine.stop(); view.classList.remove('homemode'); view.onclick = null; document.querySelector('.hm-pick')?.remove(); };
+  const cleanup = () => { vox.stop(); engine.stop(); view.classList.remove('homemode'); view.onclick = null; document.querySelector('.hm-pick')?.remove(); };
   return cleanup;
 }
 
