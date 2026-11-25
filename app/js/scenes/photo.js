@@ -2,7 +2,7 @@
 // 写真の形は変えず、時間帯・天気は色づけだけで表す。背景を描き足さない
 import { gradeChara, charaPlace, placeChara } from './look.js';
 import { near, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
-import { recolorChara } from '../characolor.js';
+import { recolorChara, lookColors } from '../characolor.js';
 const THREE = window.THREE;
 
 let charaData = null;
@@ -58,7 +58,7 @@ export async function build(place) {
       u.uAdd.value.set(t.add[0] + w.add[0], t.add[1] + w.add[1], t.add[2] + w.add[2]);
       u.uDesat.value = Math.min(1, t.desat + w.desat);
       const night = st.time === 'night', eve = st.time === 'evening';
-      setPal(ch.chara, palTex(C.pal, (c, i) => gradeChara(recolorChara(c, i, C.D), st)));
+      setPal(ch.chara, palTex(C.pal, (c, i) => gradeChara(recolorChara(c, i, C.D, lookColors(st)), st)));
     },
     frame(par, f, newF, rm, st) {
       const off = v => Math.round(-par * v * k);

@@ -12,6 +12,8 @@ export const PARTS = [
 ];
 
 export const charaColors = () => settings.charaColors || {};
+// そのカードの色：カードに残した見た目（look）があればそれ、なければホームで決めたふだんの色
+export const lookColors = st => st?.look?.colors || charaColors();
 export function setCharaColor(k, hex) {
   const c = { ...(settings.charaColors || {}) };
   if (hex) c[k] = hex; else delete c[k];
@@ -72,13 +74,13 @@ function drawSample(cv, S) {
 }
 export async function renderCharaColors(box, onChange) {
   const cur = charaColors();
-  box.innerHTML = `<h2>キャラの色</h2>
+  box.innerHTML = `<h2>キャラの色（ふだんのお着替え）</h2>
     <div class="chcol"><canvas class="chprev" aria-label="キャラの見本"></canvas>
       <div class="chrows">${PARTS.map(p => `<div class="chrow" data-k="${p.k}"><span class="lab">${p.name}</span>
         ${p.presets.map(h => `<button class="sw" data-c="${h}" style="background:${h}" aria-label="${p.name}を ${h} に" aria-pressed="${cur[p.k] === h}"></button>`).join('')}
         <label class="pick" aria-label="${p.name}の色を自由にえらぶ"><input type="color" value="${cur[p.k] || p.presets[0]}"></label>
         <button class="reset" data-c="" aria-pressed="${!cur[p.k]}">元の色</button></div>`).join('')}</div></div>
-    <p class="note">キャラ1の肌・服・目・髪の色を変えられます。カードと撮影にも反映されます。</p>`;
+    <p class="note">ふだんのお着替えです。ホームのキャラと、これから手に入れるカードに使います。前に撮ったカードは、そのときの色のまま残ります。</p>`;
   const cv = box.querySelector('.chprev');
   try { drawSample(cv, await loadSample()); } catch (e) { cv.replaceWith(Object.assign(document.createElement('p'), { className: 'note', textContent: 'キャラの見本を読みこめませんでした' })); }
   const set = (k, hex) => {

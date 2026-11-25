@@ -577,3 +577,11 @@ ul.hm-goods .own{font:700 13px var(--sans);color:var(--teal)}
 .hm-fx button{border-radius:999px;min-height:44px;padding:4px 16px}
 .hm-fx button[aria-pressed=true]{background:var(--gold);color:#14122E;border-color:var(--gold)}
 .hm-fx .note{flex-basis:100%;margin-top:4px}
+
+/* 撮影のお着替え（2026-11-26）：色の丸を並べる */
+.viewer.story .sheet .pane{display:flex;flex-direction:column;gap:8px}
+.viewer.story .sheet .pane[hidden]{display:none}
+.viewer.story .sheet .dress .sw{min-height:0;width:30px;height:30px;padding:0;border-radius:50%;border:2px solid rgba(255,255,255,.55)}
+.viewer.story .sheet .dress .sw[aria-pressed="true"]{outline:3px solid var(--gold);outline-offset:2px;border-color:#fff}
+.viewer.story .sheet .dress .pick{display:inline-flex;width:30px;height:30px;border-radius:50%;border:2px dashed rgba(255,255,255,.6);overflow:hidden;align-items:center;justify-content:center}
+.viewer.story .sheet .dress .pick input{width:40px;height:40px;border:0;padding:0;background:none;cursor:pointer}

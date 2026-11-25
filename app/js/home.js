@@ -7,8 +7,8 @@
 //   部屋と家具は room_voxel.js でボクセルの立体としてコードで作る（女の子らしい部屋。2026-11-25、マイルームはコードで描いてよい・全部ボクセルでいくと決まった）
 import { PLACES, placeById, LABEL, seasonOf } from './places.js';
 import { book, mode, settings, saveBook } from './store.js';
-import { engine, snapshot, reduceMotion } from './card.js';
-import { recolorChara } from './characolor.js';
+import { engine, snapshot, clearSnaps, reduceMotion } from './card.js';
+import { recolorChara, renderCharaColors } from './characolor.js';
 import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, img, cardEl, fmtDate, toast } from './ui.js';
@@ -137,6 +137,7 @@ export function renderHome(view, { header } = {}) {
       </div>
       <div class="hm-ov side">
         <button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button>
+        <button data-a="dress"><i aria-hidden="true">👗</i><span>お着替え</span></button>
         <button data-a="zoom"><i aria-hidden="true">⊕</i><span>ズーム</span></button>
         <button data-a="light" aria-pressed="${vlight}"><i aria-hidden="true">💡</i><span>でんき</span></button>
         <button data-a="fx"><i aria-hidden="true">✿</i><span>工夫</span></button>
@@ -200,6 +201,11 @@ export function renderHome(view, { header } = {}) {
     }
     else if (a === 'cancel') { sel = null; vox.setSelected(null); setTip(); }
     else if (a === 'zoom') { const z = ZOOMS.find(x => x > zoom + .01) ?? ZOOMS[0]; saveZoom(z); vox.setZoom(z); toast(`ズーム ${z}倍`); }
+    else if (a === 'dress') {   // ホームのお着替え＝ふだんの見た目。これから作るカードと、ホームのキャラに使う（前に撮ったカードは変わらない）
+      const box = document.createElement('div'); let changed = false; renderCharaColors(box, () => { changed = true; clearSnaps(); });
+      const el = sheet('お着替え', box), mo = new MutationObserver(() => { if (document.querySelector('.hm-pick')) return; mo.disconnect(); if (changed) { charaImg = null; window.dispatchEvent(new HashChangeEvent('hashchange')); } });
+      mo.observe(document.body, { childList: true });
+    }
     else if (a === 'light') { vlight = !vlight; vox.setLight(vlight); t.setAttribute('aria-pressed', String(vlight)); }
     else if (a === 'fx') {   // かわいく見せる工夫を、1つずつオン・オフして見比べる
       const box = document.createElement('div'); box.className = 'hm-fx';

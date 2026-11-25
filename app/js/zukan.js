@@ -4,7 +4,8 @@ import { PLACES, placeById, LABEL, TIMES, WEATHERS, PLAIN_BG } from './places.js
 //   体は1つで、腕を差し替える（2026-11-26）。番号は前の13ポーズのまま。なくなったポーズ（ジャンプ・撮る・ながめる・歩く・ハート・地図・自撮り）のカードは、立ちで出る
 const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さし'], [4, '手をふる'], [7, '持つ']];
 import { book, cardsOf, cardById, setPhoto } from './store.js';
-import { engine, snapshot, RS } from './card.js';
+import { engine, snapshot, clearSnaps, RS } from './card.js';
+import { PARTS, charaColors } from './characolor.js';
 import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast, icon } from './ui.js';
 
 // 図鑑・旅の記録・称号の上に出す切り替え（同じ図鑑タブの中の3つの見方）
@@ -127,7 +128,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   const p0 = first && placeById(first.placeId);
   if (!p0) { onClose(); return () => {}; }
   const list = preview ? [first] : cardsOf(p0.id).slice().reverse();   // 古い順
-  let idx = Math.max(0, list.findIndex(c => c.id === first.id)), card = first, p = p0, el = null, ph = null;
+  let idx = Math.max(0, list.findIndex(c => c.id === first.id)), card = first, p = p0, el = null, ph = null, lk = {};
   const root = document.createElement('div'); root.className = 'viewer story'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
   root.innerHTML = `<div class="frame">
       <div class="stage"></div>
@@ -139,11 +140,19 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
         <button data-a="save"><i aria-hidden="true">↓</i>保存</button>
       </div>
       <div class="sheet" hidden>
+        <div class="seg tabs" role="group" aria-label="メニューの切りかえ"><button data-tab="pose" aria-pressed="true">ポーズと光</button><button data-tab="dress" aria-pressed="false">お着替え</button></div>
+        <div class="pane" data-pane="pose">
         <p class="hint">指でなぞると動く（下へはみ出せます）。二本指で広げる・つまむと大きさ、ひねると角度が変わります</p>
         <div class="seg" role="group" aria-label="キャラの明るさ"><span class="lab">明るさ</span><button data-light="bright">明るいまま</button><button data-light="blend">景色になじませる</button></div>
         <div class="seg" role="group" aria-label="光の当て方"><span class="lab">光</span><button data-rim="0">無光</button><button data-rim="3">順光</button><button data-rim="1">半逆光</button><button data-rim="2">逆光</button></div>
         <div class="seg" role="group" aria-label="光のにじみ"><span class="lab">グロー</span><button data-glow="0">なし</button><button data-glow="1">弱い</button><button data-glow="2">強い</button></div>
         <div class="seg" role="group" aria-label="ポーズ"><span class="lab">ポーズ</span>${POSES.map(([i, n]) => `<button data-pose="${i}">${n}</button>`).join('')}</div>
+        </div>
+        <div class="pane" data-pane="dress" hidden>
+          <p class="hint">この撮影だけのお着替えです。ホームのお着替えは変わりません</p>
+          ${PARTS.map(pt => `<div class="seg dress" data-k="${pt.k}"><span class="lab">${pt.name}</span>${pt.presets.map(h => `<button class="sw" data-c="${h}" style="background:${h}" aria-label="${pt.name}を ${h} に"></button>`).join('')}<label class="pick" aria-label="${pt.name}の色を自由にえらぶ"><input type="color"></label></div>`).join('')}
+          <div class="seg"><button data-a="homelook">ホームのお着替えに合わせる</button></div>
+        </div>
         <div class="seg"><button data-a="center">元に戻す</button>${preview ? '' : '<button class="primary" data-a="keep">この配置を残す</button>'}<button data-a="photo">とじる</button></div>
       </div>
     </div>`;
@@ -154,6 +163,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   function load(i) {
     idx = i; card = list[i]; p = placeById(card.placeId);
     ph = { x: 0, y: 0, s: 1, r: 0, light: 'bright', pose: 0, rim: 0, glow: 0, ...(card.photo || {}) };
+    lk = { ...(card.look?.colors || charaColors()) };   // この撮影のお着替え（色）。残すまではカードに書かない
     stage.innerHTML = ''; el = cardEl(p, card); stage.append(el);
     if (btn('clean').getAttribute('aria-pressed') === 'true') el.classList.add('clean');
     root.setAttribute('aria-label', `${p.name}のカード`);
@@ -166,7 +176,8 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     setPosing(false);
   }
   const sync = () => {
-    engine.setState({ ...card, photo: { ...ph } });
+    engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk } } });
+    sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; });
     sheet.querySelectorAll('[data-light]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.light === ph.light)));
     sheet.querySelectorAll('[data-rim]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.rim === (ph.rim | 0))));
     sheet.querySelectorAll('[data-glow]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.glow === (ph.glow | 0))));
@@ -190,13 +201,15 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
     if (pinch && pts.size === 2) {   // 二本指：広げる・つまむで大きさ、ひねると角度（画面で右回りにひねると、キャラも右回り）
       ph.s = Math.max(.4, Math.min(6, pinch.s * pdist() / pinch.d)); ph.r = pinch.r - (pang() - pinch.a);
-      engine.setState({ ...card, photo: { ...ph } }); return;
+      engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk } } });
+    sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; }); return;
     }
     if (!drag) return; const r = stage.getBoundingClientRect(), dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
     if (root.classList.contains('posing')) {
       ph.x = Math.max(-.75, Math.min(.75, drag.px + dx / r.width));   // 左右も少しカードの外へはみ出せる
       ph.y = Math.max(-1.5, Math.min(.5, drag.py - dy / r.height));   // 指の動きどおり。下はカードの外まで
-      engine.setState({ ...card, photo: { ...ph } });
+      engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk } } });
+    sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; });
     } else if (dy > 0) root.style.setProperty('--pull', `${Math.min(dy, 200)}px`);
   });
   const endDrag = e => {
@@ -210,7 +223,8 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   // パソコンでは、ホイールで大きさ、Shift＋ホイールで角度を変える
   stage.addEventListener('wheel', e => { if (!root.classList.contains('posing')) return; e.preventDefault();
     if (e.shiftKey) ph.r += (e.deltaY < 0 ? 1 : -1) * .06; else ph.s = Math.max(.4, Math.min(6, ph.s * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
-    engine.setState({ ...card, photo: { ...ph } }); }, { passive: false });
+    engine.setState({ ...card, photo: { ...ph }, look: { colors: { ...lk } } });
+    sheet.querySelectorAll('.dress').forEach(row => { row.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === lk[row.dataset.k]))); row.querySelector('input').value = lk[row.dataset.k] || PARTS.find(x => x.k === row.dataset.k).presets[0]; }); }, { passive: false });
 
   async function saveImage() {
     const src = engine.canvas, k = Math.max(1, Math.round(4 / RS)), c = document.createElement('canvas'); c.width = src.width * k; c.height = src.height * k;
@@ -231,12 +245,16 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     else if (a === 'photo') setPosing(sheet.hidden);
     else if (a === 'save') saveImage();
     else if (b.dataset.light) { ph.light = b.dataset.light; sync(); }
+    else if (b.dataset.tab) { sheet.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); sheet.querySelectorAll('.pane').forEach(x => { x.hidden = x.dataset.pane !== b.dataset.tab; }); }
+    else if (b.dataset.c) { lk[b.closest('.dress').dataset.k] = b.dataset.c; sync(); }
+    else if (a === 'homelook') { lk = { ...charaColors() }; sync(); }
     else if (b.dataset.rim) { ph.rim = +b.dataset.rim; sync(); }
     else if (b.dataset.glow) { ph.glow = +b.dataset.glow; sync(); }
     else if (b.dataset.pose) { ph.pose = +b.dataset.pose; sync(); }
     else if (a === 'center') { ph.x = 0; ph.y = 0; ph.s = 1; ph.r = 0; sync(); }
-    else if (a === 'keep') { setPhoto(card.id, { ...ph }); card.photo = { ...ph }; toast('この配置をカードに残しました'); setPosing(false); }
+    else if (a === 'keep') { setPhoto(card.id, { ...ph }, { colors: { ...lk } }); card.photo = { ...ph }; card.look = { colors: { ...lk } }; clearSnaps(); toast('この配置をカードに残しました'); setPosing(false); }
   });
+  sheet.addEventListener('input', e => { const row = e.target.closest('.dress'); if (row && e.target.type === 'color') { lk[row.dataset.k] = e.target.value; sync(); } });
   document.addEventListener('keydown', onKey);
   load(idx);
   if (posing) setPosing(true);

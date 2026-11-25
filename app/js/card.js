@@ -230,7 +230,7 @@ export const engine = new Engine();
 const snaps = new Map();
 export const clearSnaps = () => snaps.clear();   // キャラの色を変えたときなど、一覧の小さな絵を描き直す
 export function snapshot(id, state) {
-  const k = `${id}|${state.time}|${state.weather}|${state.season || ''}|${JSON.stringify(state.photo || null)}`;
+  const k = `${id}|${state.time}|${state.weather}|${state.season || ''}|${JSON.stringify(state.photo || null)}|${JSON.stringify(state.look || null)}`;
   if (!snaps.has(k)) snaps.set(k, engine.snapshot(id, state));
   return snaps.get(k);
 }

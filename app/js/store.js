@@ -27,6 +27,10 @@ export const settings = Object.assign({ debugUnlocked: false, debugOn: false, lo
 export const saveSettings = () => write(KEY.settings, settings);
 
 const books = { real: migrate(read(KEY.real)), debug: migrate(read(KEY.debug)) };
+// お着替え（キャラの見た目）：ホームで決めたものが「ふだんの見た目」（settings.charaColors など）。カードには、できたときの見た目を look として残す
+//   look：{ colors: { skin, cloth, eye, hair } }（髪型・衣装が入ったら、ここに足す）。前に作ったカードには、いまの見た目を1回だけ写して、これ以上変わらないようにする
+export const defaultLook = () => ({ colors: { ...(settings.charaColors || {}) } });
+for (const b of Object.values(books)) for (const c of b.cards) if (!c.look) c.look = defaultLook();
 write(KEY.real, books.real); write(KEY.debug, books.debug);
 export const mode = () => (settings.debugUnlocked && settings.debugOn ? 'debug' : 'real');
 export const book = (m = mode()) => books[m];
@@ -48,15 +52,16 @@ export function arrive(place, v, m = mode()) {
   else if (!before.some(c => dayKey(new Date(c.at)) === dayKey(now))) points = POINTS.revisit;
   const n = (b.seq[place.id] || 0) + 1; b.seq[place.id] = n;
   const card = { id: `${place.id}-${n}`, placeId: place.id, n, at, time: v.time, timeReal: v.timeReal ?? v.time, weather: v.weather, weatherSrc: v.weatherSrc || null, season: v.season,
-    lat: v.lat ?? null, lng: v.lng ?? null, pose: null, friends: [] };
+    lat: v.lat ?? null, lng: v.lng ?? null, pose: null, friends: [], look: defaultLook() };
   b.cards.push(card); b.points += points; save(m);
   return { first, count: before.length + 1, points, item, card };
 }
 
 // 撮影で決めたキャラの置き場所・明るさ・ポーズを、カードに残す（{ x, y, light, pose }。null で元に戻す）
-export function setPhoto(cardId, photo, m = mode()) {
+//   look を渡すと、その撮影のお着替え（このカードだけの見た目）も残す
+export function setPhoto(cardId, photo, look, m = mode()) {
   const c = books[m].cards.find(x => x.id === cardId); if (!c) return false;
-  c.photo = photo; save(m); return true;
+  c.photo = photo; if (look) c.look = look; save(m); return true;
 }
 
 // アチーブメントの達成を記録する（1回だけ）。ポイントも足す

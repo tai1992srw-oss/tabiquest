@@ -5,7 +5,7 @@
 //               海のきらめき、踏切のランプ、電車とカモメの動き、雨・雪・落ち葉の粒、濡れた道の光
 // 絵はコードで描き足さない（形が変わるものは Codex の絵を使う）
 import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
-import { recolorChara } from '../characolor.js';
+import { recolorChara, lookColors } from '../characolor.js';
 import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara, charaPlace, placeChara } from './look.js';
 const THREE = window.THREE;
 
@@ -90,7 +90,7 @@ export async function build() {
       // カモメ：夏は3羽、春・秋は2羽、冬と曇りは1羽。夜・雨・雪は出ない
       self.gullN = st.time === 'night' || ['rain', 'snow'].includes(st.weather) ? 0 : st.weather === 'cloudy' || st.season === 'winter' ? 1 : st.season === 'summer' ? 3 : 2;
       self.leaves = st.season === 'autumn' && st.weather !== 'snow';
-      setPal(ch.chara, palTex(D.pal.chara, (c, i) => gradeChara(recolorChara(c, i, D), st)));
+      setPal(ch.chara, palTex(D.pal.chara, (c, i) => gradeChara(recolorChara(c, i, D, lookColors(st)), st)));
     },
     frame(par, f, newF, rm, st) {
       const off = v => Math.round(-par * v * k);
