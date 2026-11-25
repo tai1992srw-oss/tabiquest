@@ -18,7 +18,7 @@ import * as chukagai from './scenes/chukagai.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.4';
+export const VERSION = '0.10.5';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('kamakura', kamakura.build);
@@ -74,11 +74,13 @@ addEventListener('hashchange', route);
 // 現在地がわかっていれば「いま到着できる／近く／日帰りで／遠く」に分ける。わからなければ番号順
 const RANGES = [['can', 'いま到着できます'], [2000, '近く（2km以内）'], [50000, '日帰りで行ける（50km以内）'], [Infinity, '遠く']];
 // 名所の絵：行ったことがあれば最新のカード、なければいまの時間帯の絵
-function placeArt(p, el, cs = cardsOf(p.id)) {
-  if (cs.length) snapshot(p.scene, cs[0]).then(u => el.prepend(img(u, p.alt)));
-  else if (p.kind === 'photo') el.prepend(img(p.photo.src, ''));
-  else if (p.kind === 'plain') el.prepend(img(PLAIN_BG, ''));
-  else snapshot(p.scene, { time: renderTime(p, timeOfDay(new Date())), weather: 'clear' }).then(u => el.prepend(img(u, '')));
+// noChara：カードの中のキャラを絵の外へ出して、景色だけにする（上の大きな絵では、案内役のキャラを別に立たせるため）
+function placeArt(p, el, cs = cardsOf(p.id), noChara = false) {
+  const off = st => noChara ? { ...st, photo: { ...(st.photo || {}), x: 9 } } : st;
+  if (p.kind === 'plain' && !cs.length) el.prepend(img(PLAIN_BG, ''));
+  else if (cs.length) snapshot(p.scene, off(cs[0])).then(u => el.prepend(img(u, p.alt)));
+  else if (p.kind === 'photo' && !noChara) el.prepend(img(p.photo.src, ''));
+  else snapshot(p.scene, off({ time: renderTime(p, timeOfDay(new Date())), weather: 'clear' })).then(u => el.prepend(img(u, '')));
 }
 function renderList() {
   const pos = current(), fake = pos?.fake;
@@ -100,7 +102,7 @@ function renderList() {
     : `<button class="cta${pos ? ' sub' : ''}" id="locate" ${here.busy ? 'disabled' : ''}>${icon('locate', 20)}${pos ? 'もう一度 現在地を確かめる' : '現在地を確かめる'}</button>`;
   view.innerHTML = `<div class="listwrap">
     <section class="lhero${near ? '' : ' empty'}">
-      <div class="lh-art">${near ? '' : '<img class="lh-chara" src="ui/chara_wave.png" alt="">'}</div>
+      <div class="lh-art"></div><img class="lh-chara" src="ui/chara_wave.png" alt="">
       ${near ? `<a class="hit" href="#/place/${near.id}" aria-label="${esc(near.name)}を見る"></a>` : ''}
       <p class="bubble">${say}</p>
     </section>
@@ -116,7 +118,7 @@ function renderList() {
     </div>
     <div id="spots"></div></div>`;
   const wrap = view.querySelector('.listwrap');
-  if (near) placeArt(near, wrap.querySelector('.lh-art'));
+  if (near) placeArt(near, wrap.querySelector('.lh-art'), undefined, true);
   wrap.querySelector('#locate')?.addEventListener('click', async () => { here.busy = true; renderList(); await locate(); renderList(); });
   wrap.querySelector('.filters').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
