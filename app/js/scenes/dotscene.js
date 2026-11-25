@@ -2,7 +2,7 @@
 // 絵は Codex の元の絵を tools/make_<名所>.py で層に分けたもの。コードでは絵を描き足さない
 //   層：空／景色／手前（動く物より前にあるもの）／キャラ
 //   差分：昼の絵・夜の絵・雪の絵（どれも同じ位置）と、空（朝・夕暮れ・夜・曇り・冬）を組み合わせる
-//   印（景色の G）：1＝海のきらめき 2＝街灯の灯り 3＝窓（夜にまたたく） 5＝観覧車の輪（夜に色が回る。B＝角度） 6＝提灯（夕暮れ・夜に灯る）
+//   印（景色の G）：1＝海のきらめき 2＝街灯の灯り 3＝窓（夜にまたたく） 5＝観覧車の輪（夜に色が回る。B＝角度） 6＝提灯（夕暮れ・夜に灯る） 7＝ライトアップする建物（夕暮れに灯る。夜は夜の絵）
 import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
 import { recolorChara, lookColors } from '../characolor.js';
 import { loadParts, applyParts } from '../charaparts.js';
@@ -21,6 +21,7 @@ const FRAG = `uniform sampler2D tSky,tSkyPal; uniform float uRefl; uniform vec2 
   if(fl>2.5 && fl<3.5 && uNight>.75 && fract(ph*7.)<.12 && mod(ph*60.+uF,60.)<3.) c*=.45;
   if(fl>4.5 && fl<5.5 && uNight>.75 && lum(c)>.45){ float h=fract(t.b*3.+uF/32.); vec3 pc=h<.2?vec3(1.,.35,.54):h<.4?vec3(1.,.78,.34):h<.6?vec3(.42,.94,.75):h<.8?vec3(.35,.7,1.):vec3(.75,.48,1.); c=mix(c,pc,.65); }
   if(fl>5.5 && fl<6.5 && uNight>.25){ c=mix(c,vec3(1.,.5,.25),uNight>.75?.15:.35)*(1.+.08*sin(uF*.7+ph*9.)); }
+  if(fl>6.5 && fl<7.5 && uNight>.25 && uNight<.75){ c=mix(c,vec3(1.,.64,.26),.5)*1.14; }
   if(uWet>.5 && s.y>uSize.y*.72 && lum(c)<.62 && mod(ph*26.+uF*.5,26.)<1.) c=mix(c,vec3(.78,.82,.92),.4);
   gl_FragColor=vec4(c,1.); }`;
 
