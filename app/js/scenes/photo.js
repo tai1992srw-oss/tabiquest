@@ -1,5 +1,6 @@
 // 仮の名所：写真を背景にして、キャラを重ねる（ドット絵ができるまでのつなぎ）
 // 写真の形は変えず、時間帯・天気は色づけだけで表す。背景を描き足さない
+import { gradeChara, charaPlace } from './look.js';
 import { near, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
 const THREE = window.THREE;
 
@@ -56,17 +57,13 @@ export async function build(place) {
       u.uAdd.value.set(t.add[0] + w.add[0], t.add[1] + w.add[1], t.add[2] + w.add[2]);
       u.uDesat.value = Math.min(1, t.desat + w.desat);
       const night = st.time === 'night', eve = st.time === 'evening';
-      setPal(ch.chara, palTex(C.pal, ([r, g, b]) => {
-        if (night) { r = r * .62 * .8; g = g * .62 * .9; b = b * .62 * 1.25 + 8; }
-        else if (eve) { r = r * 1.02 + 6; g *= .9; b *= .86; }
-        if (st.weather === 'rain' || st.weather === 'cloudy') { const l = r * .3 + g * .59 + b * .11; r = (r + (l - r) * .3) * .88; g = (g + (l - g) * .3) * .88; b = (b + (l - b) * .3) * .92; }
-        return [r, g, b];
-      }));
+      setPal(ch.chara, palTex(C.pal, c => gradeChara(c, st)));
     },
     frame(par, f, newF, rm, st) {
       const off = v => Math.round(-par * v * k);
       photo.material.uniforms.uOff.value.set(off(5), 0);
-      const cx = W / 2 + off(12), feet = Math.round(610 * k);
+      const cp = charaPlace(st, W), cx = W / 2 + off(12) + cp.dx, feet = Math.round(610 * k) - cp.dy;
+      ch.setPose(self.forcePose ?? st.photo?.pose ?? 0);   // 到着の演出では forcePose（喜び）が優先
       ch.chara.position.set(cx, H - (feet - ch.CH / 2) + self.drop, 4); ch.shadow.position.set(cx, H - feet + 1, 3);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
       if (newF) parts.draw(f, st.weather);

@@ -51,6 +51,12 @@ export function arrive(place, v, m = mode()) {
   return { first, count: before.length + 1, points, item, card };
 }
 
+// 撮影で決めたキャラの置き場所・明るさ・ポーズを、カードに残す（{ x, y, light, pose }。null で元に戻す）
+export function setPhoto(cardId, photo, m = mode()) {
+  const c = books[m].cards.find(x => x.id === cardId); if (!c) return false;
+  c.photo = photo; save(m); return true;
+}
+
 // アチーブメントの達成を記録する（1回だけ）。ポイントも足す
 export function markGoal(id, pts, m = mode()) {
   const b = books[m]; if (b.goals[id]) return false;

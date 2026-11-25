@@ -4,7 +4,7 @@
 //   差分：昼の絵・夜の絵・雪の絵（どれも同じ位置）と、空（朝・夕暮れ・夜・曇り・冬）を組み合わせる
 //   印（景色の G）：1＝海のきらめき 2＝街灯の灯り 3＝窓（夜にまたたく） 5＝観覧車の輪（夜に色が回る。B＝角度） 6＝提灯（夕暮れ・夜に灯る）
 import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
-import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara } from './look.js';
+import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara, charaPlace } from './look.js';
 const THREE = window.THREE;
 
 // 海のマス（B＝128）：空の差分を使うとき、空を上下に反転して映す（uRefl＝水面の行。0なら映さない）
@@ -118,7 +118,8 @@ export async function buildDot(cfg) {
         g.material.uniforms.uWet.value = right ? 0 : 1;
         g.material.uniforms.uOff.value.set(Math.floor(f / 3 + i) % 8 < 6 ? Math.floor(f / 3 + i) % 2 : 1, 0);
       });
-      const cx = W / 2 + off(P[2]), feet = Math.round(H * (cfg.feet || .945));
+      const cp = charaPlace(st, W), cx = W / 2 + off(P[2]) + cp.dx, feet = Math.round(H * (cfg.feet || .945)) - cp.dy;
+      ch.setPose(self.forcePose ?? st.photo?.pose ?? 0);   // 到着の演出では forcePose（喜び）が優先
       ch.chara.position.set(cx, H - (feet - ch.CH / 2) + self.drop, 4); ch.shadow.position.set(cx, H - feet + 1, 3);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
       if (newF) {

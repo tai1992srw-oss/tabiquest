@@ -1,10 +1,10 @@
 // オフライン対応：アプリ本体と絵を端末に保存して、電波がなくても開けるようにする
 // 版を上げるときは VERSION を変える（古い保存は消える）
-const VERSION = 'tabiquest-v0.6.1';
+const VERSION = 'tabiquest-v0.6.2';
 const CORE = [
   './', 'index.html', 'manifest.json', 'css/app.css', 'vendor/three.r128.min.js',
   'js/main.js', 'js/card.js', 'js/places.js', 'js/photo_places.js', 'js/store.js', 'js/geo.js', 'js/conditions.js', 'js/ui.js', 'js/arrival.js', 'js/zukan.js', 'js/debug.js',
-  'js/map.js', 'js/goals.js', 'assets/map/map_jp.png', 'assets/map/map_jp.json',
+  'js/map.js', 'js/goals.js', 'js/calendar.js', 'assets/map/map_jp.png', 'assets/map/map_jp.json',
   'js/scenes/minatomirai.js', 'js/scenes/chukagai.js', 'js/scenes/kamakura.js', 'js/scenes/photo.js', 'js/scenes/look.js', 'js/scenes/dotscene.js',
   'assets/minatomirai/boat.png', 'assets/minatomirai/chara.png', 'assets/minatomirai/data.json', 'assets/minatomirai/front.png', 'assets/minatomirai/front_night.png', 'assets/minatomirai/front_snow.png', 'assets/minatomirai/gulls.png', 'assets/minatomirai/scene.png', 'assets/minatomirai/scene_night.png', 'assets/minatomirai/scene_snow.png', 'assets/minatomirai/sky.png', 'assets/minatomirai/sky_evening.png', 'assets/minatomirai/sky_morning.png', 'assets/minatomirai/sky_night.png', 'assets/minatomirai/sky_overcast.png', 'assets/minatomirai/sky_winter.png',
   'assets/chukagai/chara.png', 'assets/chukagai/data.json', 'assets/chukagai/front.png', 'assets/chukagai/front_night.png', 'assets/chukagai/front_snow.png', 'assets/chukagai/scene.png', 'assets/chukagai/scene_night.png', 'assets/chukagai/scene_snow.png', 'assets/chukagai/sky.png', 'assets/chukagai/sky_evening.png', 'assets/chukagai/sky_morning.png', 'assets/chukagai/sky_night.png', 'assets/chukagai/sky_overcast.png', 'assets/chukagai/sky_winter.png',

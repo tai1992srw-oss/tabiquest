@@ -5,7 +5,7 @@
 //               海のきらめき、踏切のランプ、電車とカモメの動き、雨・雪・落ち葉の粒、濡れた道の光
 // 絵はコードで描き足さない（形が変わるものは Codex の絵を使う）
 import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
-import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara } from './look.js';
+import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara, charaPlace } from './look.js';
 const THREE = window.THREE;
 
 export async function build() {
@@ -111,7 +111,8 @@ export async function build() {
         g.material.uniforms.uWet.value = right ? 0 : 1;
         g.material.uniforms.uOff.value.set(Math.floor(f / 3 + i) % 8 < 6 ? Math.floor(f / 3 + i) % 2 : 1, 0);
       });
-      const cx = W / 2 + off(14), feet = Math.round(H * .945);
+      const cp = charaPlace(st, W), cx = W / 2 + off(14) + cp.dx, feet = Math.round(H * .945) - cp.dy;
+      ch.setPose(self.forcePose ?? st.photo?.pose ?? 0);   // 到着の演出では forcePose（喜び）が優先
       ch.chara.position.set(cx, H - (feet - ch.CH / 2) + self.drop, 4); ch.shadow.position.set(cx, H - feet + 1, 3);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
       if (newF) {

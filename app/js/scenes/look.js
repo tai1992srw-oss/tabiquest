@@ -44,10 +44,18 @@ export function season(c, kind, s) {
   return c;
 }
 
-// キャラは背景ほど強く色を変えない
+// キャラの色：ふだんは明るいまま（夜でも暗くしない）。撮影で「景色になじませる」を選ぶと、時間帯と天気に合わせて暗くする
 export function gradeChara([r, g, b], st) {
+  const blend = st.photo?.light === 'blend';
+  if (!blend) {   // 明るいまま。夜と夕暮れは、ほんの少しだけ光の色を足す
+    if (st.time === 'night') { r *= .96; g *= .97; b = b * 1.02 + 4; }
+    else if (st.time === 'evening' && st.weather === 'clear') { r = r * 1.02 + 4; g *= .97; b *= .95; }
+    return [r, g, b];
+  }
   if (st.time === 'night') { r = r * .62 * .8; g = g * .62 * .9; b = b * .62 * 1.25 + 8; }
   else if (st.time === 'evening' && st.weather === 'clear') { r = r * 1.02 + 6; g *= .9; b *= .86; }
   if (st.weather === 'rain' || st.weather === 'cloudy') { const l = r * .3 + g * .59 + b * .11; r = (r + (l - r) * .3) * .88; g = (g + (l - g) * .3) * .88; b = (b + (l - b) * .3) * .92; }
   return [r, g, b];
 }
+// 撮影で選んだキャラの置き場所：x＝横のずれ（絵の幅に対する割合）、y＝上下のずれ（マス。上が正）
+export const charaPlace = (st, W) => ({ dx: Math.round((st.photo?.x || 0) * W), dy: Math.round(st.photo?.y || 0) });

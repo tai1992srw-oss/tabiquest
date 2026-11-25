@@ -108,7 +108,7 @@ class Engine {
     const [w, h] = dims(s.scene); if (this.canvas.width === w && this.canvas.height === h) return;
     this.renderer.setSize(w, h, false); this.cam.right = w; this.cam.top = h; this.cam.updateProjectionMatrix();
   }
-  reset(s) { for (const m of [...s.layers, s.ch.chara]) m.material.uniforms.uReveal.value = 1; s.drop = 0; s.ch.shadow.material.opacity = s.ch.shadowOpacity; s.ch.setPose?.(0); }
+  reset(s) { for (const m of [...s.layers, s.ch.chara]) m.material.uniforms.uReveal.value = 1; s.drop = 0; s.ch.shadow.material.opacity = s.ch.shadowOpacity; s.forcePose = null; }
   get(id) { return this.built[id] || (this.built[id] = this.builders[id]()); }
   // container の中に動くカードを出す
   async show(container, id, state) {
@@ -142,7 +142,7 @@ class Engine {
 export const engine = new Engine();
 const snaps = new Map();
 export function snapshot(id, state) {
-  const k = `${id}|${state.time}|${state.weather}|${state.season || ''}`;
+  const k = `${id}|${state.time}|${state.weather}|${state.season || ''}|${JSON.stringify(state.photo || null)}`;
   if (!snaps.has(k)) snaps.set(k, engine.snapshot(id, state));
   return snaps.get(k);
 }
