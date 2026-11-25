@@ -3,7 +3,8 @@ import { PLACES, placeById, LABEL, TIMES, WEATHERS, PLAIN_BG } from './places.js
 // キャラのポーズ（コマの順。assets の data.json の charaPoses と同じ）
 //   体は1つで、腕を差し替える（2026-11-26）。番号は前の13ポーズのまま。なくなったポーズ（ジャンプ・撮る・ながめる・歩く・ハート・地図・自撮り）のカードは、立ちで出る
 const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さし'], [4, '手をふる'], [7, '持つ']];
-import { book, cardsOf, cardById, setPhoto } from './store.js';
+import { book, cardsOf, cardById, setPhoto, defaultLook } from './store.js';
+import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS } from './card.js';
 import { PARTS, charaColors } from './characolor.js';
 import { loadParts, hairList, charaHair, outfitList, charaOutfit } from './charaparts.js';
@@ -137,24 +138,17 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
       <div class="top"><div class="bars"></div><div class="who"><span class="nm"></span><span class="when"></span><button class="x" data-a="close" aria-label="とじる">×</button></div></div>
       <div class="side">
         <button data-a="photo" aria-pressed="false"><i aria-hidden="true">◎</i>撮影</button>
+        <button data-a="dress"><i aria-hidden="true">♥</i>着替え</button>
         <button data-a="clean" aria-pressed="false"><i aria-hidden="true">Aa</i>文字</button>
         <button data-a="save"><i aria-hidden="true">↓</i>保存</button>
       </div>
       <div class="sheet" hidden>
-        <div class="seg tabs" role="group" aria-label="メニューの切りかえ"><button data-tab="pose" aria-pressed="true">ポーズと光</button><button data-tab="dress" aria-pressed="false">お着替え</button></div>
         <div class="pane" data-pane="pose">
         <p class="hint">指でなぞると動く（下へはみ出せます）。二本指で広げる・つまむと大きさ、ひねると角度が変わります</p>
         <div class="seg" role="group" aria-label="キャラの明るさ"><span class="lab">明るさ</span><button data-light="bright">明るいまま</button><button data-light="blend">景色になじませる</button></div>
         <div class="seg" role="group" aria-label="光の当て方"><span class="lab">光</span><button data-rim="0">無光</button><button data-rim="3">順光</button><button data-rim="1">半逆光</button><button data-rim="2">逆光</button></div>
         <div class="seg" role="group" aria-label="光のにじみ"><span class="lab">グロー</span><button data-glow="0">なし</button><button data-glow="1">弱い</button><button data-glow="2">強い</button></div>
         <div class="seg" role="group" aria-label="ポーズ"><span class="lab">ポーズ</span>${POSES.map(([i, n]) => `<button data-pose="${i}">${n}</button>`).join('')}</div>
-        </div>
-        <div class="pane" data-pane="dress" hidden>
-          <p class="hint">この撮影だけのお着替えです。ホームのお着替えは変わりません</p>
-          <div class="seg hairs" role="group" aria-label="髪型"><span class="lab">髪型</span></div>
-          <div class="seg wears" role="group" aria-label="衣装"><span class="lab">衣装</span></div>
-          ${PARTS.map(pt => `<div class="seg dress" data-k="${pt.k}"><span class="lab">${pt.name}</span>${pt.presets.map(h => `<button class="sw" data-c="${h}" style="background:${h}" aria-label="${pt.name}を ${h} に"></button>`).join('')}<label class="pick" aria-label="${pt.name}の色を自由にえらぶ"><input type="color"></label></div>`).join('')}
-          <div class="seg"><button data-a="homelook">ホームのお着替えに合わせる</button></div>
         </div>
         <div class="seg"><button data-a="center">元に戻す</button>${preview ? '' : '<button class="primary" data-a="keep">この配置を残す</button>'}<button data-a="photo">とじる</button></div>
       </div>
@@ -253,6 +247,11 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     else if (a === 'clean') b.setAttribute('aria-pressed', String(el.classList.toggle('clean')));
     else if (a === 'photo') setPosing(sheet.hidden);
     else if (a === 'save') saveImage();
+    else if (a === 'dress') {   // この撮影だけのお着替え。決定で、このカードに残す（試し見は残さない）
+      const before = { colors: { ...lk }, hair: lh, outfit: lo }, apply = L => { lk = { ...L.colors }; lh = L.hair || ''; lo = L.outfit || ''; sync(); };
+      openDress({ look: before, home: defaultLook(), title: 'お着替え', note: preview ? '試し見なので、残りません' : 'この撮影だけ。ホームのお着替えは変わりません',
+        onChange: apply, onSave: L => { apply(L); if (!preview) { const look = { colors: { ...lk }, hair: lh, outfit: lo }; setPhoto(card.id, card.photo ?? null, look); card.look = look; clearSnaps(); toast('このカードのお着替えを残しました'); } } });
+    }
     else if (b.dataset.light) { ph.light = b.dataset.light; sync(); }
     else if (b.dataset.tab) { sheet.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); sheet.querySelectorAll('.pane').forEach(x => { x.hidden = x.dataset.pane !== b.dataset.tab; }); }
     else if (b.dataset.c) { lk[b.closest('.dress').dataset.k] = b.dataset.c; sync(); }

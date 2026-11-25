@@ -5,7 +5,8 @@
 //   ぼかし具合は「ぼかし」ボタンで変えて、この端末に覚えておく（くりたが画面でいじって決めるため）
 //   前のボクセルのマイルーム（模様がえ・写真・家具・ショップ）はやめた。アプリの外 archive/home-room-voxel/ に保管
 import { PLACES, LABEL, seasonOf } from './places.js';
-import { book, mode, settings, saveBook } from './store.js';
+import { book, mode, settings, saveBook, saveSettings, defaultLook } from './store.js';
+import { openDress } from './dress.js';
 import { engine, clearSnaps, reduceMotion } from './card.js';
 import { recolorChara, renderCharaColors } from './characolor.js';
 import { loadParts, sheet as partsSheet, charaHair, charaOutfit } from './charaparts.js';
@@ -157,9 +158,9 @@ export function renderHome(view, { header } = {}) {
       location.hash = `#/card/${encodeURIComponent(c.id)}`;
     }
     else if (a === 'dress') {   // ホームのお着替え＝ふだんの見た目。これから作るカードと、ホームのキャラに使う（前に撮ったカードは変わらない）
-      const bx = document.createElement('div'); let changed = false;
-      renderCharaColors(bx, () => { changed = true; clearSnaps(); });
-      sheet('お着替え', bx, () => { if (changed) { charaImg = null; showChara(); } });
+      openDress({ look: defaultLook(), title: 'お着替え', note: 'ふだんの見た目。これからのカードにも使います',
+        onSave: L => { settings.charaColors = L.colors; if (L.hair) settings.charaHair = L.hair; else delete settings.charaHair; if (L.outfit) settings.charaOutfit = L.outfit; else delete settings.charaOutfit;
+          saveSettings(); clearSnaps(); charaImg = null; showChara(); toast('お着替えを保存しました'); } });
     }
     else if (a === 'blur') {   // ぼかし具合を動かして見る（後ろが見えるシート）
       const bx = document.createElement('div'); bx.className = 'hh-blur';
