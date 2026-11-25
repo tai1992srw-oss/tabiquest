@@ -7,7 +7,7 @@ import { book, cardsOf, cardById, setPhoto, defaultLook } from './store.js';
 import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS } from './card.js';
 import { PARTS, charaColors } from './characolor.js';
-import { loadParts, hairList, charaHair, outfitList, charaOutfit } from './charaparts.js';
+import { loadParts, hairList, charaHair, outfitList, charaOutfit, faceList } from './charaparts.js';
 import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast, icon } from './ui.js';
 
 // 図鑑・旅の記録・称号の上に出す切り替え（同じ図鑑タブの中の3つの見方）
@@ -149,12 +149,14 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
         <div class="seg" role="group" aria-label="光の当て方"><span class="lab">光</span><button data-rim="0">無光</button><button data-rim="3">順光</button><button data-rim="1">半逆光</button><button data-rim="2">逆光</button></div>
         <div class="seg" role="group" aria-label="光のにじみ"><span class="lab">グロー</span><button data-glow="0">なし</button><button data-glow="1">弱い</button><button data-glow="2">強い</button></div>
         <div class="seg" role="group" aria-label="ポーズ"><span class="lab">ポーズ</span>${POSES.map(([i, n]) => `<button data-pose="${i}">${n}</button>`).join('')}</div>
+        <div class="seg faces" role="group" aria-label="表情"><span class="lab">表情</span></div>
         </div>
         <div class="seg"><button data-a="center">元に戻す</button>${preview ? '' : '<button class="primary" data-a="keep">この配置を残す</button>'}<button data-a="photo">とじる</button></div>
       </div>
     </div>`;
   document.body.append(root);
   const stage = root.querySelector('.stage'), sheet = root.querySelector('.sheet');
+  loadParts().then(P => { sheet.querySelector('.faces').insertAdjacentHTML('beforeend', faceList(P).map(q => `<button data-face="${q.id}" aria-pressed="${q.id === (ph?.face || '')}">${q.name}</button>`).join('')); }).catch(() => {});   // 表情（その撮影だけ）
   loadParts().then(P => { sheet.querySelector('.hairs').insertAdjacentHTML('beforeend', hairList(P).map(h => `<button data-hair="${h.id}" aria-pressed="${h.id === lh}">${h.name}</button>`).join(''));
     sheet.querySelector('.wears').insertAdjacentHTML('beforeend', outfitList(P).map(u => `<button data-wear="${u.id}" aria-pressed="${u.id === lo}">${u.name}</button>`).join('')); }).catch(() => {});
   const btn = a => root.querySelector(`.side [data-a="${a}"]`);
@@ -185,6 +187,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     sheet.querySelectorAll('[data-rim]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.rim === (ph.rim | 0))));
     sheet.querySelectorAll('[data-glow]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.glow === (ph.glow | 0))));
     sheet.querySelectorAll('[data-pose]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.pose === ph.pose)));
+    sheet.querySelectorAll('[data-face]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.face === (ph.face || ''))));
   };
   function setPosing(on) {
     sheet.hidden = !on; root.classList.toggle('posing', on); btn('photo').setAttribute('aria-pressed', String(on));
@@ -261,6 +264,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     else if (b.dataset.rim) { ph.rim = +b.dataset.rim; sync(); }
     else if (b.dataset.glow) { ph.glow = +b.dataset.glow; sync(); }
     else if (b.dataset.pose) { ph.pose = +b.dataset.pose; sync(); }
+    else if (b.dataset.face !== undefined) { ph.face = b.dataset.face; sync(); }
     else if (a === 'center') { ph.x = 0; ph.y = 0; ph.s = 1; ph.r = 0; sync(); }
     else if (a === 'keep') { setPhoto(card.id, { ...ph }, { colors: { ...lk }, hair: lh, outfit: lo }); card.photo = { ...ph }; card.look = { colors: { ...lk }, hair: lh, outfit: lo }; clearSnaps(); toast('この配置をカードに残しました'); setPosing(false); }
   });

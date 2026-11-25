@@ -15,7 +15,7 @@ async function pixels(name) {
 export function loadParts() {
   return parts || (parts = (async () => {
     const J = await (await fetch(BASE + 'parts.json')).json(), L = {};
-    await Promise.all(['close', 'normal'].flatMap(lod => ['body', 'arms', 'hair', 'outfit', 'sleeve'].map(async k => { L[k + '_' + lod] = await pixels(k + '_' + lod); })));
+    await Promise.all(['close', 'normal'].flatMap(lod => ['body', 'arms', 'hair', 'outfit', 'sleeve', 'face'].map(async k => { L[k + '_' + lod] = await pixels(k + '_' + lod); })));
     return { J, L, sheets: {}, tex: {} };
   })().catch(e => { parts = null; throw e; }));
 }
@@ -28,30 +28,38 @@ export const outfitList = P => [{ id: '', name: 'インナー' }, ...(P.J.outfit
 export const charaOutfit = () => settings.charaOutfit || '';
 export function setCharaOutfit(id) { if (id) settings.charaOutfit = id; else delete settings.charaOutfit; saveSettings(); }
 export const lookOutfit = st => (st?.look ? st.look.outfit || '' : charaOutfit());
+// 表情（目・まゆ・口だけの層）：撮影でえらぶ（st.photo.face）。'' ＝ 元のほほえみ
+export const faceList = P => [{ id: '', name: 'ほほえみ' }, ...(P.J.faces || [])];
+export const lookFace = st => st?.photo?.face || '';
 
 // 髪型 hair・細かさ lod（'close'／'normal'）のコマの絵（色番号の絵。横にポーズのコマが並ぶ）
-export function sheet(P, hair, lod, outfit = '') {
-  const key = hair + '|' + outfit + '|' + lod; if (P.sheets[key]) return P.sheets[key];
+//   face：表情の番号。コマは「ポーズ n 個」のうしろに「同じポーズのまばたき n 個」（目のあたりだけ「目をとじる」の層に替える。目を閉じた表情は、まばたきなし）
+export function sheet(P, hair, lod, outfit = '', face = '') {
+  const key = hair + '|' + outfit + '|' + face + '|' + lod; if (P.sheets[key]) return P.sheets[key];
   const [fw, fh] = P.J[lod], n = P.J.poses, hi = P.J.hairs.findIndex(h => h.id === hair), oi = (P.J.outfits || []).findIndex(u => u.id === outfit);
   const wear = P.L['outfit_' + lod], slv = P.L['sleeve_' + lod];
   const body = P.L['body_' + lod].data, arms = P.L['arms_' + lod].data, hairs = P.L['hair_' + lod], hw = hairs.width;
-  const out = new ImageData(fw * n, fh), o = out.data, aw = fw * n;
-  for (let f = 0; f < n; f++) for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) {
-    const k = (y * aw + f * fw + x) * 4, b = (y * fw + x) * 4, a = (y * aw + f * fw + x) * 4;
+  const faces = P.L['face_' + lod], fl = P.J.faces || [], fi = fl.findIndex(q => q.id === face), bi = (P.J.closed || []).includes(face) ? -1 : fl.findIndex(q => q.id === P.J.blink);
+  const by = (P.J.blinkY?.close ?? 0) * (lod === 'close' ? 1 : .5), src = arms.length / 4 / fh;   // by：この行より上だけ、まばたきの層を使う。src：腕の絵の幅
+  const out = new ImageData(fw * n * 2, fh), o = out.data, aw = fw * n * 2;
+  for (let f = 0; f < n * 2; f++) for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) {
+    const pf = f % n, k = (y * aw + f * fw + x) * 4, b = (y * fw + x) * 4, a = (y * src + pf * fw + x) * 4;
     let v = -1;
     if (body[b + 3] > 127) v = body[b];
     if (oi >= 0) { const w = (y * wear.width + oi * fw + x) * 4; if (wear.data[w + 3] > 127) v = wear.data[w]; }
+    if (fi >= 0) { const q = (y * faces.width + fi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
+    if (f >= n && bi >= 0 && y < by) { const q = (y * faces.width + bi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
     if (hi >= 0) { const h = (y * hw + hi * fw + x) * 4; if (hairs.data[h + 3] > 127) v = hairs.data[h]; }
     if (arms[a + 3] > 127) v = arms[a];
-    if (oi >= 0) { const s = (y * slv.width + (oi * n + f) * fw + x) * 4; if (slv.data[s + 3] > 127) v = slv.data[s]; }
+    if (oi >= 0) { const s = (y * slv.width + (oi * n + pf) * fw + x) * 4; if (slv.data[s + 3] > 127) v = slv.data[s]; }
     if (v >= 0) { o[k] = v; o[k + 3] = 255; }
   }
   const c = document.createElement('canvas'); c.width = aw; c.height = fh; c.getContext('2d').putImageData(out, 0, 0);
-  return (P.sheets[key] = Object.assign(c, { fw, fh, frames: n, px: out }));
+  return (P.sheets[key] = Object.assign(c, { fw, fh, frames: n * 2, blink: n, px: out }));
 }
 // カードのキャラに、その見た目（髪型）の絵を入れる。ch：card.js の makeChara の返り値。見た目が変わったときだけ絵を作り直す
 export function applyParts(P, ch, st) {
-  const hair = lookHair(st), outfit = lookOutfit(st), key = hair + '|' + outfit; if (ch.partsKey === key) return; ch.partsKey = key;
-  const tex = lod => { const k = key + '|' + lod; if (!P.tex[k]) { const t = new THREE.CanvasTexture(sheet(P, hair, lod, outfit)); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; P.tex[k] = t; } return P.tex[k]; };
+  const hair = lookHair(st), outfit = lookOutfit(st), face = lookFace(st), key = hair + '|' + outfit + '|' + face; if (ch.partsKey === key) return; ch.partsKey = key;
+  const tex = lod => { const k = key + '|' + lod; if (!P.tex[k]) { const t = new THREE.CanvasTexture(sheet(P, hair, lod, outfit, face)); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; P.tex[k] = t; } return P.tex[k]; };
   ch.setLods([{ s: 1, tex: tex('normal'), size: P.J.normal }, { s: 2, tex: tex('close'), size: P.J.close }]);
 }
