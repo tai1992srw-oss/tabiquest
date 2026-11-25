@@ -1,6 +1,6 @@
 // 仮の名所：写真を背景にして、キャラを重ねる（ドット絵ができるまでのつなぎ）
 // 写真の形は変えず、時間帯・天気は色づけだけで表す。背景を描き足さない
-import { W, H, near, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
+import { near, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
 const THREE = window.THREE;
 
 let charaData = null;
@@ -27,15 +27,18 @@ const WEATHER = {
   snow: { mul: [.96, .98, 1.02], add: [.06, .07, .09], desat: .35 },
 };
 
+// ドット絵の名所（みなとみらいなど）と同じ 285×507 マスで描く。キャラの大きさをそろえるため
+const W = 285, H = 507, k = W / 360;
+
 export async function build(place) {
-  const scene = new THREE.Scene();
+  const scene = new THREE.Scene(); scene.userData = { W, H };
   const ph = await new THREE.TextureLoader().loadAsync(place.photo.src);
   ph.magFilter = THREE.NearestFilter; ph.minFilter = THREE.LinearFilter; ph.generateMipmaps = false;
   const C = await chara();
 
   const photo = makeLayer(scene, 0, `uniform sampler2D tPhoto; uniform vec3 uMul,uAdd; uniform float uDesat;
   void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; if(hidden(px)) discard;
-    vec2 s=(px-uOff+vec2(6.,10.)+.5)/(uSize+vec2(12.,20.));
+    vec2 s=(px-uOff+vec2(5.,8.)+.5)/(uSize+vec2(10.,16.));
     vec3 c=texture2D(tPhoto,vec2(s.x,1.-s.y)).rgb; float l=lum(c);
     c=mix(c,vec3(l),uDesat)*uMul+uAdd; gl_FragColor=vec4(c,1.); }`);
   Object.assign(photo.material.uniforms, { tPhoto: { value: ph }, uMul: { value: new THREE.Vector3(1, 1, 1) }, uAdd: { value: new THREE.Vector3() }, uDesat: { value: 0 } });
@@ -43,7 +46,7 @@ export async function build(place) {
 
   const ch = makeChara(scene, C.size, 0x100a26, .45);
   ch.chara.material.uniforms.tIdx.value = C.tex;
-  const parts = makeParticles(scene, [560, H - 4]);
+  const parts = makeParticles(scene, [Math.round(560 * k), H - 4]);
 
   const self = {
     scene, layers: [photo], ch, drop: 0,
@@ -61,9 +64,9 @@ export async function build(place) {
       }));
     },
     frame(par, f, newF, rm, st) {
-      const off = k => Math.round(-par * k);
+      const off = v => Math.round(-par * v * k);
       photo.material.uniforms.uOff.value.set(off(5), 0);
-      const cx = W / 2 + off(12), feet = 610;
+      const cx = W / 2 + off(12), feet = Math.round(610 * k);
       ch.chara.position.set(cx, H - (feet - ch.CH / 2) + self.drop, 4); ch.shadow.position.set(cx, H - feet + 1, 3);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
       if (newF) parts.draw(f, st.weather);

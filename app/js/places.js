@@ -22,6 +22,15 @@ const DOT = [
     item: { id: 'ck-nikuman', name: 'ほかほか肉まん（仮）' },
     alt: '夜の横浜中華街の門の前に分身キャラが立つ、動くドット絵カード',
   },
+  {
+    // 絵は Codex で作った昼の1枚（みなとみらいの絵を見本にした）。朝・夕暮れ・夜は色づけだけ
+    id: 'kamakura-koukoumae', kind: 'dot', no: '014-11', name: '鎌倉高校前の踏切', pref: '神奈川県', city: '鎌倉市',
+    lat: 35.3067, lng: 139.5003, radius: 250, categories: ['自然・絶景', '街並み・港'],
+    scene: 'kamakura', times: ['day', 'morning', 'evening', 'night'],
+    welcome: 'ようこそ、鎌倉高校前へ！',
+    item: { id: 'kk-signal', name: '踏切のキーホルダー（仮）' },
+    alt: '海の見える鎌倉高校前の踏切の坂に分身キャラが立つ、動くドット絵カード',
+  },
 ];
 
 // 写真の名所は、時間帯の色づけをコードで行う（形は変えない）ので4つの時間帯すべてを持つ

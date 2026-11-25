@@ -12,11 +12,13 @@ import { renderMap } from './map.js';
 import { renderGoals, checkGoals } from './goals.js';
 import * as minatomirai from './scenes/minatomirai.js';
 import * as chukagai from './scenes/chukagai.js';
+import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.4.0';
+export const VERSION = '0.4.1';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
+engine.register('kamakura', kamakura.build);
 for (const p of PLACES) if (p.kind === 'photo') engine.register(p.scene, () => photo.build(p));
 
 const view = document.getElementById('view');
