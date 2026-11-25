@@ -59,8 +59,7 @@ export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1, b
     if (blink && !rm && blinkNow(f)) i += blink;
     chara.material.uniforms.uPose.value = Math.min(frames - 1, i);
   };
-  const shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: shadowColor, transparent: true, opacity: shadowOpacity, depthTest: false }));
-  shadow.scale.set(30, 5, 1); shadow.renderOrder = 3; scene.add(shadow);
+  const shadow = makeShadow(scene, chara, size, shadowColor, shadowOpacity);
   // 細かさの段階：大きさ s に合わせて、いちばん合う絵に切り替える（小さいとき用・ふだん用・寄り用）
   //   lods：[{ s：その絵がちょうどよい大きさ, tex, size：[1コマの幅, 高さ] }]。ふだん用は s＝1
   let lods = [], cur = null;
@@ -72,6 +71,28 @@ export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1, b
     chara.material.uniforms.tIdx.value = best.tex; chara.material.uniforms.uSize.value.set(best.size[0], best.size[1]);
   };
   return { chara, shadow, CW, CH, shadowOpacity, setPose, frames, setLods, pickLod };
+}
+// 影：キャラの形（いまのポーズ・大きさ・角度）を、光の向きに合わせて地面へ落とす。背景と同じ粗さのドットで描く
+//   地面の点 p から、光をさかのぼって「キャラのどの点の影か」を求め、そこがキャラなら影にする（1マスの中を何か所か見て、細い所が抜けないように）
+//   uK：足もとから高さ 1 のぶん影がどれだけずれるか（x＝横、y＝奥。小さいほど影が短い）。uFoot：足もとの点。uC・uS・uR：キャラのまん中・大きさ・角度
+//   uFade：影にする高さ（キャラの背の何割まで。上ほど薄い）。placeChara（scenes/look.js）が毎コマ値を入れる。material.opacity は登場の動き（arrival.js）が変えるので、描く前に写す
+function makeShadow(scene, chara, size, color, opacity) {
+  const [SW, SH] = dims(scene), cu = chara.material.uniforms;
+  const u = { tIdx: cu.tIdx, uSize: cu.uSize, uPose: cu.uPose, uFrames: cu.uFrames, uScene: { value: new THREE.Vector2(SW, SH) },
+    uCS: { value: new THREE.Vector2(size[0], size[1]) }, uC: { value: new THREE.Vector2() }, uFoot: { value: new THREE.Vector2() }, uK: { value: new THREE.Vector2(.3, .2) },
+    uS: { value: 1 }, uR: { value: 0 }, uFade: { value: 1 }, uMul: { value: 1 }, uOp: { value: opacity }, uCol: { value: new THREE.Color(color) } };
+  const m = new THREE.ShaderMaterial({ transparent: true, depthTest: false, uniforms: u, vertexShader: VERT, fragmentShader: `
+    uniform sampler2D tIdx; uniform vec2 uSize,uScene,uCS,uC,uFoot,uK; uniform float uPose,uFrames,uS,uR,uFade,uMul,uOp; uniform vec3 uCol; varying vec2 vUv;
+    float body(vec2 w){ vec2 l=w-uC; float c=cos(uR),s=sin(uR); l=vec2(c*l.x+s*l.y,-s*l.x+c*l.y)/uS;
+      vec2 t=floor(vec2(l.x/uCS.x+.5,.5-l.y/uCS.y)*uSize); if(t.x<0.||t.y<0.||t.x>=uSize.x||t.y>=uSize.y) return 0.;
+      return step(.5,texture2D(tIdx,(vec2(t.x+uPose*uSize.x,t.y)+.5)/vec2(uSize.x*uFrames,uSize.y)*vec2(1.,-1.)+vec2(0.,1.)).a); }
+    void main(){ vec2 p=floor(vUv*uScene); float a=0.,h0=1e9;
+      float top=uCS.y*uS*uFade; for(int i=0;i<6;i++){ vec2 q=p+vec2((float(i/2)+.5)/3.,(mod(float(i),2.)+.5)/2.); float h=(q.y-uFoot.y)/uK.y; if(h<-.5||h>top) continue;
+        float b=body(vec2(q.x-h*uK.x,uFoot.y+max(h,0.))); if(b>0.){ a=1.; h0=min(h0,max(h,0.)); } }
+      if(a<.5) discard; float f=clamp(h0/top,0.,1.); gl_FragColor=vec4(uCol,min(.85,uOp*uMul)*(1.-floor(f*3.)*.2)); }` });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), m); mesh.position.set(SW / 2, SH / 2, 3); mesh.renderOrder = 3; scene.add(mesh);
+  m.opacity = opacity; mesh.onBeforeRender = () => { u.uOp.value = m.opacity; };
+  return mesh;
 }
 // キャラの細かさの段階を読む（data.json の charaLods）。ふだん用（chara.png）も入れて返す
 export async function charaLods(base, D, baseTex) {

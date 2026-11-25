@@ -70,12 +70,21 @@ export function charaPlace(st, W, H, ground) {
   const s = Math.max(.4, Math.min(6, st.photo?.s || 1));
   return { dx: Math.round((st.photo?.x || 0) * W), feet: Math.round(H * f), s, r: st.photo?.r || 0 };
 }
-// キャラを置く（大きさ s のときは足もとをそろえる。角度 r はキャラのまん中を軸に回す）。回したときは影を消す
+// 影の向き：晴れの日は太陽の向きに、体の形の影を地面へ落とす（朝は左奥、昼は短く右奥、夕方は右へ長く）
+//   曇り・雨・雪・夜は光がやわらかいので、足もとに短い影だけ。k：足もとから高さ1のぶんのずれ [横, 奥]、fade：影にする高さ（キャラの背の何割まで。上ほど薄い）、op：濃さの倍率
+export function shadowLight(st) {
+  if (['cloudy', 'rain', 'snow'].includes(st?.weather) || st?.time === 'night') return { k: [.05, .14], fade: .3, op: 1.7 };
+  return { morning: { k: [-.85, .2], fade: 1, op: 1.5 }, evening: { k: [1.1, .16], fade: 1, op: 1.4 } }[st?.time] || { k: [.3, .18], fade: 1, op: 1.6 };
+}
+// キャラを置く（大きさ s のときは足もとをそろえる。角度 r はキャラのまん中を軸に回す）。影はキャラの形を光の向きへ落とす
 //   左はしと足もとを画面のマス（背景の 1/RS）にそろえて、ドットがにじまないようにする
-export function placeChara(ch, cx, feet, s, H, drop, r = 0) {
+export function placeChara(ch, cx, feet, s, H, drop, r = 0, st) {
   const w = ch.CW * s, h = ch.CH * s; ch.pickLod?.(s);
   const left = Math.round((cx - w / 2) * RS) / RS, bottom = Math.round((H - feet + drop) * RS) / RS;
   ch.chara.scale.set(s, s, 1); ch.chara.rotation.z = r;
   ch.chara.position.set(left + w / 2, bottom + h / 2, 4);
-  ch.shadow.scale.set(30 * s, 5 * s, 1); ch.shadow.position.set(Math.round(cx), H - feet + 1, 3); ch.shadow.visible = Math.abs(r) < .2 && feet < H;
+  const L = shadowLight(st), u = ch.shadow.material.uniforms;
+  u.uC.value.set(left + w / 2, bottom + h / 2); u.uFoot.value.set(cx, Math.round(H - feet)); u.uS.value = s; u.uR.value = r;
+  u.uK.value.set(L.k[0], L.k[1]); u.uFade.value = L.fade; u.uMul.value = L.op;
+  ch.shadow.visible = feet < H;
 }
