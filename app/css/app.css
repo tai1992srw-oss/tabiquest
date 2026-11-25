@@ -104,6 +104,9 @@ canvas.map{position:absolute;inset:0;width:100%;height:100%;touch-action:none;im
 .mapctl button{width:44px;height:44px;padding:0;font-size:20px;background:rgba(21,26,56,.92)}
 .maplegend{position:absolute;left:10px;top:10px;display:flex;gap:10px;align-items:center;font:400 12px var(--dot);background:rgba(11,14,34,.8);padding:4px 8px;border:2px solid var(--line)}
 .maplegend .src{color:var(--sub);font-size:10px}
+.mapctl button.jp{font:400 13px var(--dot)}
+.mapsrc{position:absolute;left:0;right:0;bottom:0;padding:2px 6px;font-size:9px;line-height:1.3;color:var(--sub);background:rgba(11,14,34,.7);pointer-events:none}
+.mapinfo{bottom:22px}
 .lg{display:inline-block;width:10px;height:10px;margin-right:4px;vertical-align:-1px;border:1px solid #14122E}
 .lg.v{background:#FFC857}.lg.n{background:#8FA8FF}
 .mapinfo{position:absolute;left:12px;right:12px;bottom:12px;background:var(--paper);border:2px solid var(--gold);padding:10px 12px;display:flex;flex-direction:column;gap:4px}

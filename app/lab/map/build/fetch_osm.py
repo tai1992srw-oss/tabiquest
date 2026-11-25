@@ -1,11 +1,11 @@
 # 名所のまわり（20m の段 near*）に入れる OpenStreetMap のデータを、Overpass API から取ってくる
 # 取るもの：ふつうの道路（幹線〜3けた県道くらいまで）・公園・森・水辺（川・池）
 # データ：© OpenStreetMap contributors（ODbL）
-# 使い方：python fetch_osm.py <保存するフォルダ>   … data/levels.json の near* の範囲ごとに osm_near*.json を保存（あればとばす）
+# 使い方：python fetch_osm.py <保存するフォルダ> [levels.json（本番用は app/assets/map/dot/levels.json）]   … data/levels.json の near* の範囲ごとに osm_near*.json を保存（あればとばす）
 import json, os, sys, time, urllib.request, urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-meta = json.load(open(os.path.join(HERE, '..', 'data', 'levels.json'), encoding='utf-8'))
+meta = json.load(open(sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, '..', 'data', 'levels.json'), encoding='utf-8'))
 P = meta['proj']
 out = sys.argv[1]; os.makedirs(out, exist_ok=True)
 Q = '''[out:json][timeout:180];
