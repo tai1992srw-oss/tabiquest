@@ -2,6 +2,7 @@
 // kind: 'dot'＝Canva の見本を写し取ったドット絵、'photo'＝ドット絵ができるまでの仮の写真
 // 緯度・経度と半径は仮の値（到着と判定する距離はまだ決めていない）
 import { PHOTO_PLACES } from './photo_places.js';
+import { PLAIN_PLACES } from './plain_places.js';
 
 export const CATEGORIES = ['神社・寺', '城・史跡', '自然・絶景', '街並み・港', '夜景', '温泉', '食・市場', 'テーマパーク・施設'];
 
@@ -41,7 +42,16 @@ const PHOTO = PHOTO_PLACES.map(p => ({
   alt: `${p.name}の写真に分身キャラが立つ、仮のカード`,
 }));
 
-export const PLACES = [...DOT, ...PHOTO];
+// 絵も写真もまだの名所：背景は景色を描かない無地（空色の上下のぼかし）にして、時間帯の色づけだけする
+export const PLAIN_BG = 'assets/photos/plain.png';
+const PLAIN = PLAIN_PLACES.map(p => ({
+  ...p, kind: 'plain', scene: 'plain:' + p.id, times: ['morning', 'day', 'evening', 'night'],
+  welcome: `ようこそ、${p.name}へ！`,
+  item: { id: `${p.id}-omiyage`, name: `${p.name}のおみやげ（仮）` },
+  alt: `${p.name}の仮のカード（絵はまだ）`,
+}));
+
+export const PLACES = [...DOT, ...PHOTO, ...PLAIN];
 export const placeById = id => PLACES.find(p => p.id === id);
 
 export const LABEL = {

@@ -1,5 +1,5 @@
 // 図鑑：名所ごとのアルバム。カードは到着ごとの1枚で、時間帯や天気をあとから変えることはできない
-import { PLACES, placeById, LABEL, TIMES, WEATHERS } from './places.js';
+import { PLACES, placeById, LABEL, TIMES, WEATHERS, PLAIN_BG } from './places.js';
 import { book, cardsOf, cardById, setPhoto } from './store.js';
 import { engine, snapshot, RS } from './card.js';
 import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast } from './ui.js';
@@ -54,6 +54,7 @@ export function renderPlace(view, id) {
   const hero = view.querySelector('.hero');
   if (cs.length) snapshot(p.scene, cs[0]).then(u => hero.prepend(img(u, p.alt)));
   else if (p.kind === 'photo') hero.prepend(img(p.photo.src, ''));
+  else if (p.kind === 'plain') hero.prepend(img(PLAIN_BG, ''));
   else snapshot(p.scene, { time: 'day', weather: 'clear' }).then(u => hero.prepend(img(u, '')));
   const grid = view.querySelector('.shelf');
   for (const c of cs) {

@@ -1,9 +1,9 @@
 // オフライン対応：アプリ本体と絵を端末に保存して、電波がなくても開けるようにする
 // 版を上げるときは VERSION を変える（古い保存は消える）
-const VERSION = 'tabiquest-v0.8.0';
+const VERSION = 'tabiquest-v0.8.1';
 const CORE = [
   './', 'index.html', 'manifest.json', 'css/app.css', 'vendor/three.r128.min.js',
-  'js/main.js', 'js/card.js', 'js/places.js', 'js/photo_places.js', 'js/store.js', 'js/geo.js', 'js/conditions.js', 'js/ui.js', 'js/arrival.js', 'js/zukan.js', 'js/debug.js',
+  'js/main.js', 'js/card.js', 'js/places.js', 'js/photo_places.js', 'js/plain_places.js', 'js/store.js', 'js/geo.js', 'js/conditions.js', 'js/ui.js', 'js/arrival.js', 'js/zukan.js', 'js/debug.js',
   'js/map.js', 'js/goals.js', 'js/calendar.js',
   'assets/map/dot/levels.json', 'assets/map/dot/jp8.png', 'assets/map/dot/jp2.png', 'assets/map/dot/jp1.png', 'assets/map/dot/kt1000.png', 'assets/map/dot/kt250.png', 'assets/map/dot/kt100.png', 'assets/map/dot/kt50.png', 'assets/map/dot/near0.png', 'assets/map/dot/near1.png', 'assets/map/dot/near2.png',
   'js/scenes/minatomirai.js', 'js/scenes/chukagai.js', 'js/scenes/kamakura.js', 'js/scenes/photo.js', 'js/scenes/look.js', 'js/scenes/dotscene.js',
@@ -15,7 +15,7 @@ const CORE = [
   'assets/photos/kanagawa-032.jpg', 'assets/photos/kanagawa-033.jpg', 'assets/photos/kanagawa-035.jpg', 'assets/photos/kanagawa-040.jpg',
   'assets/photos/kanagawa-043.jpg', 'assets/photos/kanagawa-044.jpg', 'assets/photos/kanagawa-045.jpg', 'assets/photos/kanagawa-046.jpg',
   'assets/photos/tokyo-001.jpg', 'assets/photos/tokyo-002.jpg', 'assets/photos/tokyo-003.jpg', 'assets/photos/tokyo-004.jpg',
-  'assets/photos/tokyo-008.jpg', 'assets/photos/tokyo-009.jpg', 'assets/photos/kanagawa-061.jpg', 'assets/photos/kanagawa-063.jpg',
+  'assets/photos/tokyo-008.jpg', 'assets/photos/tokyo-009.jpg', 'assets/photos/kanagawa-061.jpg', 'assets/photos/kanagawa-063.jpg', 'assets/photos/plain.png',
 ];
 
 self.addEventListener('install', e => {

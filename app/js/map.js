@@ -242,7 +242,7 @@ export async function renderMap(view) {
     if (!p) { info.hidden = true; return; }
     const cs = cardsOf(p.id), st = statusOf(p);
     info.hidden = false;
-    info.innerHTML = `<button class="x" data-a="x" aria-label="とじる">×</button><b>${esc(p.name)}</b>${p.kind === 'photo' ? ' <span class="kari-s static">仮</span>' : ''}
+    info.innerHTML = `<button class="x" data-a="x" aria-label="とじる">×</button><b>${esc(p.name)}</b>${p.kind === 'photo' || p.kind === 'plain' ? ' <span class="kari-s static">仮</span>' : ''}
       <span class="sub">${esc(p.pref)} ${esc(p.city)} ／ ${p.categories.map(esc).join('・')}</span>
       <span class="sub">${cs.length ? `カード ${cs.length}まい` : 'まだ行っていません'}${st.known ? ` ／ ${st.inside ? '到着できます！' : 'ここから ' + fmtDist(st.d)}` : ''}</span>
       <div class="row"><button class="btn" data-a="near">まわりを見る</button>${cs.length ? `<a class="btn" href="#/place/${p.id}">アルバム</a>` : ''}<a class="btn" href="#/">名所の一覧へ</a></div>`;

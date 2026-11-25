@@ -1,5 +1,5 @@
 // 画面の切り替えと、一覧・設定の画面
-import { PLACES, placeById, CATEGORIES } from './places.js';
+import { PLACES, placeById, CATEGORIES, PLAIN_BG } from './places.js';
 import { settings, saveSettings, book, mode, arrive, cardsOf, visited, exportBook, importBook, persist } from './store.js';
 import { engine, snapshot } from './card.js';
 import { locate, here, statusOf, fmtDist, current } from './geo.js';
@@ -16,11 +16,13 @@ import * as chukagai from './scenes/chukagai.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.8.0';
+export const VERSION = '0.8.1';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('kamakura', kamakura.build);
 for (const p of PLACES) if (p.kind === 'photo') engine.register(p.scene, () => photo.build(p));
+// 絵のない名所は、写真の名所のしくみに空の絵を渡して使う
+for (const p of PLACES) if (p.kind === 'plain') engine.register(p.scene, () => photo.build({ ...p, photo: { src: PLAIN_BG } }));
 
 const view = document.getElementById('view');
 let closeViewer = null;
@@ -99,12 +101,13 @@ function renderList() {
     const act = st.inside ? `<button class="go" data-arrive="${p.id}">到着する</button>`
       : been ? `<span class="go sub">アルバム ›</span>` : `<span class="go sub">まだ</span>`;
     el.innerHTML = `<a class="hit" href="#/place/${p.id}" aria-label="${esc(p.name)}を見る"></a><div class="art"></div><div class="shade"></div>
-      ${cs.length > 1 ? `<span class="cnt">×${cs.length}</span>` : ''}${p.kind === 'photo' ? '<span class="kari-s">仮</span>' : ''}
+      ${cs.length > 1 ? `<span class="cnt">×${cs.length}</span>` : ''}${p.kind === 'photo' || p.kind === 'plain' ? '<span class="kari-s">仮</span>' : ''}
       <div class="t"><b>${esc(p.name)}</b><small>${where}</small>${been ? '' : (p.blurb ? `<small class="bl">${esc(p.blurb)}</small>` : '')}</div>${act}`;
     box.append(el);
     const art = el.querySelector('.art');
     if (been) snapshot(p.scene, cs[0]).then(u => art.append(img(u, p.alt)));
     else if (p.kind === 'photo') art.append(img(p.photo.src, ''));
+    else if (p.kind === 'plain') art.append(img(PLAIN_BG, ''));
     else snapshot(p.scene, { time: renderTime(p, timeOfDay(new Date())), weather: 'clear' }).then(u => art.append(img(u, '')));
   }
   box.onclick = async e => {

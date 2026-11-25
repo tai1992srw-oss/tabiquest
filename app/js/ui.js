@@ -15,7 +15,7 @@ export function cardEl(place, card, { stamp = true, welcome = true } = {}) {
   const chips = [[LABEL.time[card.time], CHIP_COLOR.time], [LABEL.weather[card.weather] || '天気不明', CHIP_COLOR.weather], [LABEL.season[card.season || seasonOf(new Date(card.at || Date.now()))], CHIP_COLOR.season]];
   el.innerHTML = `
     <div class="hud top"><span class="pref">${esc(prefCity(place))}</span>${welcome ? `<span class="wel1">${esc(w1)}</span><span class="wel2">${esc(w2)}</span>` : ''}</div>
-    ${place.kind === 'photo' ? `<span class="kari" title="ドット絵ができるまでの仮の写真">仮</span><span class="credit">写真：${esc(place.photo.author)}／${esc(place.photo.license)}</span>` : ''}
+    ${place.kind === 'plain' ? '<span class="kari" title="この名所の絵はまだです">絵はまだ</span>' : ''}${place.kind === 'photo' ? `<span class="kari" title="ドット絵ができるまでの仮の写真">仮</span><span class="credit">写真：${esc(place.photo.author)}／${esc(place.photo.license)}</span>` : ''}
     ${stamp ? `<div class="stamp" aria-hidden="true"><b>到着</b><small>${fmtDate(card.at)}</small></div>` : ''}
     <div class="hud bot"><div><div class="place">${esc(place.name)}</div><div class="meta">${cardNo(place, card)} ／ ${fmtDate(card.at)}</div></div>
       <div class="chips">${chips.map(([a, c]) => `<span class="chip" style="background:${c}">${esc(a)}</span>`).join('')}</div></div>`;
