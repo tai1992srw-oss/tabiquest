@@ -43,12 +43,16 @@ export function makeLayer(scene, z, frag, w, h) {
 }
 
 // キャラ（背景と別の層。あとで着せ替えのパーツ層にする）
-export function makeChara(scene, size, shadowColor, shadowOpacity) {
+// frames：絵にコマ（ポーズ）が横に何枚並んでいるか。setPose(i) で i 番目のコマにする（0＝立ち、1＝喜び）
+export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1) {
   const [CW, CH] = size;
-  const chara = makeLayer(scene, 4, `void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; vec2 s=px; if(s.y<uSize.y*.62) s.y-=uOff.y; vec4 t=smp(s); if(t.a<.5||s.y<0.||hidden(px)) discard; gl_FragColor=vec4(pal(t.r),1.); }`, CW, CH);
+  const chara = makeLayer(scene, 4, `uniform float uPose,uFrames; void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; vec2 s=px; if(s.y<uSize.y*.62) s.y-=uOff.y;
+    vec4 t=texture2D(tIdx,(vec2(s.x+uPose*uSize.x,s.y)+.5)/vec2(uSize.x*uFrames,uSize.y)*vec2(1.,-1.)+vec2(0.,1.)); if(t.a<.5||s.y<0.||hidden(px)) discard; gl_FragColor=vec4(pal(t.r),1.); }`, CW, CH);
+  Object.assign(chara.material.uniforms, { uPose: { value: 0 }, uFrames: { value: frames } }); chara.material.needsUpdate = true;
+  const setPose = i => { chara.material.uniforms.uPose.value = Math.min(frames - 1, Math.max(0, i)); };
   const shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: shadowColor, transparent: true, opacity: shadowOpacity, depthTest: false }));
   shadow.scale.set(30, 5, 1); shadow.renderOrder = 3; scene.add(shadow);
-  return { chara, shadow, CW, CH, shadowOpacity };
+  return { chara, shadow, CW, CH, shadowOpacity, setPose, frames };
 }
 
 // 雨・雪の粒（コードで動かすもの）。splash は雨のはね返りを出す高さの範囲
@@ -104,7 +108,7 @@ class Engine {
     const [w, h] = dims(s.scene); if (this.canvas.width === w && this.canvas.height === h) return;
     this.renderer.setSize(w, h, false); this.cam.right = w; this.cam.top = h; this.cam.updateProjectionMatrix();
   }
-  reset(s) { for (const m of [...s.layers, s.ch.chara]) m.material.uniforms.uReveal.value = 1; s.drop = 0; s.ch.shadow.material.opacity = s.ch.shadowOpacity; }
+  reset(s) { for (const m of [...s.layers, s.ch.chara]) m.material.uniforms.uReveal.value = 1; s.drop = 0; s.ch.shadow.material.opacity = s.ch.shadowOpacity; s.ch.setPose?.(0); }
   get(id) { return this.built[id] || (this.built[id] = this.builders[id]()); }
   // container の中に動くカードを出す
   async show(container, id, state) {

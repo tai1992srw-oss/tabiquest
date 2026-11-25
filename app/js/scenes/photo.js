@@ -8,7 +8,7 @@ async function chara() {
   if (!charaData) charaData = (async () => {
     const D = await (await fetch('assets/minatomirai/data.json')).json();
     const t = near(await new THREE.TextureLoader().loadAsync('assets/minatomirai/chara.png'));
-    return { size: D.chara, pal: D.pal.chara, tex: t };
+    return { size: D.chara, pal: D.pal.chara, tex: t, frames: D.charaFrames || 1 };
   })();
   return charaData;
 }
@@ -44,7 +44,7 @@ export async function build(place) {
   Object.assign(photo.material.uniforms, { tPhoto: { value: ph }, uMul: { value: new THREE.Vector3(1, 1, 1) }, uAdd: { value: new THREE.Vector3() }, uDesat: { value: 0 } });
   photo.material.needsUpdate = true;
 
-  const ch = makeChara(scene, C.size, 0x100a26, .45);
+  const ch = makeChara(scene, C.size, 0x100a26, .45, C.frames);
   ch.chara.material.uniforms.tIdx.value = C.tex;
   const parts = makeParticles(scene, [Math.round(560 * k), H - 4]);
 

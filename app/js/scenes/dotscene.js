@@ -55,7 +55,7 @@ export async function buildDot(cfg) {
   const gulls = D.sprites?.gull && cfg.gulls ? cfg.gulls.map(() => makeLayer(scene, .5, GULL, ...D.sprites.gull)) : [];
   for (const g of gulls) g.material.uniforms.tIdx.value = tex.gulls;
   const [GW] = D.sprites?.gull || [0];
-  const ch = makeChara(scene, D.chara, 0x1a2a44, .35); ch.chara.material.uniforms.tIdx.value = tex.chara;
+  const ch = makeChara(scene, D.chara, 0x1a2a44, .35, D.charaFrames || 1); ch.chara.material.uniforms.tIdx.value = tex.chara;
   const parts = makeParticles(scene, [Math.round(H * .74), H - 4]);
 
   function skyOf(st) {

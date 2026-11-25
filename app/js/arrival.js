@@ -38,7 +38,7 @@ export function playArrival(place, v, result, { onZukan } = {}) {
       s.layers.forEach((m, i) => { m.material.uniforms.uReveal.value = clamp((t - 150 - i * 450) / 600); });
       const k = clamp((t - charaAt) / 520);
       s.ch.chara.material.uniforms.uReveal.value = k > 0 ? 1 : 0; s.drop = Math.round(230 * (1 - bounce(k))); s.ch.shadow.material.opacity = s.ch.shadowOpacity * k;
-      once(flashAt, t, () => { if (!skip) flash.classList.add('on'); root.classList.add('lit'); card.classList.remove('pre'); card.classList.add('lit'); });
+      once(flashAt, t, () => { s.ch.setPose?.(1); if (!skip) flash.classList.add('on'); root.classList.add('lit'); card.classList.remove('pre'); card.classList.add('lit'); });
       once(stampAt, t, () => { card.classList.add('stamped'); if (!skip) { card.classList.add('shake'); navigator.vibrate?.(40); } });
       once(confAt, t, () => { if (!skip) conf.start(); });
       once(bandAt, t, () => band.classList.add('in'));

@@ -47,7 +47,7 @@ export async function build() {
   const [GW, GH] = D.sprites.gull;
   const gulls = [0, 1, 2].map(() => makeLayer(scene, .5, `void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; vec2 s=px; if(uWet>.5) s.x=uSize.x-1.-s.x;
   vec4 t=texture2D(tIdx,(vec2(s.x+uOff.x*uSize.x,s.y)+.5)/vec2(uSize.x*2.,uSize.y)*vec2(1.,-1.)+vec2(0.,1.)); if(t.a<.5) discard; gl_FragColor=vec4(pal(t.r),1.); }`, GW, GH));
-  const ch = makeChara(scene, D.chara, 0x1a2a44, .35);
+  const ch = makeChara(scene, D.chara, 0x1a2a44, .35, D.charaFrames || 1);
   const parts = makeParticles(scene, [Math.round(H * .72), H - 4]);
 
   train.material.uniforms.tIdx.value = tex.train; for (const g of gulls) g.material.uniforms.tIdx.value = tex.gulls; ch.chara.material.uniforms.tIdx.value = tex.chara;
