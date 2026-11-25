@@ -12,14 +12,14 @@ import { renderDebug } from './debug.js';
 import { renderMap } from './map.js';
 import { renderGoals, checkGoals, goalList } from './goals.js';
 import { renderTimeline } from './calendar.js';
-import { renderHome, renderShop } from './home.js';
+import { renderHome } from './home.js';
 import * as minatomirai from './scenes/minatomirai.js';
 import * as chukagai from './scenes/chukagai.js';
 import * as tokyotower from './scenes/tokyotower.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.26';
+export const VERSION = '0.10.27';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);
@@ -41,10 +41,10 @@ function header() {
 function route() {
   closeViewer?.(); closeViewer = null;
   const [name, ...args] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
-  if (name === 'home' || name === 'shop') {   // ホーム（マイルーム）とショップ
+  if (name === 'home' || name === 'shop') {   // ホーム（前のショップは家具だけだったので、ホームへ）
     document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.tab === 'home') a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     header(); view.classList.remove('mapmode');
-    if (name === 'home') closeViewer = renderHome(view, { header }); else renderShop(view, { header });
+    closeViewer = renderHome(view, { header });
     window.scrollTo(0, 0); return;
   }
   const tab = ['zukan', 'place', 'card', 'preview', 'goals', 'calendar', 'timeline'].includes(name) ? 'zukan' : ['settings', 'map'].includes(name) ? name : 'list';

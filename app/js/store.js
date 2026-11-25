@@ -36,7 +36,7 @@ write(KEY.real, books.real); write(KEY.debug, books.debug);
 export const mode = () => (settings.debugUnlocked && settings.debugOn ? 'debug' : 'real');
 export const book = (m = mode()) => books[m];
 const save = m => write(KEY[m], books[m]);
-// ほかのファイルで記録を書きかえたあとに呼ぶ（マイルームの飾り・ログインボーナス・ショップ）
+// ほかのファイルで記録を書きかえたあとに呼ぶ（ログインボーナスなど）
 export const saveBook = (m = mode()) => save(m);
 
 const dayKey = d => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
