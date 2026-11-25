@@ -61,7 +61,7 @@ export function sheet(P, hair, lod, outfit = '', face = '') {
   // 体に着せる順：くつ下 → くつ → ボトムス → トップス → 装飾品。サスペンダーやジャンパースカートのように、上に重ねるボトムス（J.over）は、トップスのあと
   const ord = (P.J.over || []).includes(W.bottom) ? ['socks', 'shoes', 'top', 'bottom', 'acc'] : ['socks', 'shoes', 'bottom', 'top', 'acc'];
   const under = ord.filter(k => W[k] && P.W[W[k] + '_' + lod]).map(k => [P.W[W[k] + '_' + lod], cols.indexOf(k)]), slv = W.top ? P.W[W.top + '_' + lod] : null, sc = cols.length;
-  const af = W.acc && cols.includes('accF') ? P.W[W.acc + '_' + lod] : null, afc = cols.indexOf('accF');   // 装飾品の、肩にかかる所（腕・そでより前）
+  const af = W.acc ? P.W[W.acc + '_' + lod] : null, afc = sc + n, afOk = af && af.w >= (afc + n) * fw;   // 装飾品の、肩にかかる所（腕・そでより前）。そでのコマのうしろに、ポーズごとに1コマ
   const body = P.L['body_' + lod].data, arms = P.L['arms_' + lod].data, hairs = P.L['hair_' + lod], hw = hairs.width;
   const faces = P.L['face_' + lod], fl = P.J.faces || [], fi = fl.findIndex(q => q.id === face), bi = (P.J.closed || []).includes(face) ? -1 : fl.findIndex(q => q.id === P.J.blink);
   const by = (P.J.blinkY?.close ?? 0) * (lod === 'close' ? 1 : .5), src = arms.length / 4 / fh;   // by：この行より上だけ、まばたきの層を使う。src：腕の絵の幅
@@ -74,7 +74,7 @@ export function sheet(P, hair, lod, outfit = '', face = '') {
     if (fi >= 0) { const q = (y * faces.width + fi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
     if (f >= n && bi >= 0 && y < by) { const q = (y * faces.width + bi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
     if (hi >= 0) { const h = (y * hw + hi * fw + x) * 4; if (hairs.data[h + 3] > 127) v = hairs.data[h]; }
-    const front = af && af.d[y * af.w + afc * fw + x] !== 255;   // ここは装飾品が腕・そでの前（下に描いた装飾品と、その上の髪をそのまま見せる）
+    const front = afOk && af.d[y * af.w + (afc + pf) * fw + x] !== 255;   // ここは装飾品が腕・そでの前（下に描いた装飾品と、その上の髪をそのまま見せる）
     if (!front && arms[a + 3] > 127) v = arms[a];
     if (slv && !front) { const q = slv.d[y * slv.w + (sc + pf) * fw + x]; if (q !== 255) v = q; }
     if (v >= 0) { o[k] = v; o[k + 3] = 255; }
