@@ -101,6 +101,206 @@ const DOT = [
     item: { id: 'saitama-015-omiyage', name: '芝桜のしおり（仮）' },
     alt: '羊山公園の芝桜の丘の道に分身キャラが立つ、動くドット絵カード',
   },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。赤レンガ倉庫を広場からななめに見る
+    id: 'akarenga', kind: 'dot', no: '014-03', name: '横浜赤レンガ倉庫', pref: '神奈川県', city: '横浜市中区',
+    lat: 35.4522, lng: 139.643, radius: 250, categories: ['街並み・港', '夜景', '城・史跡'],
+    scene: 'akarenga', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '明治・大正の倉庫を使った商業施設。季節のイベント',
+    welcome: 'ようこそ、横浜赤レンガ倉庫へ！',
+    item: { id: 'akarenga-omiyage', name: 'レンガのキーホルダー（仮）' },
+    alt: '横浜赤レンガ倉庫の広場に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。山下公園の遊歩道から氷川丸を見る
+    id: 'yamashita', kind: 'dot', no: '014-04', name: '山下公園', pref: '神奈川県', city: '横浜市中区',
+    lat: 35.445778, lng: 139.64975, radius: 350, categories: ['街並み・港', '自然・絶景'],
+    scene: 'yamashita', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '海沿いの公園。氷川丸が係留されている。秋はバラ',
+    welcome: 'ようこそ、山下公園へ！',
+    item: { id: 'yamashita-omiyage', name: '氷川丸の模型（仮）' },
+    alt: '山下公園の海ぞいの遊歩道に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。大さん橋の屋上（くじらのせなか）から、みなとみらいを見る
+    id: 'osanbashi', kind: 'dot', no: '014-05', name: '大さん橋', pref: '神奈川県', city: '横浜市中区',
+    lat: 35.4517, lng: 139.648, radius: 300, categories: ['街並み・港', '夜景'],
+    scene: 'osanbashi', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '船の形の客船ターミナル。屋上から港の夜景',
+    welcome: 'ようこそ、大さん橋へ！',
+    item: { id: 'osanbashi-omiyage', name: '客船の模型（仮）' },
+    alt: '大さん橋の屋上の板張りに分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。大池ごしに三重塔を見る
+    id: 'sankeien', kind: 'dot', no: '014-06', name: '三溪園', pref: '神奈川県', city: '横浜市中区',
+    lat: 35.41695, lng: 139.660042, radius: 400, categories: ['自然・絶景', '城・史跡'],
+    scene: 'sankeien', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '歴史的建造物を移した日本庭園。三重塔',
+    welcome: 'ようこそ、三溪園へ！',
+    item: { id: 'sankeien-omiyage', name: '三重塔の置物（仮）' },
+    alt: '三溪園の大池のほとりに分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。阿字ヶ池にかかる赤い反橋と金堂
+    id: 'kanagawa-070', kind: 'dot', no: '014-40', name: '称名寺（金沢文庫）', pref: '神奈川県', city: '横浜市金沢区',
+    lat: 35.344181, lng: 139.630392, radius: 250, categories: ['神社・寺', '自然・絶景', '城・史跡'],
+    scene: 'shomyoji', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '鎌倉時代の浄土庭園。となりに県立金沢文庫',
+    welcome: 'ようこそ、称名寺（金沢文庫）へ！',
+    item: { id: 'kanagawa-070-omiyage', name: '赤い橋の置物（仮）' },
+    alt: '称名寺の池のほとりに分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。舞殿・大石段・本宮を正面から
+    id: 'tsurugaoka', kind: 'dot', no: '014-07', name: '鶴岡八幡宮', pref: '神奈川県', city: '鎌倉市',
+    lat: 35.326081, lng: 139.556417, radius: 350, categories: ['神社・寺', '城・史跡'],
+    scene: 'tsurugaoka', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '鎌倉幕府ゆかりの神社。若宮大路の先にある',
+    welcome: 'ようこそ、鶴岡八幡宮へ！',
+    item: { id: 'tsurugaoka-omiyage', name: '鳩のお守り（仮）' },
+    alt: '鶴岡八幡宮の舞殿の前に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。高徳院の大仏を正面から見上げる
+    id: 'daibutsu', kind: 'dot', no: '014-08', name: '鎌倉大仏（高徳院）', pref: '神奈川県', city: '鎌倉市',
+    lat: 35.316861, lng: 139.535722, radius: 200, categories: ['神社・寺', '城・史跡'],
+    scene: 'daibutsu', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '高さ約11mの国宝の阿弥陀如来像',
+    welcome: 'ようこそ、鎌倉大仏（高徳院）へ！',
+    item: { id: 'daibutsu-omiyage', name: '大仏の置物（仮）' },
+    alt: '鎌倉大仏の前に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。石段の上の観音堂と、両わきのあじさい
+    id: 'kanagawa-034', kind: 'dot', no: '014-14', name: '長谷寺（鎌倉）', pref: '神奈川県', city: '鎌倉市',
+    lat: 35.312464, lng: 139.532995, radius: 200, categories: ['神社・寺', '自然・絶景'],
+    scene: 'hasedera', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '海を見下ろす寺。6月のあじさい',
+    welcome: 'ようこそ、長谷寺（鎌倉）へ！',
+    item: { id: 'kanagawa-034-omiyage', name: 'あじさいのしおり（仮）' },
+    alt: '長谷寺の石段の下に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。建長寺の三門を正面から
+    id: 'kanagawa-049', kind: 'dot', no: '014-21', name: '建長寺', pref: '神奈川県', city: '鎌倉市',
+    lat: 35.331789, lng: 139.555347, radius: 300, categories: ['神社・寺'],
+    scene: 'kenchoji', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '鎌倉五山の第一位の禅寺',
+    welcome: 'ようこそ、建長寺へ！',
+    item: { id: 'kanagawa-049-omiyage', name: '三門の置物（仮）' },
+    alt: '建長寺の三門の前に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。石段の上の山門を木立の中から見上げる
+    id: 'kanagawa-050', kind: 'dot', no: '014-22', name: '円覚寺', pref: '神奈川県', city: '鎌倉市',
+    lat: 35.337704, lng: 139.547498, radius: 300, categories: ['神社・寺'],
+    scene: 'engakuji', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '北鎌倉駅前の禅寺。国宝の舎利殿',
+    welcome: 'ようこそ、円覚寺へ！',
+    item: { id: 'kanagawa-050-omiyage', name: '山門の置物（仮）' },
+    alt: '円覚寺の石段の下に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。報国寺の竹の庭
+    id: 'kanagawa-051', kind: 'dot', no: '014-23', name: '報国寺（竹の寺）', pref: '神奈川県', city: '鎌倉市',
+    lat: 35.32, lng: 139.5693, radius: 150, categories: ['神社・寺', '自然・絶景'],
+    scene: 'hokokuji', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '竹林の庭で抹茶がいただける寺',
+    welcome: 'ようこそ、報国寺（竹の寺）へ！',
+    item: { id: 'kanagawa-051-omiyage', name: '竹の茶しゃく（仮）' },
+    alt: '報国寺の竹林の道に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。片瀬の砂浜から江の島と灯台を見る
+    id: 'enoshima', kind: 'dot', no: '014-09', name: '江の島（江島神社）', pref: '神奈川県', city: '藤沢市',
+    lat: 35.299331, lng: 139.480908, radius: 600, categories: ['自然・絶景', '神社・寺', '夜景'],
+    scene: 'enoshima', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '橋で渡れる島。江島神社と展望灯台。冬は夜のイルミネーション',
+    welcome: 'ようこそ、江の島（江島神社）へ！',
+    item: { id: 'enoshima-omiyage', name: '貝がらのお守り（仮）' },
+    alt: '江の島を望む砂浜に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。城ヶ島の馬の背洞門
+    id: 'kanagawa-054', kind: 'dot', no: '014-26', name: '城ヶ島', pref: '神奈川県', city: '三浦市',
+    lat: 35.133889, lng: 139.618611, radius: 800, categories: ['自然・絶景'],
+    scene: 'jogashima', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '三浦半島の先の島。馬の背洞門と夕日',
+    welcome: 'ようこそ、城ヶ島へ！',
+    item: { id: 'kanagawa-054-omiyage', name: '洞門の絵はがき（仮）' },
+    alt: '城ヶ島の岩場に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。猿島の要塞跡の切通しとレンガのトンネル
+    id: 'kanagawa-055', kind: 'dot', no: '014-27', name: '猿島', pref: '神奈川県', city: '横須賀市',
+    lat: 35.286111, lng: 139.694167, radius: 300, categories: ['自然・絶景', '城・史跡'],
+    scene: 'sarushima', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '東京湾の無人島。旧日本軍の要塞跡。船で渡る',
+    welcome: 'ようこそ、猿島へ！',
+    item: { id: 'kanagawa-055-omiyage', name: 'レンガの文鎮（仮）' },
+    alt: '猿島の切通しの道に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。本丸広場から天守を見上げる
+    id: 'odawarajo', kind: 'dot', no: '014-10', name: '小田原城', pref: '神奈川県', city: '小田原市',
+    lat: 35.250833, lng: 139.153611, radius: 300, categories: ['城・史跡'],
+    scene: 'odawarajo', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '北条氏の城。天守閣は1960年の再建。春は桜',
+    welcome: 'ようこそ、小田原城へ！',
+    item: { id: 'odawarajo-omiyage', name: '天守の置物（仮）' },
+    alt: '小田原城の本丸広場に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。芦ノ湖に立つ平和の鳥居を岸から見る
+    id: 'kanagawa-036', kind: 'dot', no: '014-15', name: '箱根神社', pref: '神奈川県', city: '箱根町',
+    lat: 35.203889, lng: 139.025556, radius: 250, categories: ['神社・寺'],
+    scene: 'hakonejinja', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '芦ノ湖のほとりの神社。湖に立つ「平和の鳥居」',
+    welcome: 'ようこそ、箱根神社へ！',
+    item: { id: 'kanagawa-036-omiyage', name: '鳥居のお守り（仮）' },
+    alt: '箱根神社の平和の鳥居の前に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。大涌谷の噴気地帯
+    id: 'kanagawa-037', kind: 'dot', no: '014-16', name: '大涌谷', pref: '神奈川県', city: '箱根町',
+    lat: 35.241916, lng: 139.020667, radius: 400, categories: ['自然・絶景', '温泉'],
+    scene: 'owakudani', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '噴煙が上がる火山の谷。黒たまご。火山の状態で立入規制あり',
+    welcome: 'ようこそ、大涌谷へ！',
+    item: { id: 'kanagawa-037-omiyage', name: '黒たまご（仮）' },
+    alt: '大涌谷の展望台に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。元箱根から芦ノ湖・平和の鳥居・富士山を見る
+    id: 'kanagawa-038', kind: 'dot', no: '014-17', name: '芦ノ湖（元箱根港）', pref: '神奈川県', city: '箱根町',
+    lat: 35.200972, lng: 139.03, radius: 400, categories: ['自然・絶景', '街並み・港'],
+    scene: 'ashinoko', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '箱根のカルデラ湖。海賊船の港。晴れると富士山',
+    welcome: 'ようこそ、芦ノ湖（元箱根港）へ！',
+    item: { id: 'kanagawa-038-omiyage', name: '海賊船の模型（仮）' },
+    alt: '芦ノ湖の元箱根の湖畔に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。大山阿夫利神社の下社と大山の森
+    id: 'kanagawa-052', kind: 'dot', no: '014-24', name: '大山阿夫利神社（下社）', pref: '神奈川県', city: '伊勢原市',
+    lat: 35.432131, lng: 139.238074, radius: 250, categories: ['神社・寺', '自然・絶景'],
+    scene: 'oyama', times: ['day', 'morning', 'evening', 'night'],
+    blurb: 'ケーブルカーで行ける大山の中腹の神社。相模湾を見下ろす',
+    welcome: 'ようこそ、大山阿夫利神社（下社）へ！',
+    item: { id: 'kanagawa-052-omiyage', name: '大山こま（仮）' },
+    alt: '大山阿夫利神社の下社の前に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。川崎大師の大本堂と八角五重塔
+    id: 'kanagawa-048', kind: 'dot', no: '014-20', name: '川崎大師（平間寺）', pref: '神奈川県', city: '川崎市川崎区',
+    lat: 35.533741, lng: 139.729483, radius: 300, categories: ['神社・寺', '食・市場'],
+    scene: 'kawasakidaishi', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '厄除けで知られる寺。参道のくず餅と飴',
+    welcome: 'ようこそ、川崎大師（平間寺）へ！',
+    item: { id: 'kanagawa-048-omiyage', name: 'だるま（仮）' },
+    alt: '川崎大師の大本堂の前に分身キャラが立つ、動くドット絵カード',
+  },
 ];
 
 // 写真の名所は、時間帯の色づけをコードで行う（形は変えない）ので4つの時間帯すべてを持つ

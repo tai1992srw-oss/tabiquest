@@ -37,10 +37,16 @@ export function kindOf([r, g, b]) {
 }
 // 季節の色の差し替え（夏が元の絵）
 export function season(c, kind, s) {
-  if (kind === 'bloom') {   // 春だけ咲く花（芝桜・花の木）：春は元の絵のまま。夏は葉の緑、秋はくすんだ緑、冬は茶色がかった緑（芝桜は冬も葉が残る。明るさは元の絵のまま）
-    if (s === 'spring') return c; const l = (c[0] * .3 + c[1] * .59 + c[2] * .11) / 255, g = s === 'summer' ? [70, 150, 58] : s === 'autumn' ? [100, 132, 60] : [112, 114, 72];
+  // 咲く季節が決まっている花・雪：その季節だけ元の絵のまま。ほかの季節は葉の色（明るさは元の絵のまま）
+  //   bloom＝春（芝桜・花の木） bloomS＝夏（花しょうぶ） bloomA＝秋（菊） sakura＝桜（春に咲き、夏は緑、秋は色づき、冬は枯れ枝の色） cap＝富士山の雪（夏だけ消える）
+  if (kind === 'bloom' || kind === 'bloomS' || kind === 'bloomA' || kind === 'sakura') {
+    if (s === { bloom: 'spring', bloomS: 'summer', bloomA: 'autumn', sakura: 'spring' }[kind]) return c;
+    const l = (c[0] * .3 + c[1] * .59 + c[2] * .11) / 255;
+    const g = kind === 'sakura' ? (s === 'summer' ? [70, 150, 58] : s === 'autumn' ? [206, 112, 48] : [128, 112, 104])
+      : s === 'winter' ? [112, 114, 72] : s === 'autumn' ? [100, 132, 60] : [70, 150, 58];   // 芝桜などは冬も葉が残る：秋はくすんだ緑、冬は茶色がかった緑
     return g.map(v => Math.min(255, v * (.45 + l * 1.1)));
   }
+  if (kind === 'cap') return s === 'summer' ? mix(c, [86, 108, 150], .82) : c;
   if (!kind || s === 'summer') return c;
   if (kind === 'grass') return s === 'autumn' ? mix(c, [186, 178, 84], .38) : s === 'winter' ? mix(c, [150, 148, 96], .5) : mix(c, [150, 206, 86], .2);   // 芝生：秋は少し黄色く、冬は枯れ色（赤くはしない）
   const l = (c[0] * .3 + c[1] * .59 + c[2] * .11) / 255;
