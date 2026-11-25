@@ -14,14 +14,22 @@ const TIME = {
   evening: { mul: [1.05, .88, .8], add: [10, 2, 8], desat: .08 },
   night: { mul: [.3, .38, .62], add: [0, 2, 14], desat: .35 },
 };
+// 曇り・雨・雪の日の時間帯：日が差さないので夕焼けの色にはならない。暗くなるだけ（少し青みの灰色）
+const TIME_GRAY = {
+  morning: { mul: [.96, .97, 1.0], add: [4, 5, 8], desat: .05 },
+  day: { mul: [1, 1, 1], add: [0, 0, 0], desat: 0 },
+  evening: { mul: [.74, .75, .82], add: [2, 2, 8], desat: .15 },
+  night: { mul: [.3, .36, .55], add: [0, 2, 12], desat: .35 },
+};
 const WEATHER = {
   clear: { mul: [1, 1, 1], add: [0, 0, 0], desat: 0 },
-  cloudy: { mul: [.9, .9, .93], add: [0, 0, 0], desat: .35 },
-  rain: { mul: [.76, .78, .86], add: [0, 0, 4], desat: .45 },
+  cloudy: { mul: [.86, .87, .9], add: [6, 7, 10], desat: .5, flat: .15 },
+  rain: { mul: [.74, .76, .84], add: [4, 5, 10], desat: .55, flat: .12 },
   snow: { mul: [.94, .96, 1.0], add: [6, 8, 12], desat: .25 },
 };
-const tint = ([r, g, b], t) => { const l = r * .3 + g * .59 + b * .11; return [(r + (l - r) * t.desat) * t.mul[0] + t.add[0], (g + (l - g) * t.desat) * t.mul[1] + t.add[1], (b + (l - b) * t.desat) * t.mul[2] + t.add[2]]; };
-const both = (a, b) => ({ mul: a.mul.map((v, i) => v * b.mul[i]), add: a.add.map((v, i) => v + b.add[i]), desat: Math.min(1, a.desat + b.desat) });
+// flat：明るいところと暗いところの差を小さくする（曇りの日は影がぼやけ、全体が平らに見える）
+const tint = ([r, g, b], t) => { const l = r * .3 + g * .59 + b * .11, f = t.flat || 0; const o = [(r + (l - r) * t.desat) * t.mul[0] + t.add[0], (g + (l - g) * t.desat) * t.mul[1] + t.add[1], (b + (l - b) * t.desat) * t.mul[2] + t.add[2]]; return o.map(v => v + (128 - v) * f); };
+const both = (a, b) => ({ mul: a.mul.map((v, i) => v * b.mul[i]), add: a.add.map((v, i) => v + b.add[i]), desat: Math.min(1, a.desat + b.desat), flat: (a.flat || 0) + (b.flat || 0) });
 const mix = (c, d, k) => c.map((v, i) => v + (d[i] - v) * k);
 
 // 色の種類（32色のパレットから、葉・黄緑の葉・あじさいを見分ける）
@@ -59,10 +67,13 @@ export async function build() {
   gl_FragColor=vec4(pal(t.r),1.); }`);
   // 印：1＝海のきらめき 2＝踏切のランプ 3＝家の窓 4＝江の島の灯台
   // uNight：0＝昼 .5＝夕暮れ 1＝夜、uStretch：きらめきの強さ（晴れ1、曇り・雨・雪0）、uWet：濡れた道
-  const SCENE_FRAG = `void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; if(hidden(px)) discard; vec2 s=px-uOff; vec4 t=smp(s); if(t.a<.5) discard;
-  vec3 c=pal(t.r); float fl=floor(t.g*255.+.5), ph=hash(s);
-  if(fl>.5 && fl<1.5 && uStretch>.5){ float q=mod(ph*14.+uF,14.); if(q<2.) c=mix(c,vec3(1.),uNight>.75?.3:.75); else if(q<4.) c*=.9; }
-  if(fl>1.5 && fl<2.5){ float on=step(.5,uLamp), side=step(.5,t.b), blink=mod(floor(uF/6.),2.);
+  // 海のマス（B＝128）は、空の差分を使うとき、空の絵に描かれた海の色にする（夕焼けや月の映る海）
+  const SCENE_FRAG = `uniform sampler2D tSky,tSkyPal; uniform float uSeaSky; uniform vec2 uSkyOff;
+  void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; if(hidden(px)) discard; vec2 s=px-uOff; vec4 t=smp(s); if(t.a<.5) discard;
+  vec3 c=pal(t.r); float fl=floor(t.g*255.+.5), ph=hash(s), sea=step(abs(t.b*255.-128.),2.);
+  if(sea>.5 && uSeaSky>.5){ vec2 q=px-uSkyOff; vec4 k=texture2D(tSky,clamp((q+.5)/uSize,0.,1.)*vec2(1.,-1.)+vec2(0.,1.)); c=texture2D(tSkyPal,vec2((floor(k.r*255.+.5)+.5)/256.,.5)).rgb; }
+  if(fl>.5 && fl<1.5 && uStretch>.5){ float q=mod(ph*14.+uF,14.); if(q<2.) c=mix(c,uNight>.25&&uNight<.75?vec3(1.,.82,.5):vec3(1.),uNight>.75?.3:.7); else if(q<4.) c*=.9; }
+  if(fl>1.5 && fl<2.5 && sea<.5){ float on=step(.5,uLamp), side=step(.5,t.b), blink=mod(floor(uF/6.),2.);
     if(on>.5 && abs(side-blink)<.5) c=mix(vec3(1.,.16,.08),vec3(1.,.82,.6),step(.62,lum(c))); else c*=.42; }
   if(fl>2.5 && fl<3.5 && uNight>.25){ vec3 w=mix(vec3(1.,.74,.38),vec3(1.,.9,.62),step(.5,fract(ph*5.))); c=mix(c,w,uNight>.75?.92:.5); }
   if(fl>3.5 && fl<4.5 && uNight>.25 && mod(uF,24.)<7.) c=vec3(1.,.95,.72);
@@ -70,6 +81,7 @@ export async function build() {
   gl_FragColor=vec4(c,1.); }`;
   const scn = makeLayer(scene, 1, SCENE_FRAG);
   const front = makeLayer(scene, 3, SCENE_FRAG);   // 電車より手前にあるもの（壁・木・警報機の柱）
+  for (const m of [scn, front]) { Object.assign(m.material.uniforms, { tSky: { value: null }, tSkyPal: { value: null }, uSeaSky: { value: 0 }, uSkyOff: { value: new THREE.Vector2() } }); m.material.needsUpdate = true; }
 
   // 電車：線路の上を横切る。uWet を「左右を反転する」印に使う
   const [TW, TH] = D.sprites.train;
@@ -94,12 +106,14 @@ export async function build() {
   const self = {
     scene, layers: [sky, scn], ch, drop: 0,   // 到着演出で順に組み上がる層。手前の層は景色の層に合わせる
     apply(st) {
-      const t = TIME[st.time] || TIME.day, w = WEATHER[st.weather] || WEATHER.clear, tw = both(t, w);
+      const gray = ['cloudy', 'rain', 'snow'].includes(st.weather);
+      const t = (gray ? TIME_GRAY : TIME)[st.time] || TIME.day, w = WEATHER[st.weather] || WEATHER.clear, tw = both(t, w);
       // 空
       const sn = skyOf(st), sname = D.skies?.[sn];
       sky.material.uniforms.tIdx.value = sname ? tex[sname] : tex.sky;
       const own = sname && sn !== 'overcast';   // 時間帯の色がもう入っている空は、天気の色だけ
       setPal(sky, palTex(sname ? D.pal[sname] : D.pal.main, c => tint(c, own ? w : tw)));
+      for (const m of [scn, front]) { m.material.uniforms.tSky.value = sky.material.uniforms.tIdx.value; m.material.uniforms.tSkyPal.value = sky.material.uniforms.tPal.value; m.material.uniforms.uSeaSky.value = sname ? 1 : 0; }
       // 景色：雪の日は雪の絵。それ以外は季節の色を差し替えてから、時間帯・天気の色づけ
       const snow = st.weather === 'snow' && D.snowScene;
       const pkey = snow ? 'main_snow' : 'main';
@@ -129,6 +143,7 @@ export async function build() {
     frame(par, f, newF, rm, st) {
       const off = v => Math.round(-par * v * k);
       sky.material.uniforms.uOff.value.set(off(3), 0); scn.material.uniforms.uOff.value.set(off(9), 0); front.material.uniforms.uOff.value.set(off(9), 0);
+      scn.material.uniforms.uSkyOff.value.set(off(3), 0);
       front.material.uniforms.uReveal.value = scn.material.uniforms.uReveal.value;
       // 電車：踏切が鳴りはじめて1秒後から約3.5秒で通り抜ける。向きは1回ごとに入れかわる
       const cyc = Math.floor(f / 240), ph = f % 240 - 12, dir = cyc % 2 ? -1 : 1, run = 42;
