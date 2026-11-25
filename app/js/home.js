@@ -119,6 +119,9 @@ export function renderHome(view, { header } = {}) {
   // かわいく見せる工夫のオン・オフ（この端末に覚えておく）と、でんき（夕方と夜は、はじめからつける）
   const vfx = (() => { try { return Object.assign(Object.fromEntries(FX.map(([k]) => [k, true])), JSON.parse(localStorage.getItem('tabiquest:voxfx') || '{}')); } catch (e) { return Object.fromEntries(FX.map(([k]) => [k, true])); } })();
   let vlight = timeReal === 'night' || timeReal === 'evening';
+  // 部屋の倍率（この端末に覚えておく）。ボタンで 1 → 1.4 → 1.8 → 1 と切りかえる
+  const ZOOMS = [1, 1.4, 1.8];
+  let zoom = (() => { try { const z = +localStorage.getItem('tabiquest:roomzoom'); return ZOOMS.includes(z) ? z : 1.4; } catch (e) { return 1.4; } })();
 
   view.classList.add('homemode');
   view.innerHTML = `
@@ -131,6 +134,7 @@ export function renderHome(view, { header } = {}) {
       </div>
       <div class="hm-ov side">
         <button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button>
+        <button data-a="zoom"><i aria-hidden="true">⊕</i><span>ズーム</span></button>
         <button data-a="light" aria-pressed="${vlight}"><i aria-hidden="true">💡</i><span>でんき</span></button>
         <button data-a="fx"><i aria-hidden="true">✿</i><span>工夫</span></button>
         <a href="#/shop"><i aria-hidden="true">¥</i><span>ショップ</span></a>
@@ -175,10 +179,10 @@ export function renderHome(view, { header } = {}) {
     },
     onTapPhoto: k => pickPhoto(b, r, k, () => { saveBook(); loadPhotos(); vox.setPhotos(photos); }),
     fx: vfx, light: vlight, onLight: v => { vlight = v; view.querySelector('[data-a=light]')?.setAttribute('aria-pressed', String(v)); },
-    photoSlots: PHOTO_SLOTS });
+    photoSlots: PHOTO_SLOTS, zoom });
   loadPhotos(); vox.setPhotos(photos);
   // はじめはキャラが画面のまん中に来るようにスクロール
-  requestAnimationFrame(() => { scroller.scrollLeft = vox.screenX() * vox.canvas.clientWidth - scroller.clientWidth / 2; });
+  requestAnimationFrame(() => { scroller.scrollLeft = vox.screenX() * vox.canvas.clientWidth - scroller.clientWidth / 2; scroller.scrollTop = vox.screenY() * vox.canvas.clientHeight - scroller.clientHeight * .6; });
 
   view.onclick = e => {
     const t = e.target.closest('button'); if (!t) return;
@@ -192,6 +196,7 @@ export function renderHome(view, { header } = {}) {
       else { saveBook(); vox.sync(); vox.setSelected(sel); }
     }
     else if (a === 'cancel') { sel = null; vox.setSelected(null); setTip(); }
+    else if (a === 'zoom') { zoom = ZOOMS[(ZOOMS.indexOf(zoom) + 1) % ZOOMS.length]; try { localStorage.setItem('tabiquest:roomzoom', String(zoom)); } catch (err) {} vox.setZoom(zoom); toast(`ズーム ${zoom}倍`); }
     else if (a === 'light') { vlight = !vlight; vox.setLight(vlight); t.setAttribute('aria-pressed', String(vlight)); }
     else if (a === 'fx') {   // かわいく見せる工夫を、1つずつオン・オフして見比べる
       const box = document.createElement('div'); box.className = 'hm-fx';

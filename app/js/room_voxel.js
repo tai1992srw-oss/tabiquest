@@ -374,9 +374,10 @@ export function mountVoxelRoom(opts) {
   const charaTint = (n, L) => { const day = [1, .98, .96], dark = [.66, .66, .86], lamp = [1, .9, .84], k = n * (L ? .5 : 1), t = L ? lamp : dark; return day.map((d, i) => d + (t[i] - d) * k); };
 
   // 大きさ：ステージの高さに合わせ、横は少し広く（横にスクロール）。描く1ドット＝画面の1.5px
-  const SCALE = 1.5;
+  //   zoom：部屋を大きく見せる倍率（1＝ステージにぴったり）。大きくすると、たて・よこにスクロールして見わたす
+  const SCALE = 1.5; let zoom = opts.zoom || 1;
   function resize() {
-    const H = stage.clientHeight, W = Math.round(H * 1.35);
+    const H0 = stage.clientHeight, H = Math.round(H0 * zoom), W = Math.round(H0 * 1.35 * zoom);
     cv.style.height = H + 'px'; cv.style.width = W + 'px';
     renderer.setSize(Math.round(W / SCALE), Math.round(H / SCALE), false);
     const viewH = 215, viewW = viewH * W / H; Object.assign(cam, { left: -viewW / 2, right: viewW / 2, top: viewH / 2, bottom: -viewH / 2 }); cam.updateProjectionMatrix();
@@ -467,6 +468,10 @@ export function mountVoxelRoom(opts) {
     setSelected(o) { sel = o || null; showEdit(); },
     sync() { sync(); showEdit(); },
     screenX: () => { const v = new THREE.Vector3(me.x * V, 25, me.z * V).project(cam); return (v.x + 1) / 2; },
+    screenY: () => { const v = new THREE.Vector3(me.x * V, 25, me.z * V).project(cam); return (1 - v.y) / 2; },
+    // 倍率を変える。見ているまん中がずれないように、スクロールの位置も合わせる
+    setZoom(z) { const cx = (stage.scrollLeft + stage.clientWidth / 2) / cv.clientWidth, cy = (stage.scrollTop + stage.clientHeight / 2) / cv.clientHeight;
+      zoom = z; resize(); stage.scrollLeft = cx * cv.clientWidth - stage.clientWidth / 2; stage.scrollTop = cy * cv.clientHeight - stage.clientHeight / 2; },
     stop() { cancelAnimationFrame(raf); removeEventListener('resize', onResize); renderer.dispose(); geo.dispose(); matL.dispose(); matT.dispose(); cv.remove(); },
   };
 }
