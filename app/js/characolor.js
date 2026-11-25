@@ -36,9 +36,10 @@ function hsl2rgb([h, s, l]) {
 // D：その名所の data.json。c：元の色、i：色番号。colors：{ skin:'#rrggbb', ... }（選んでいない部位は元のまま）
 export function recolorChara(c, i, D, colors = charaColors()) {
   const R = D.charaRegions, F = D.charaRef; if (!R || !F) return c;
-  for (const k of ['skin', 'cloth', 'eye', 'hair']) {
-    const r = R[k]; if (!r || i < r[0] || i > r[1] || !colors[k] || !F[k]) continue;
-    const o = rgb2hsl(c), ref = rgb2hsl(F[k]), t = rgb2hsl(hex2rgb(colors[k]));
+  for (const k of ['skin', 'cloth', 'eye', 'hair', 'brow']) {
+    const ck = k === 'brow' ? 'hair' : k;          // まゆ毛は髪の色に合わせる
+    const r = R[k]; if (!r || i < r[0] || i > r[1] || !colors[ck] || !F[k]) continue;
+    const o = rgb2hsl(c), ref = rgb2hsl(F[k]), t = rgb2hsl(hex2rgb(colors[ck]));
     const s = Math.max(0, Math.min(1, ref[1] > .15 && ref[2] < .85 ? o[1] * t[1] / ref[1] : t[1]));
     // 明るさは「基準の色（いちばん多い色）→ 選んだ色」に合わせて、影は同じ割合で暗く、光は同じ割合で明るく（明暗の順番を変えない）
     const rl = Math.min(.98, Math.max(.02, ref[2]));
