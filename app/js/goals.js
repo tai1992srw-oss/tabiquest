@@ -2,6 +2,7 @@
 import { PLACES, placeById, CATEGORIES } from './places.js';
 import { book, markGoal } from './store.js';
 import { esc, fmtDate, toast } from './ui.js';
+import { zukanTabs } from './zukan.js';
 
 const dayKey = iso => { const d = new Date(iso); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
 
@@ -52,11 +53,15 @@ export function renderGoals(view) {
   checkGoals();
   const b = book(), s = stats(b), L = goalList(), done = L.filter(g => b.goals[g.id]);
   const titles = done.map(g => g.title);
-  view.innerHTML = `<p><a class="back" href="#/zukan">← 図鑑</a></p><h1>アチーブメント</h1>
-    <p class="count">${done.length} / ${L.length} 達成</p>
-    ${titles.length ? `<div class="group"><h2>手に入れた称号</h2><div class="tags">${titles.map(t => `<span class="tag gold">${esc(t)}</span>`).join('')}</div></div>` : ''}
-    <ul class="goals">${L.map(g => { const v = Math.min(g.n, g.get(s)), ok = !!b.goals[g.id];
-      return `<li class="${ok ? 'ok' : ''}"><div class="gl"><b>${ok ? '★' : '☆'} ${esc(g.name)}</b><span class="sub">${esc(g.desc)}</span>
-        <span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${g.n}" aria-valuenow="${v}"><i style="width:${v / g.n * 100}%"></i></span></div>
-        <div class="gr"><span>${v}/${g.n}</span><span class="sub">${ok ? fmtDate(b.goals[g.id]) : `+${g.pts}pt`}</span><span class="sub">称号「${esc(g.title)}」</span></div></li>`; }).join('')}</ul>`;
+  // 達成したものを上に、まだのものは近い順（進みぐあいの大きい順）に
+  const rest = L.filter(g => !b.goals[g.id]).sort((x, y) => Math.min(1, y.get(s) / y.n) - Math.min(1, x.get(s) / x.n));
+  const li = g => { const v = Math.min(g.n, g.get(s)), ok = !!b.goals[g.id];
+    return `<li class="${ok ? 'ok' : ''}"><span class="medal" aria-hidden="true">${ok ? '★' : '☆'}</span><div class="gl"><b>${esc(g.name)}</b><span class="sub">${esc(g.desc)}</span>
+      <span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${g.n}" aria-valuenow="${v}"><i style="width:${v / g.n * 100}%"></i></span>
+      <span class="sub">${ok ? `${fmtDate(b.goals[g.id])} に達成 ・ 称号「${esc(g.title)}」` : `${v} / ${g.n} ・ 達成で +${g.pts}pt と称号「${esc(g.title)}」`}</span></div></li>`; };
+  view.innerHTML = `<div class="phead"><h1>図鑑</h1><span class="prog">${done.length} / ${L.length} 達成</span></div>
+    ${zukanTabs('goals')}
+    <div class="group"><h2>手に入れた称号（${titles.length}）</h2>${titles.length ? `<div class="tags">${titles.map(t => `<span class="tag gold">${esc(t)}</span>`).join('')}</div>` : '<p class="note">アチーブメントを達成すると、称号がもらえます。</p>'}</div>
+    ${rest.length ? `<h2 class="range">つぎの目標</h2><ul class="goals">${rest.map(li).join('')}</ul>` : ''}
+    ${done.length ? `<h2 class="range">達成したもの</h2><ul class="goals">${done.map(li).join('')}</ul>` : ''}`;
 }

@@ -4,40 +4,62 @@ import { book, cardsOf, cardById, setPhoto } from './store.js';
 import { engine, snapshot, RS } from './card.js';
 import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast } from './ui.js';
 
-function locked(p) {
-  const el = document.createElement('div'); el.className = 'card locked'; el.setAttribute('role', 'img'); el.setAttribute('aria-label', `まだ手に入れていないカード No.${p.no}`);
-  el.innerHTML = `<span class="q" aria-hidden="true">？</span><span class="no">No.${esc(p.no)}</span>`; return el;
+// 図鑑・カレンダー・称号の上に出す切り替え（同じ図鑑タブの中の3つの見方）
+export function zukanTabs(on) {
+  return `<div class="seg3" role="tablist">${[['zukan', 'カード'], ['calendar', 'カレンダー'], ['goals', '称号']].map(([k, l]) =>
+    `<a role="tab" href="#/${k}" aria-selected="${k === on}">${l}</a>`).join('')}</div>`;
 }
-function mini(p, c) { const el = cardEl(p, c); snapshot(p.scene, c).then(u => el.prepend(img(u, p.alt))); return el; }
+
+// カードの小さな絵（文字は重ねない。名前などは下に帯で出す）
+function art(p, c, cls = '') {
+  const el = document.createElement('div'); el.className = 'pic ' + cls;
+  snapshot(p.scene, c).then(u => el.prepend(img(u, p.alt))); return el;
+}
 
 export function renderZukan(view) {
   const b = book(), got = PLACES.filter(p => cardsOf(p.id).length);
-  view.innerHTML = `<h1>図鑑</h1><p class="row"><a class="btn" href="#/goals">★ アチーブメント</a><a class="btn" href="#/calendar">カレンダー</a></p><p class="count">${got.length} / ${PLACES.length} か所 ／ カード ${b.cards.length} まい</p><div class="grid"></div>`;
-  const grid = view.querySelector('.grid');
-  for (const p of PLACES) {
+  view.innerHTML = `<div class="phead"><h1>図鑑</h1><span class="prog">${got.length} / ${PLACES.length} か所 ・ ${b.cards.length} まい</span></div>
+    ${zukanTabs('zukan')}<div class="shelf"></div>`;
+  const grid = view.querySelector('.shelf');
+  // 手に入れた名所を先に（新しく到着した順）、まだの名所はあとに番号順で
+  const order = [...got.sort((a, z) => cardsOf(z.id)[0].at.localeCompare(cardsOf(a.id)[0].at)), ...PLACES.filter(p => !cardsOf(p.id).length)];
+  for (const p of order) {
     const cs = cardsOf(p.id);
-    if (!cs.length) { grid.append(locked(p)); continue; }
-    const a = document.createElement('a'); a.href = `#/place/${p.id}`; a.className = 'slotlink'; a.setAttribute('aria-label', `${p.name}のアルバムを開く（${cs.length}まい）`);
-    a.append(mini(p, cs[0])); if (cs.length > 1) a.insertAdjacentHTML('beforeend', `<span class="badge">×${cs.length}</span>`);
+    if (!cs.length) {
+      grid.insertAdjacentHTML('beforeend', `<div class="slot locked" role="img" aria-label="まだ手に入れていないカード No.${esc(p.no)}"><span class="q" aria-hidden="true">？</span><span class="cap">No.${esc(p.no)}</span></div>`);
+      continue;
+    }
+    const a = document.createElement('a'); a.href = `#/place/${p.id}`; a.className = 'slot'; a.setAttribute('aria-label', `${p.name}のアルバムを開く（${cs.length}まい）`);
+    a.append(art(p, cs[0]));
+    a.insertAdjacentHTML('beforeend', `${cs.length > 1 ? `<span class="cnt">×${cs.length}</span>` : ''}<span class="cap">${esc(p.name)}</span>`);
     grid.append(a);
   }
 }
 
-// 名所のアルバム
+// 名所のアルバム：上に大きく最新のカード、下に集めたカードと、時間帯×天気の集まりぐあい
 export function renderPlace(view, id) {
   const p = placeById(id); if (!p) { location.hash = '#/zukan'; return; }
-  const cs = cardsOf(p.id), have = new Set(cs.map(c => c.time + '|' + c.weather));
+  const cs = cardsOf(p.id), have = new Set(cs.map(c => c.time + '|' + c.weather)), times = TIMES.filter(t => p.times.includes(t));
+  const total = times.length * WEATHERS.length, n = times.reduce((s, t) => s + WEATHERS.filter(w => have.has(t + '|' + w)).length, 0);
   const tbl = `<table class="combo" aria-label="集めた時間帯と天気"><tr><th></th>${WEATHERS.map(w => `<th>${LABEL.weather[w]}</th>`).join('')}</tr>
-    ${TIMES.filter(t => p.times.includes(t)).map(t => `<tr><th>${LABEL.time[t]}</th>${WEATHERS.map(w => `<td>${have.has(t + '|' + w) ? '<span class="got" aria-label="あり">●</span>' : '<span class="no" aria-label="なし">・</span>'}</td>`).join('')}</tr>`).join('')}</table>`;
-  view.innerHTML = `<p><a class="back" href="#/zukan">← 図鑑</a></p>
-    <h1>${esc(p.name)}</h1><p class="lead">No.${esc(p.no)} ／ ${esc(p.pref)} ${esc(p.city)} ／ ${p.categories.map(esc).join('・')}</p>
-    ${p.blurb ? `<p class="note">${esc(p.blurb)}</p>` : ''}
-    <div class="group"><h2>集めた時間帯と天気</h2>${tbl}<p class="note">${cs.length ? `はじめての到着 ${fmtDate(cs.at(-1).at)} ／ カード ${cs.length} まい` : 'まだ到着していません'}</p></div>
-    <div class="grid three"></div>
+    ${times.map(t => `<tr><th>${LABEL.time[t]}</th>${WEATHERS.map(w => `<td>${have.has(t + '|' + w) ? '<span class="got" aria-label="あり">●</span>' : '<span class="no" aria-label="なし">・</span>'}</td>`).join('')}</tr>`).join('')}</table>`;
+  view.innerHTML = `<div class="phead"><a class="backbtn" href="#/zukan" aria-label="図鑑にもどる">‹</a><h1>${esc(p.name)}</h1></div>
+    <div class="hero${cs.length ? '' : ' yet'}"><div class="shade"></div><div class="t"><small>No.${esc(p.no)} ・ ${esc(p.pref)} ${esc(p.city)}</small>
+      <small>${cs.length ? `カード ${cs.length} まい ・ はじめての到着 ${fmtDate(cs.at(-1).at)}` : 'まだ到着していません'}</small></div>
+      ${cs.length ? `<a class="go" href="#/card/${cs[0].id}">▶ 大きく見る</a>` : ''}</div>
+    ${p.blurb ? `<p class="note blurb">${esc(p.blurb)}</p>` : ''}
+    ${cs.length ? `<h2 class="range">集めたカード</h2><div class="shelf three"></div>` : ''}
+    <div class="group"><h2>時間帯と天気（${n} / ${total}）</h2>${tbl}<p class="note">ちがう時間帯や天気の日に来ると、ちがうカードが手に入ります。</p></div>
     ${p.kind === 'photo' ? `<p class="note">仮の写真：${esc(p.photo.author)}（<a href="${esc(p.photo.page)}" target="_blank" rel="noopener">Wikimedia Commons</a>、${esc(p.photo.license)}）</p>` : ''}`;
-  const grid = view.querySelector('.grid');
-  if (!cs.length) grid.append(locked(p));
-  for (const c of cs) { const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.setAttribute('aria-label', `${cardNo(p, c)} を開く`); a.append(mini(p, c)); grid.append(a); }
+  const hero = view.querySelector('.hero');
+  if (cs.length) snapshot(p.scene, cs[0]).then(u => hero.prepend(img(u, p.alt)));
+  else if (p.kind === 'photo') hero.prepend(img(p.photo.src, ''));
+  else snapshot(p.scene, { time: 'day', weather: 'clear' }).then(u => hero.prepend(img(u, '')));
+  const grid = view.querySelector('.shelf');
+  for (const c of cs) {
+    const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.className = 'slot'; a.setAttribute('aria-label', `${cardNo(p, c)} を開く`);
+    a.append(art(p, c)); a.insertAdjacentHTML('beforeend', `<span class="cap sm">${LABEL.time[c.time] || ''}・${LABEL.weather[c.weather] || ''}<br>${fmtDate(c.at)}</span>`); grid.append(a);
+  }
 }
 
 // 1枚のカードを全画面で見る（ストーリーズのような見せ方）

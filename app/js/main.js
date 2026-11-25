@@ -4,7 +4,7 @@ import { settings, saveSettings, book, mode, arrive, cardsOf, visited, exportBoo
 import { engine, snapshot } from './card.js';
 import { locate, here, statusOf, fmtDist, current } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
-import { esc, img, toast, fmtDate } from './ui.js';
+import { esc, img, toast, fmtDate, prefCity } from './ui.js';
 import { playArrival } from './arrival.js';
 import { renderZukan, renderPlace, openViewer } from './zukan.js';
 import { renderDebug } from './debug.js';
@@ -16,7 +16,7 @@ import * as chukagai from './scenes/chukagai.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.7.1';
+export const VERSION = '0.8.0';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('kamakura', kamakura.build);
@@ -59,45 +59,53 @@ function route() {
 addEventListener('hashchange', route);
 
 // ---- 名所の一覧 ----
+// 近い順に、名所ごとの横長の絵（タイル）を並べる。まだ行っていない名所の絵はグレーにして、行ってからのお楽しみにする
+// 現在地がわかっていれば「いま到着できる／近く／日帰りで／遠く」に分ける。わからなければ番号順
+const RANGES = [['can', 'いま到着できます'], [2000, '近く（2km以内）'], [50000, '日帰りで行ける（50km以内）'], [Infinity, '遠く']];
 function renderList() {
   const pos = current(), fake = pos?.fake;
   const nowText = fake ? `デバッグ：${esc(placeById(settings.loc)?.name || 'どこでもない場所')}にいることにしています`
     : here.busy ? '現在地を確かめています…'
-    : here.error ? esc(here.error)
-    : pos ? `現在地を確かめました（${here.at.getHours()}:${String(here.at.getMinutes()).padStart(2, '0')}、誤差 約${Math.round(pos.acc)}m）${pos.acc > 200 ? '<br><span class="warn">誤差が大きいので、空の見える場所でもう一度確かめてください</span>' : ''}`
-    : 'まだ現在地を確かめていません';
+    : here.error ? `<span class="warn">${esc(here.error)}</span>`
+    : pos ? `${here.at.getHours()}:${String(here.at.getMinutes()).padStart(2, '0')} の現在地から近い順${pos.acc > 200 ? `<br><span class="warn">誤差が約${Math.round(pos.acc)}mと大きいので、空の見える場所でもう一度確かめてください</span>` : ''}`
+    : '現在地を確かめると、近い順に並びます';
   const cats = CATEGORIES.filter(c => PLACES.some(p => p.categories.includes(c)));
   let list = PLACES.filter(p => (ui.cat === 'all' || p.categories.includes(ui.cat)) && (ui.seen === 'all' || (ui.seen === 'yes') === visited(p.id)));
   if (pos) list = [...list].sort((a, z) => statusOf(a).d - statusOf(z).d);
-  view.innerHTML = `<h1>名所</h1><p class="lead">名所の近くで「到着する」を押すと、そのときの時間帯と天気のカードが1枚手に入ります。</p>
-    <div class="group here"><span class="now">${nowText}</span>${fake ? '' : `<div class="row"><button class="primary" id="locate" ${here.busy ? 'disabled' : ''}>現在地を確かめる</button></div>`}</div>
+  const got = PLACES.filter(p => visited(p.id)).length;
+  view.innerHTML = `<div class="phead"><h1>名所</h1><span class="prog">${got} / ${PLACES.length} か所 行った</span>
+      ${fake ? '' : `<button class="pillbtn" id="locate" ${here.busy ? 'disabled' : ''}>◎ ${pos ? 'もう一度' : '現在地'}</button>`}</div>
+    <p class="nowline">${nowText}</p>
     <div class="filters">
-      <div class="chips-row" role="group" aria-label="カテゴリ">${[['all', 'すべて'], ...cats.map(c => [c, c])].map(([v, l]) => `<button data-cat="${esc(v)}" aria-pressed="${ui.cat === v}">${esc(l)}</button>`).join('')}</div>
-      <div class="chips-row" role="group" aria-label="行った／まだ">${[['all', 'ぜんぶ'], ['no', 'まだ'], ['yes', '行った']].map(([v, l]) => `<button data-seen="${v}" aria-pressed="${ui.seen === v}">${l}</button>`).join('')}<span class="count">${list.length}か所</span></div>
+      <div class="chips-row" role="group" aria-label="行った／まだ">${[['all', 'ぜんぶ'], ['no', 'まだ'], ['yes', '行った']].map(([v, l]) => `<button data-seen="${v}" aria-pressed="${ui.seen === v}">${l}</button>`).join('')}<span class="sep"></span>${cats.map(c => `<button data-cat="${esc(c)}" aria-pressed="${ui.cat === c}">${esc(c)}</button>`).join('')}</div>
     </div>
     <div id="spots"></div>`;
   view.querySelector('#locate')?.addEventListener('click', async () => { here.busy = true; renderList(); await locate(); renderList(); });
   view.querySelector('.filters').onclick = e => {
     const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.cat) ui.cat = b.dataset.cat; if (b.dataset.seen) ui.seen = b.dataset.seen; saveUi(); renderList();
+    if (b.dataset.cat) ui.cat = ui.cat === b.dataset.cat ? 'all' : b.dataset.cat;   // カテゴリはもう一度押すと解除 if (b.dataset.seen) ui.seen = b.dataset.seen; saveUi(); renderList();
   };
   const box = view.querySelector('#spots');
-  if (!list.length) box.innerHTML = '<p class="note">この条件の名所はありません。</p>';
+  if (!list.length) box.innerHTML = '<p class="note empty">この条件の名所はありません。</p>';
+  let range = null;
   for (const p of list) {
-    const cs = cardsOf(p.id), st = statusOf(p);
-    const stText = !st.known ? '距離はまだわかりません' : st.inside ? '到着できます！' : `ここから ${fmtDist(st.d)}`;
-    const el = document.createElement('section'); el.className = 'spot' + (st.inside ? ' can' : ''); el.setAttribute('aria-label', p.name);
-    el.innerHTML = `<div class="thumb ${cs.length ? '' : 'dim'}">${cs.length ? '' : '<span class="lock" aria-hidden="true">？</span>'}${p.kind === 'photo' ? '<span class="kari-s">仮</span>' : ''}</div>
-      <div class="body"><span class="nm">${esc(p.name)}</span><span class="sub">${esc(p.pref)} ${esc(p.city)} ／ No.${esc(p.no)}</span>
-        <span class="tags">${p.categories.map(c => `<span class="tag">${esc(c)}</span>`).join('')}</span>
-        <span class="st ${st.inside ? 'go' : 'far'}">${stText}</span>
-        <span class="sub">${cs.length ? `カード ${cs.length}まい ／ さいごの到着 ${fmtDate(cs[0].at)}` : 'カードはまだありません'}</span>
-        <div class="act row"><button class="primary" data-arrive="${p.id}" ${st.inside ? '' : 'disabled'}>到着する</button>${cs.length ? `<a class="btn" href="#/place/${p.id}">アルバム</a>` : ''}</div></div>`;
+    const cs = cardsOf(p.id), st = statusOf(p), been = cs.length > 0;
+    if (pos) {   // 距離のまとまりごとに見出しを入れる
+      const r = RANGES.find(([k]) => k === 'can' ? st.inside : st.d <= k);
+      if (r !== range) { range = r; box.insertAdjacentHTML('beforeend', `<h2 class="range${r[0] === 'can' ? ' can' : ''}">${r[1]}</h2>`); }
+    }
+    const el = document.createElement('section'); el.className = 'tile' + (st.inside ? ' can' : '') + (been ? '' : ' yet'); el.setAttribute('aria-label', p.name);
+    const where = `${esc(prefCity(p))}${st.known ? ` ・ ここから ${fmtDist(st.d)}` : ''}`;
+    const act = st.inside ? `<button class="go" data-arrive="${p.id}">到着する</button>`
+      : been ? `<span class="go sub">アルバム ›</span>` : `<span class="go sub">まだ</span>`;
+    el.innerHTML = `<a class="hit" href="#/place/${p.id}" aria-label="${esc(p.name)}を見る"></a><div class="art"></div><div class="shade"></div>
+      ${cs.length > 1 ? `<span class="cnt">×${cs.length}</span>` : ''}${p.kind === 'photo' ? '<span class="kari-s">仮</span>' : ''}
+      <div class="t"><b>${esc(p.name)}</b><small>${where}</small>${been ? '' : (p.blurb ? `<small class="bl">${esc(p.blurb)}</small>` : '')}</div>${act}`;
     box.append(el);
-    const th = el.querySelector('.thumb');
-    if (cs.length) snapshot(p.scene, cs[0]).then(u => th.prepend(img(u, p.alt)));
-    else if (p.kind === 'photo') th.prepend(img(p.photo.src, ''));
-    else snapshot(p.scene, { time: renderTime(p, timeOfDay(new Date())), weather: 'clear' }).then(u => th.prepend(img(u, '')));
+    const art = el.querySelector('.art');
+    if (been) snapshot(p.scene, cs[0]).then(u => art.append(img(u, p.alt)));
+    else if (p.kind === 'photo') art.append(img(p.photo.src, ''));
+    else snapshot(p.scene, { time: renderTime(p, timeOfDay(new Date())), weather: 'clear' }).then(u => art.append(img(u, '')));
   }
   box.onclick = async e => {
     const btn = e.target.closest('[data-arrive]'); if (!btn) return;
@@ -116,13 +124,15 @@ let taps = 0, tapT = 0;
 async function renderSettings() {
   const b = book(), got = PLACES.filter(p => visited(p.id)).length, m = mode();
   const items = PLACES.filter(p => b.items[p.item.id]).map(p => `${esc(p.item.name)} ×${b.items[p.item.id]}`);
-  view.innerHTML = `<h1>設定</h1>
+  view.innerHTML = `<div class="phead"><h1>設定</h1></div>
     <div class="group"><h2>きろく${m === 'debug' ? '（デバッグ用）' : ''}</h2>
-      <dl class="rec"><dt>ポイント</dt><dd>${b.points}pt</dd><dt>名所</dt><dd>${got} / ${PLACES.length} か所</dd><dt>カード</dt><dd>${b.cards.length} まい</dd><dt>アイテム</dt><dd>${items.length ? items.join('<br>') : 'まだありません'}</dd></dl></div>
+      <div class="stats"><div><b>${b.points}</b><span>ポイント</span></div><div><b>${got}<small>/${PLACES.length}</small></b><span>行った名所</span></div><div><b>${b.cards.length}</b><span>カード</span></div><div><b>${items.length}</b><span>アイテム</span></div></div>
+      ${items.length ? `<p class="note">${items.join('　')}</p>` : ''}
+      <a class="wide" href="#/goals">★ 称号とアチーブメントを見る</a></div>
     <div class="group"><h2>記録の保存</h2>
       <p class="note">記録はこの端末の中だけにあります。機種変更やブラウザのデータ消去にそなえて、ときどきファイルに書き出してください。${m === 'debug' ? '<br><b>いまはデバッグ用の記録が対象です。</b>' : ''}</p>
       <p class="note" id="persist">消さないでの設定：確かめています…</p>
-      <div class="row"><button data-a="export">ファイルに書き出す</button><button data-a="import">ファイルから読み込む</button><input type="file" id="importFile" accept="application/json,.json" hidden></div></div>
+      <div class="col"><button data-a="export">↓ ファイルに書き出す</button><button data-a="import">↑ ファイルから読み込む</button><input type="file" id="importFile" accept="application/json,.json" hidden></div></div>
     <div class="group"><h2>このアプリについて</h2>
       <p class="note">位置情報は「現在地を確かめる」を押したときだけ使います。到着したときは、天気を調べるために、だいたいの位置（約1km単位）を Open-Meteo に送ります。</p>
       <p class="note">端末で「動きを減らす」をオンにしていると、到着演出を省略します。</p>

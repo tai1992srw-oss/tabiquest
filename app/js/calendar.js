@@ -3,7 +3,9 @@
 import { placeById } from './places.js';
 import { book } from './store.js';
 import { snapshot } from './card.js';
-import { cardEl, img, esc } from './ui.js';
+import { img, esc, fmtTime } from './ui.js';
+import { zukanTabs } from './zukan.js';
+import { LABEL } from './places.js';
 
 const pad = n => String(n).padStart(2, '0');
 const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -20,12 +22,11 @@ export function renderCalendar(view, ym) {
   const monthCards = cards.filter(c => { const d = new Date(c.at); return d.getFullYear() === y && d.getMonth() === m - 1; });
   const places = new Set(monthCards.map(c => c.placeId)).size;
 
-  view.innerHTML = `<p><a class="back" href="#/zukan">← 図鑑</a></p>
-    <h1>カレンダー</h1>
+  view.innerHTML = `<div class="phead"><h1>図鑑</h1><span class="prog">${monthCards.length ? `この月 ${monthCards.length} 回 ・ ${places} か所` : 'この月の到着はまだありません'}</span></div>
+    ${zukanTabs('calendar')}
     <div class="calhead"><a class="btn" href="#/calendar/${prev.getFullYear()}-${pad(prev.getMonth() + 1)}" aria-label="前の月">‹</a>
       <span class="ym">${y}年${m}月</span>
       <a class="btn" href="#/calendar/${next.getFullYear()}-${pad(next.getMonth() + 1)}" aria-label="次の月">›</a></div>
-    <p class="count">${monthCards.length ? `この月の到着 ${monthCards.length} 回 ／ ${places} か所` : 'この月の到着はまだありません'}</p>
     <div class="cal" role="grid" aria-label="${y}年${m}月">
       ${['日', '月', '火', '水', '木', '金', '土'].map((w, i) => `<div class="wd${i === 0 ? ' sun' : i === 6 ? ' sat' : ''}" role="columnheader">${w}</div>`).join('')}
       ${Array.from({ length: lead }, () => '<div class="day empty"></div>').join('')}
@@ -46,15 +47,16 @@ export function renderCalendar(view, ym) {
   function showDay(k) {
     view.querySelectorAll('.day').forEach(b => b.classList.toggle('sel', b.dataset.k === k));
     const cs = byDay.get(k) || [], [yy, mm, dd] = k.split('-').map(Number);
-    out.innerHTML = `<h2>${yy}年${mm}月${dd}日</h2><div class="grid three"></div>`;
-    const g = out.querySelector('.grid');
-    for (const c of cs) {
+    out.innerHTML = `<h2 class="range">${mm}月${dd}日の到着</h2><div class="dayrow"></div>`;
+    const g = out.querySelector('.dayrow');
+    for (const c of cs) {   // その日のカード：横長の帯で、押すとカードの画面
       const p = placeById(c.placeId); if (!p) continue;
-      const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.setAttribute('aria-label', `${p.name}のカードを開く`);
-      const el = cardEl(p, c); snapshot(p.scene, c).then(u => el.prepend(img(u, p.alt))); a.append(el); g.append(a);
+      const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.className = 'tile sm'; a.setAttribute('aria-label', `${p.name}のカードを開く`);
+      a.innerHTML = `<div class="art"></div><div class="shade"></div><div class="t"><b>${esc(p.name)}</b><small>${fmtTime(c.at)} ・ ${LABEL.time[c.time] || ''}・${LABEL.weather[c.weather] || ''}</small></div><span class="go sub">見る ›</span>`;
+      snapshot(p.scene, c).then(u => a.querySelector('.art').append(img(u, p.alt))); g.append(a);
     }
   }
-  view.querySelector('.cal').addEventListener('click', e => { const b = e.target.closest('.day.has'); if (b) showDay(b.dataset.k); });
+  view.querySelector('.cal').addEventListener('click', e => { const b = e.target.closest('.day.has'); if (b) { showDay(b.dataset.k); out.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } });
   // 最初は、この月でいちばん新しい到着の日を開いておく
   if (monthCards.length) showDay(dayKey(new Date(monthCards.at(-1).at)));
 }
