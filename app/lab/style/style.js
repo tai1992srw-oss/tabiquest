@@ -3,27 +3,31 @@
 // 雨・雪・明かりのまたたき・キャラの上下は演出としてコードで動かす。
 
 const $ = s => document.querySelector(s);
-const KEY = 'tabiquest:stylelab:v1';
+const KEY = 'tabiquest:stylelab:v2';
 const SLOTS = ['A', 'B', 'C', 'D'];
+const BASE = { grid: 'box', w: 360, colors: 64, clean: 0, skyclean: 0, sat: 100, contrast: 100, cool: 0, shadow: 0, light: 0, chara: 32, outline: 0, fx: 'none' };
 const DEF = {
-  A: { name: 'いまに近い', w: 360, colors: 160, clean: 0, sat: 100, cool: 0, contrast: 100, chara: 40, fx: 'none' },
-  B: { name: '240マス・48色', w: 240, colors: 48, clean: 1, sat: 100, cool: 0, contrast: 100, chara: 24, fx: 'none' },
-  C: { name: '180マス・32色', w: 180, colors: 32, clean: 1, sat: 100, cool: 0, contrast: 100, chara: 16, fx: 'none' },
-  D: { name: '240マス・32色・影を青く', w: 240, colors: 32, clean: 2, sat: 90, cool: 50, contrast: 108, chara: 20, fx: 'none' },
+  A: { ...BASE, name: 'いまに近い', colors: 160, chara: 40 },
+  B: { ...BASE, name: 'ドットを見つける・64色', grid: 'refiner' },
+  C: { ...BASE, name: '見つける＋影と光＋ふち', grid: 'refiner', colors: 48, skyclean: 2, shadow: 50, light: 40, chara: 24, outline: 1 },
+  D: { ...BASE, name: '見つける・32色・影を青く', grid: 'refiner', colors: 32, clean: 1, skyclean: 2, sat: 90, cool: 40, shadow: 40, light: 30, chara: 20, outline: 1 },
 };
 const FIELDS = [
-  ['w', '横のマス数', 120, 360, 12, v => v],
+  ['w', '横のマス数', 120, 360, 12, v => v],  // 「見つける」ときは、この数を目安に近くのドットの並びを探す
   ['colors', '色の数', 8, 160, 4, v => v],
   ['clean', 'ノイズ取り', 0, 3, 1, v => ['なし', '弱', '中', '強'][v]],
   ['sat', '彩度', 50, 150, 5, v => v + '%'],
   ['contrast', 'コントラスト', 70, 140, 2, v => v + '%'],
   ['cool', '影を青く', 0, 100, 5, v => v + '%'],
+  ['shadow', '影を暗く', 0, 100, 5, v => v + '%'],
+  ['light', '真ん中に光', 0, 100, 5, v => v + '%'],
+  ['skyclean', '空のノイズ取り', 0, 3, 1, v => ['なし', '弱', '中', '強'][v]],
   ['chara', 'キャラの色数', 8, 40, 2, v => v],
 ];
 const FX = [['none', '演出なし'], ['twinkle', '明かり'], ['rain', '雨'], ['snow', '雪']];
 
 let st = { sample: null, view: 'grid', act: 'B', slots: structuredClone(DEF) };
-try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.slots) st = { ...st, ...s, slots: { ...structuredClone(DEF), ...s.slots } }; } catch (e) {}
+try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.slots) { st = { ...st, ...s, slots: structuredClone(DEF) }; for (const k of SLOTS) st.slots[k] = { ...BASE, ...DEF[k], ...(s.slots[k] || {}) }; } } catch (e) {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
 
 // ---------- 画像の読み込み ----------
@@ -68,6 +72,30 @@ function grade(px, o) {
   }
 }
 
+// 影を暗く・真ん中に光（光を当てるところだけ明るく、影は思いきって暗く）
+function tone(px, w, h, o) {
+  const ks = o.shadow / 100, kl = o.light / 100; if (!ks && !kl) return;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4, L = px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11;
+    let f = 1;
+    if (ks && L < 140) f *= 1 - ks * .6 * Math.pow((140 - L) / 140, .8);
+    if (kl) { const dx = (x / w - .5) * 1.4, dy = (y / h - .58), d = Math.sqrt(dx * dx + dy * dy); f *= 1 + kl * (.22 - d * .7); }
+    px[i] = Math.min(255, Math.max(0, px[i] * f)); px[i + 1] = Math.min(255, Math.max(0, px[i + 1] * f)); px[i + 2] = Math.min(255, Math.max(0, px[i + 2] * f));
+  }
+}
+
+// Pixel Refiner：元の絵の「見た目の1ドット」が何ピクセルかを見つけ、ドットのまん中の色で縮める
+let worker = null, wid = 0; const waits = new Map(), refined = new Map();
+function refine(url, src, w) {
+  const key = url + '@' + w; if (refined.has(key)) return refined.get(key);
+  if (!worker) { worker = new Worker('pr-worker.js', { type: 'module' }); worker.onmessage = e => { const f = waits.get(e.data.id); waits.delete(e.data.id); f && f(e.data); }; }
+  const p = new Promise((ok, ng) => {
+    const id = ++wid; waits.set(id, r => r.ok ? ok(r) : ng(new Error(r.err)));
+    worker.postMessage({ id, w: src.w, h: src.h, data: new Uint8ClampedArray(src.data), opt: { bgRemovalScope: 'off', reduceColors: false, trimToContent: false, hintPixelsW: w, hintPixelsH: Math.round(w * 16 / 9) } });
+  });
+  refined.set(key, p); p.catch(() => refined.delete(key)); return p;
+}
+
 // 色を減らす：メディアンカットで分けて、k平均で少し整える
 function quantize(px, k) {
   const list = [];
@@ -103,11 +131,11 @@ function quantize(px, k) {
 }
 
 // ノイズ取り：まわり8マスに同じ色が少ない「浮いた1マス」を、まわりで一番多い色にする
-function clean(idx, alpha, w, h, level) {
+function clean(idx, alpha, w, h, level, rows = h) {
   const lim = [0, 1, 2, 3][level];
   for (let pass = 0; pass < (level >= 3 ? 2 : 1); pass++) {
     const src = idx.slice();
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    for (let y = 0; y < rows; y++) for (let x = 0; x < w; x++) {
       const i = y * w + x; if (!alpha[i]) continue;
       const cnt = new Map(); let same = 0;
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
@@ -120,28 +148,41 @@ function clean(idx, alpha, w, h, level) {
   }
 }
 
-function build(px, w, h, k, lvl) {
+function build(px, w, h, k, lvl, sky = 0) {
   const alpha = new Uint8Array(w * h); for (let i = 0; i < w * h; i++) alpha[i] = px[i * 4 + 3] >= .5 ? 1 : 0;
   const q = quantize(px, k); if (lvl) clean(q.idx, alpha, w, h, lvl);
+  if (sky) clean(q.idx, alpha, w, h, Math.min(3, lvl + sky), Math.round(h * .42)); // 空（上のほう）だけ強めに。つるっとしたところにざらつきを残さない
   return { w, h, pal: q.pal, idx: q.idx, alpha };
 }
 
 // ---------- 1つの見本を作る ----------
 async function process(o, sample, charaUrl) {
-  const src = await pixels(sample.src), w = o.w, h = Math.round(w * 16 / 9);
-  const px = boxDown(src, w, h); grade(px, o);
-  const bg = build(px, w, h, o.colors, o.clean);
+  const src = await pixels(sample.src);
+  let w = o.w, h = Math.round(w * 16 / 9), px, info = '';
+  if (o.grid === 'refiner') {
+    const r = await refine(sample.src, src, o.w); w = r.w; h = r.h;
+    px = new Float32Array(w * h * 4); for (let i = 0; i < px.length; i++) px[i] = (i & 3) === 3 ? r.data[i] / 255 : r.data[i];
+    info = `1マス＝${r.cellW.toFixed(1)}px・${w}×${h}`;
+  } else { px = boxDown(src, w, h); info = `${w}×${h}`; }
+  grade(px, o); tone(px, w, h, o);
+  const bg = build(px, w, h, o.colors, o.clean, o.skyclean);
   const cs = await pixels(charaUrl), ch = Math.round(h * 150 / 640), cw = Math.max(1, Math.round(cs.w * ch / cs.h));
   const cp = boxDown(cs, cw, ch); grade(cp, { ...o, cool: o.cool * .4 });
   const chara = build(cp, cw, ch, o.chara, Math.min(1, o.clean));
+  // キャラのいちばん外側だけ濃い色のふちにする（主役を背景に埋もれさせない）
+  chara.rim = new Uint8Array(cw * ch);
+  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+    const i = y * cw + x; if (!chara.alpha[i]) continue;
+    if (x === 0 || y === 0 || x === cw - 1 || y === ch - 1 || !chara.alpha[i - 1] || !chara.alpha[i + 1] || !chara.alpha[i - cw] || !chara.alpha[i + cw]) chara.rim[i] = 1;
+  }
   // 明かり（明るい色）を見つけておく：またたきに使う
   const lum = bg.pal.map(p => p[0] * .3 + p[1] * .59 + p[2] * .11);
   const bright = bg.pal.map((p, j) => j).filter(j => lum[j] > 175 && Math.max(...bg.pal[j]) - Math.min(...bg.pal[j]) > 40);
-  return { bg, chara, bright, w, h, o };
+  return { bg, chara, bright, w, h, o, info };
 }
 
 // ---------- 描く（毎コマ。マス単位で組んでから整数倍で拡大） ----------
-const parts = { rain: [], snow: [] };
+const RIM = [20, 18, 46];
 function particles(kind, w, h, t) {
   const n = kind === 'rain' ? Math.round(w * h / 900) : Math.round(w * h / 1400), out = [];
   for (let i = 0; i < n; i++) {
@@ -164,7 +205,7 @@ function compose(r, ctx, img, t) {
   const bob = Math.floor(t * 2) % 2, cx = Math.round((w - chara.w) / 2), cy = Math.round(h * .86) - chara.h - bob;
   for (let y = 0; y < chara.h; y++) for (let x = 0; x < chara.w; x++) {
     const i = y * chara.w + x; if (!chara.alpha[i]) continue; const X = cx + x, Y = cy + y; if (X < 0 || Y < 0 || X >= w || Y >= h) continue;
-    const p = chara.pal[chara.idx[i]], q = (Y * w + X) * 4; d[q] = p[0]; d[q + 1] = p[1]; d[q + 2] = p[2];
+    const p = o.outline && chara.rim[i] ? RIM : chara.pal[chara.idx[i]], q = (Y * w + X) * 4; d[q] = p[0]; d[q + 1] = p[1]; d[q + 2] = p[2];
   }
   const put = (x, y, c, a) => { x = Math.floor(x); y = Math.floor(y); if (x < 0 || y < 0 || x >= w || y >= h) return; const q = (y * w + x) * 4; d[q] += (c[0] - d[q]) * a; d[q + 1] += (c[1] - d[q + 1]) * a; d[q + 2] += (c[2] - d[q + 2]) * a; };
   if (o.fx === 'rain') for (const [x, y] of particles('rain', w, h, t)) { const L = Math.max(2, Math.round(h / 110)); for (let k = 0; k < L; k++) put(x - k * .2, y + k, [200, 220, 255], .55); }
@@ -192,11 +233,12 @@ function layout() {
     c.innerHTML = `<canvas></canvas><span class="tag">${s}　${esc(st.slots[s].name || '')}</span><div class="busy">作っています…</div>`;
     c.addEventListener('click', () => { if (st.view === 'one') return; st.act = s; save(); layout(); panel(); });
     stage.appendChild(c); cells[s] = c;
-    if (results[s]) fitCanvas(c, results[s]);
+    if (results[s]) { fitCanvas(c, results[s]); tagOf(s); }
   }
   $('#vOne').classList.toggle('on', st.view === 'one'); $('#vGrid').classList.toggle('on', st.view !== 'one');
   palette();
 }
+function tagOf(s) { const c = cells[s], r = results[s]; if (!c) return; const t = c.querySelector('.tag'); t.textContent = `${s}　${st.slots[s].name || ''}${r && r.info ? '（' + r.info + '）' : ''}`; t.title = t.textContent; }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function palette() {
@@ -208,9 +250,11 @@ async function run(s) {
   const my = ++ver; const sample = samples.find(x => x.id === st.sample) || samples[0];
   const cell = cells[s]; cell && cell.classList.add('busy');
   await new Promise(r => setTimeout(r, 20));
-  const r = await process(st.slots[s], sample, charaUrl);
+  let r;
+  try { r = await process(st.slots[s], sample, charaUrl); }
+  catch (err) { const c = cells[s]; if (c) { c.classList.remove('busy'); c.querySelector('.tag').textContent = `${s}　うまく作れませんでした`; } console.error(err); return my; }
   results[s] = r; const c = cells[s];
-  if (c && document.body.contains(c)) { c.classList.remove('busy'); fitCanvas(c, r); }
+  if (c && document.body.contains(c)) { c.classList.remove('busy'); fitCanvas(c, r); tagOf(s); }
   if (s === st.act) palette();
   return my;
 }
@@ -222,9 +266,11 @@ function panel() {
   el.innerHTML = `<h2>${st.act} の加工</h2>
     <div class="row"><label for="f-name">名前</label><input id="f-name" value="${esc(o.name || '')}" style="grid-column:2/4;font:inherit;font-size:14px;color:var(--text);background:#0B0E22;border:1px solid var(--line);border-radius:8px;padding:6px 8px"></div>
     ${FIELDS.map(([k, lab, mn, mx, stp, fmt]) => `<div class="row"><label for="f-${k}">${lab}</label><input type="range" id="f-${k}" min="${mn}" max="${mx}" step="${stp}" value="${o[k]}"><output id="o-${k}">${fmt(o[k])}</output></div>`).join('')}
+    <div class="row"><label>縮め方</label><div class="chips" style="grid-column:2/4"><button data-grid="box" class="${o.grid === 'box' ? 'on' : ''}">ふつうに縮める</button><button data-grid="refiner" class="${o.grid === 'refiner' ? 'on' : ''}">ドットを見つける</button></div></div>
+    <div class="row"><label>キャラのふち</label><div class="chips" style="grid-column:2/4"><button data-ol="0" class="${!o.outline ? 'on' : ''}">なし</button><button data-ol="1" class="${o.outline ? 'on' : ''}">外側だけ濃く</button></div></div>
     <div class="row"><label>演出</label><div class="chips" style="grid-column:2/4">${FX.map(([k, l]) => `<button data-fx="${k}" class="${o.fx === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
     <div class="chips" style="margin-top:6px"><button data-a="reset">${st.act} を最初の設定に戻す</button><button data-a="copy">設定を書き出す</button></div>
-    <p class="note">縮める・色を減らす・色味を寄せるだけで、絵は描き足していません。設定はこの端末に残ります。気に入った設定は「設定を書き出す」で Claude に渡してください。</p>
+    <p class="note">「ドットを見つける」は Pixel Refiner（MIT ライセンス）の処理で、元の絵のドットの並びを見つけてから縮めます。横のマス数は、探すときの目安になります。最初の1回は数秒かかります。<br>縮める・色を減らす・色味を寄せるだけで、絵は描き足していません。設定はこの端末に残ります。気に入った設定は「設定を書き出す」で Claude に渡してください。</p>
     <textarea id="out" hidden readonly></textarea>`;
   el.querySelector('#f-name').addEventListener('input', e => { o.name = e.target.value; save(); const t = cells[st.act]?.querySelector('.tag'); if (t) t.textContent = `${st.act}　${o.name}`; });
   for (const [k, , , , , fmt] of FIELDS) {
@@ -236,6 +282,8 @@ function panel() {
   el.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.fx) { o.fx = b.dataset.fx; save(); if (results[st.act]) results[st.act].o = o; panel(); }
+    if (b.dataset.grid) { o.grid = b.dataset.grid; save(); panel(); run(st.act); }
+    if (b.dataset.ol) { o.outline = +b.dataset.ol; save(); panel(); }
     if (b.dataset.a === 'reset') { st.slots[st.act] = structuredClone(DEF[st.act]); save(); panel(); layout(); run(st.act); }
     if (b.dataset.a === 'copy') {
       const ta = el.querySelector('#out'), txt = JSON.stringify({ sample: st.sample, ...st.slots[st.act] });
