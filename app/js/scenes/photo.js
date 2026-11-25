@@ -10,7 +10,7 @@ async function chara() {
   if (!charaData) charaData = (async () => {
     const D = await (await fetch('assets/minatomirai/data.json')).json();
     const t = near(await new THREE.TextureLoader().loadAsync('assets/minatomirai/chara.png'));
-    return { D, size: D.chara, pal: D.pal.chara, tex: t, frames: D.charaFrames || 1, blink: D.charaBlink || 0, lods: await charaLods('assets/minatomirai/', D, t) };
+    return { D, size: D.chara, pal: D.pal.chara, tex: t, frames: D.charaFrames || 1, blink: D.charaBlink || 0, poseIds: D.charaPoseIds, lods: await charaLods('assets/minatomirai/', D, t) };
   })();
   return charaData;
 }
@@ -46,7 +46,7 @@ export async function build(place) {
   Object.assign(photo.material.uniforms, { tPhoto: { value: ph }, uMul: { value: new THREE.Vector3(1, 1, 1) }, uAdd: { value: new THREE.Vector3() }, uDesat: { value: 0 } });
   photo.material.needsUpdate = true;
 
-  const ch = makeChara(scene, C.size, 0x100a26, .45, C.frames, C.blink);
+  const ch = makeChara(scene, C.size, 0x100a26, .45, C.frames, C.blink, C.poseIds);
   ch.chara.material.uniforms.tIdx.value = C.tex; ch.setLods(C.lods);
   const parts = makeParticles(scene, [Math.round(560 * k), H - 4]);
 
@@ -63,7 +63,7 @@ export async function build(place) {
     frame(par, f, newF, rm, st) {
       const off = v => Math.round(-par * v * k);
       photo.material.uniforms.uOff.value.set(off(5), 0);
-      const cp = charaPlace(st, W, H, { base: 1.02, top: .76, hz: .56, s: 2.1, x: -.18 }), cx = W / 2 + off(12) + cp.dx;
+      const cp = charaPlace(st, W, H, { base: 1.02, top: .76, hz: .56, s: 2, x: -.18 }), cx = W / 2 + off(12) + cp.dx;
       ch.setPose(self.forcePose ?? st.photo?.pose ?? 0, f, rm);   // 到着の演出では forcePose（喜び）が優先
       placeChara(ch, cx, cp.feet, cp.s, H, self.drop, cp.r, st);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));

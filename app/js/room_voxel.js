@@ -365,7 +365,7 @@ export function mountVoxelRoom(opts) {
     chara.castShadow = true; chara.quaternion.copy(camQ); scene.add(chara);
   });
   const poseNo = name => { const k = cinfo?.poses?.indexOf(name); return k >= 0 ? k : 0; };
-  const JOYS = ['両手でハート', 'ばんざい', 'ピース', 'ジャンプ'];
+  const JOYS = ['ばんざい', 'ピース', '手をふる'];   // 体は1つで腕を差し替える絵になったので、いまある腕から（2026-11-26）
   const blinkNow = t => { const f = Math.floor(t / 83), q = f % 52; return q < 2 || (f % 156 >= 104 && q >= 5 && q < 7); };   // カードと同じ、約4秒に1回
   function setPose(name, t) {
     if (!cinfo) return; const fr = cinfo.frames || 1; let i = poseNo(name);

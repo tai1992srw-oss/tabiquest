@@ -47,7 +47,8 @@ export function makeLayer(scene, z, frag, w, h) {
 // キャラ（背景と別の層。あとで着せ替えのパーツ層にする）
 // frames：絵にコマ（ポーズ）が横に何枚並んでいるか。setPose(i, f, rm) で i 番目のポーズにする（0＝立ち、1＝ばんざい…）
 // blink：まばたきのコマが、ポーズのコマから何番うしろにあるか（0＝まばたきなし）。f（12コマ/秒）で、ときどき目を閉じる
-export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1, blink = 0) {
+// poseIds：コマごとのポーズ番号（保存ずみのカードの photo.pose は前の13ポーズの番号。なくなった番号は立ち＝0コマ目にする）
+export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1, blink = 0, poseIds = null) {
   const [CW, CH] = size;
   const chara = makeLayer(scene, 4, `uniform float uPose,uFrames; void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; vec2 s=px; if(s.y<uSize.y*.62) s.y-=uOff.y;
     vec4 t=texture2D(tIdx,(vec2(s.x+uPose*uSize.x,s.y)+.5)/vec2(uSize.x*uFrames,uSize.y)*vec2(1.,-1.)+vec2(0.,1.)); if(t.a<.5||s.y<0.||hidden(px)) discard; gl_FragColor=vec4(pal(t.r),1.); }`, CW, CH);
@@ -55,6 +56,7 @@ export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1, b
   const poses = blink ? blink : frames;
   const blinkNow = f => { const q = f % 52; return q < 2 || (f % 156 >= 104 && q >= 5 && q < 7); };   // 約4秒に1回、ときどき2回つづけて
   const setPose = (i, f = 0, rm = true) => {
+    if (poseIds) i = Math.max(0, poseIds.indexOf(i));
     i = Math.min(poses - 1, Math.max(0, i));
     if (blink && !rm && blinkNow(f)) i += blink;
     chara.material.uniforms.uPose.value = Math.min(frames - 1, i);
