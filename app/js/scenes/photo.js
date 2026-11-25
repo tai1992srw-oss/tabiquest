@@ -1,6 +1,6 @@
 // 仮の名所：写真を背景にして、キャラを重ねる（ドット絵ができるまでのつなぎ）
 // 写真の形は変えず、時間帯・天気は色づけだけで表す。背景を描き足さない
-import { gradeChara, charaPlace } from './look.js';
+import { gradeChara, charaPlace, placeChara } from './look.js';
 import { near, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
 const THREE = window.THREE;
 
@@ -62,9 +62,9 @@ export async function build(place) {
     frame(par, f, newF, rm, st) {
       const off = v => Math.round(-par * v * k);
       photo.material.uniforms.uOff.value.set(off(5), 0);
-      const cp = charaPlace(st, W), cx = W / 2 + off(12) + cp.dx, feet = Math.round(610 * k) - cp.dy;
+      const cp = charaPlace(st, W, H, { base: .885, top: .76, hz: .56 }), cx = W / 2 + off(12) + cp.dx;
       ch.setPose(self.forcePose ?? st.photo?.pose ?? 0);   // 到着の演出では forcePose（喜び）が優先
-      ch.chara.position.set(cx, H - (feet - ch.CH / 2) + self.drop, 4); ch.shadow.position.set(cx, H - feet + 1, 3);
+      placeChara(ch, cx, cp.feet, cp.s, H, self.drop);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
       if (newF) parts.draw(f, st.weather);
     },

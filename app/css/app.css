@@ -212,3 +212,40 @@ dl.rec dd{margin:0}
 .cal .day.today{outline:2px solid var(--teal)}
 .cal .day.sel{outline:2px solid var(--gold)}
 .calday h2{font-size:16px}
+
+/* カードの画面（ストーリーズのような見せ方）：カードは画面いっぱい、操作はカードの上に重ねる */
+.viewer.story{padding:0;gap:0;background:#000;justify-content:center;overflow:hidden;touch-action:none}
+.viewer.story .frame{position:relative;width:min(100vw,calc(100dvh * .5625));height:min(100dvh,calc(100vw / .5625));transform:translateY(var(--pull,0px));transition:transform .2s}
+.viewer.story .stage{position:absolute;inset:0}
+.viewer.story .card{width:100%;height:100%;margin:0;border:none;box-shadow:none;aspect-ratio:auto;touch-action:none}
+.viewer.story .top{position:absolute;left:0;right:0;top:0;z-index:5;padding:calc(env(safe-area-inset-top) + 8px) 10px 22px;background:linear-gradient(rgba(0,0,0,.55),transparent);pointer-events:none}
+.viewer.story .bars{display:flex;gap:3px}
+.viewer.story .bars i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.35)}
+.viewer.story .bars i.seen,.viewer.story .bars i.now{background:#fff}
+.viewer.story .who{display:flex;align-items:center;gap:8px;margin-top:8px;font:400 14px var(--dot);color:#fff;text-shadow:0 1px 2px #000}
+.viewer.story .who .when{font-size:11px;opacity:.85}
+.viewer.story .who .x{margin-left:auto;min-height:40px;min-width:40px;padding:0;background:rgba(0,0,0,.35);border:none;border-radius:50%;font-size:22px;color:#fff;pointer-events:auto}
+.viewer.story .side{position:absolute;right:8px;bottom:36%;z-index:5;display:flex;flex-direction:column;gap:12px}
+.viewer.story .side button{display:flex;flex-direction:column;align-items:center;gap:3px;width:56px;min-height:auto;padding:7px 4px;background:rgba(10,12,30,.5);border:none;border-radius:14px;font:400 11px var(--dot);color:#fff;backdrop-filter:blur(4px)}
+.viewer.story .side i{font-style:normal;font-size:20px;line-height:1}
+.viewer.story .side button[aria-pressed="true"]{background:var(--gold);color:#221a00}
+.viewer.story.posing .side{bottom:12%}
+.viewer.story.posing .card .hud,.viewer.story.posing .card .stamp{opacity:0}
+.viewer.story .sheet{position:absolute;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 66px);z-index:6;display:flex;flex-direction:column;gap:8px;padding:10px;background:rgba(10,12,30,.8);border-radius:16px;backdrop-filter:blur(8px)}
+.viewer.story .sheet[hidden]{display:none}
+.viewer.story .sheet .hint{margin:0;font-size:12px;color:#ddd;text-align:center}
+.viewer.story .sheet .seg{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center}
+.viewer.story .sheet .lab{font-size:12px;color:var(--sub);margin-right:2px}
+.viewer.story .sheet button{min-height:38px;padding:4px 10px;font-size:13px;border-radius:10px}
+.viewer.story .sheet button[aria-pressed="true"]{background:var(--gold);color:#221a00;border-color:var(--gold)}
+.viewer.story .tap{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);border:0}
+
+/* 到着の画面も、カードの画面と同じく画面いっぱい。最後の操作はカードの下に重ねる */
+.arrival{padding:0;justify-content:center;gap:0;background:#000}
+.arrival .stage{width:min(100vw,calc(100dvh * .5625));height:min(100dvh,calc(100vw / .5625))}
+.arrival .card{width:100%;height:100%;border:none;box-shadow:none;aspect-ratio:auto}
+.arrival .band.up{top:calc(env(safe-area-inset-top) + 12%);bottom:auto}
+.arrival .after{left:0;right:0;bottom:0;padding:56px 16px calc(env(safe-area-inset-bottom) + 18px);background:linear-gradient(transparent,rgba(5,6,20,.88) 45%)}
+.arrival.done .card .hud.bot,.arrival.done .card .stamp{opacity:0;transition:opacity .3s}
+.viewer.story .card .hud.top{top:calc(4% + 58px)}
+.viewer.story .card.posing{outline:none}

@@ -42,7 +42,7 @@ export function playArrival(place, v, result, { onZukan } = {}) {
       once(stampAt, t, () => { card.classList.add('stamped'); if (!skip) { card.classList.add('shake'); navigator.vibrate?.(40); } });
       once(confAt, t, () => { if (!skip) conf.start(); });
       once(bandAt, t, () => band.classList.add('in'));
-      once(upAt, t, () => { band.classList.add('up'); after.classList.add('on'); skipBtn.remove(); after.querySelector('button.primary').focus({ preventScroll: true }); });
+      once(upAt, t, () => { root.classList.add('done'); band.classList.add('up'); after.classList.add('on'); skipBtn.remove(); after.querySelector('button.primary').focus({ preventScroll: true }); });
       if (t < endAt) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);

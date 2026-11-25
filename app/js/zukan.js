@@ -40,44 +40,80 @@ export function renderPlace(view, id) {
   for (const c of cs) { const a = document.createElement('a'); a.href = `#/card/${c.id}`; a.setAttribute('aria-label', `${cardNo(p, c)} を開く`); a.append(mini(p, c)); grid.append(a); }
 }
 
-// 1枚のカードを全画面で見る。preview は デバッグの「試し見」（記録ではない仮のカード）
+// 1枚のカードを全画面で見る（ストーリーズのような見せ方）
+//   カードは画面いっぱい。上にバー（同じ名所のカードの何枚目か）と名前・×、右に縦のボタン（撮影・文字・保存）
+//   左右のタップで前後のカード、下へのスワイプで閉じる。撮影の操作はカードの上に重なるシート
+//   preview は デバッグの「試し見」（記録ではない仮のカード）
 export function openViewer({ cardId, preview, onClose }) {
-  const card = preview ? { ...preview, at: new Date().toISOString(), n: 0 } : cardById(cardId);
-  const p = card && placeById(card.placeId);
-  if (!p) { onClose(); return () => {}; }
-  const root = document.createElement('div'); root.className = 'viewer'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', `${p.name}のカード`);
-  const slot = document.createElement('div'); slot.className = 'slot'; root.append(slot);
-  const el = cardEl(p, card); slot.append(el);
-  const src = String(card.weatherSrc || ''), wsrc = src.startsWith('open-meteo') ? '天気は Open-Meteo から自動で取得' : src === 'debug' ? '天気はデバッグで指定' : src === 'none' ? '天気は取れませんでした' : '';
-  const info = preview ? '試し見（デバッグ）：記録には入りません' : `${cardNo(p, card)} ／ ${fmtDate(card.at)} ${fmtTime(card.at)} に到着${wsrc ? ' ／ ' + wsrc : ''}${card.timeReal && card.timeReal !== card.time ? ` ／ 本当の時間帯は「${LABEL.time[card.timeReal]}」（その絵がまだないため${LABEL.time[card.time]}で表示）` : ''}`;
-  root.insertAdjacentHTML('beforeend', `<p class="info">${esc(info)}</p>
-    <div class="row"><button data-a="photo" aria-pressed="false">撮影</button><button data-a="clean" aria-pressed="false">文字を隠す</button><button data-a="close">もどる</button></div>
-    <div class="photo" hidden>
-      <p class="note">カードの上を指でなぞると、キャラの置き場所を変えられます。</p>
-      <div class="row seg" role="group" aria-label="キャラの明るさ"><span class="lab">明るさ</span><button data-light="bright">明るいまま</button><button data-light="blend">景色になじませる</button></div>
-      <div class="row seg" role="group" aria-label="ポーズ"><span class="lab">ポーズ</span><button data-pose="0">立ち</button><button data-pose="1">喜び</button></div>
-      <div class="row"><button data-a="center">真ん中に戻す</button><button data-a="save">画像を保存</button>${preview ? '' : '<button class="primary" data-a="keep">この配置を残す</button>'}</div>
-    </div>`);
+  const first = preview ? { ...preview, at: new Date().toISOString(), n: 0 } : cardById(cardId);
+  const p0 = first && placeById(first.placeId);
+  if (!p0) { onClose(); return () => {}; }
+  const list = preview ? [first] : cardsOf(p0.id).slice().reverse();   // 古い順
+  let idx = Math.max(0, list.findIndex(c => c.id === first.id)), card = first, p = p0, el = null, ph = null;
+  const root = document.createElement('div'); root.className = 'viewer story'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
+  root.innerHTML = `<div class="frame">
+      <div class="stage"></div>
+      <button class="tap prev" aria-label="前のカード"></button><button class="tap next" aria-label="次のカード"></button>
+      <div class="top"><div class="bars"></div><div class="who"><span class="nm"></span><span class="when"></span><button class="x" data-a="close" aria-label="とじる">×</button></div></div>
+      <div class="side">
+        <button data-a="photo" aria-pressed="false"><i aria-hidden="true">◎</i>撮影</button>
+        <button data-a="clean" aria-pressed="false"><i aria-hidden="true">Aa</i>文字</button>
+        <button data-a="save"><i aria-hidden="true">↓</i>保存</button>
+      </div>
+      <div class="sheet" hidden>
+        <p class="hint">カードの上を指でなぞると、キャラが動きます（上へ動かすと奥へ）</p>
+        <div class="seg" role="group" aria-label="キャラの明るさ"><span class="lab">明るさ</span><button data-light="bright">明るいまま</button><button data-light="blend">景色になじませる</button></div>
+        <div class="seg" role="group" aria-label="ポーズ"><span class="lab">ポーズ</span><button data-pose="0">立ち</button><button data-pose="1">喜び</button></div>
+        <div class="seg"><button data-a="center">真ん中に戻す</button>${preview ? '' : '<button class="primary" data-a="keep">この配置を残す</button>'}<button data-a="photo">とじる</button></div>
+      </div>
+    </div>`;
   document.body.append(root);
-  engine.show(el, p.scene, card).then(() => { engine.canvas.setAttribute('role', 'img'); engine.canvas.setAttribute('aria-label', p.alt); });
+  const stage = root.querySelector('.stage'), sheet = root.querySelector('.sheet');
+  const btn = a => root.querySelector(`.side [data-a="${a}"]`);
 
-  // 撮影：キャラの置き場所（指でなぞる）・明るさ・ポーズを選ぶ。「この配置を残す」でカードに保存する
-  const panel = root.querySelector('.photo');
-  const ph = { x: 0, y: 0, light: 'bright', pose: 0, ...(card.photo || {}) };
+  function load(i) {
+    idx = i; card = list[i]; p = placeById(card.placeId);
+    ph = { x: 0, y: 0, light: 'bright', pose: 0, ...(card.photo || {}) };
+    stage.innerHTML = ''; el = cardEl(p, card); stage.append(el);
+    if (btn('clean').getAttribute('aria-pressed') === 'true') el.classList.add('clean');
+    root.setAttribute('aria-label', `${p.name}のカード`);
+    root.querySelector('.bars').innerHTML = list.map((_, j) => `<i class="${j < idx ? 'seen' : j === idx ? 'now' : ''}"></i>`).join('');
+    root.querySelector('.nm').textContent = p.name;
+    root.querySelector('.when').textContent = preview ? '試し見（記録には入りません）' : `${fmtDate(card.at)} ${fmtTime(card.at)}`;
+    root.querySelector('.tap.prev').hidden = idx === 0; root.querySelector('.tap.next').hidden = idx === list.length - 1;
+    engine.show(el, p.scene, card).then(() => { engine.canvas.setAttribute('role', 'img'); engine.canvas.setAttribute('aria-label', p.alt); });
+    if (!preview && location.hash !== `#/card/${card.id}`) history.replaceState(null, '', `#/card/${card.id}`);
+    setPosing(false);
+  }
   const sync = () => {
     engine.setState({ ...card, photo: { ...ph } });
-    panel.querySelectorAll('[data-light]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.light === ph.light)));
-    panel.querySelectorAll('[data-pose]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.pose === ph.pose)));
+    sheet.querySelectorAll('[data-light]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.light === ph.light)));
+    sheet.querySelectorAll('[data-pose]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.pose === ph.pose)));
   };
+  function setPosing(on) {
+    sheet.hidden = !on; root.classList.toggle('posing', on); btn('photo').setAttribute('aria-pressed', String(on));
+    el?.classList.toggle('posing', on); if (on) sync();
+  }
+
+  // 指の操作：撮影中はキャラを動かす。それ以外は、下へのスワイプで閉じる
   let drag = null;
-  el.addEventListener('pointerdown', e => { if (panel.hidden) return; drag = { x: e.clientX, y: e.clientY, px: ph.x, py: ph.y }; el.setPointerCapture(e.pointerId); });
-  el.addEventListener('pointermove', e => {
-    if (!drag) return; const r = el.getBoundingClientRect(), H = engine.canvas.height;
-    ph.x = Math.max(-.42, Math.min(.42, drag.px + (e.clientX - drag.x) / r.width));
-    ph.y = Math.max(-8, Math.min(H * .38, drag.py - (e.clientY - drag.y) * H / r.height));
-    engine.setState({ ...card, photo: { ...ph } });
+  stage.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, px: ph.x, py: ph.y, moved: 0 }; stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener('pointermove', e => {
+    if (!drag) return; const r = stage.getBoundingClientRect(), dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
+    if (root.classList.contains('posing')) {
+      ph.x = Math.max(-.42, Math.min(.42, drag.px + dx / r.width));
+      ph.y = Math.max(-.15, Math.min(1, drag.py - dy / (r.height * .3)));   // 上へ指をずらすと奥へ（カードの高さの3割で、いちばん奥）
+      engine.setState({ ...card, photo: { ...ph } });
+    } else if (dy > 0) root.style.setProperty('--pull', `${Math.min(dy, 200)}px`);
   });
-  const endDrag = () => { drag = null; }; el.addEventListener('pointerup', endDrag); el.addEventListener('pointercancel', endDrag);
+  const endDrag = e => {
+    if (!drag) return; const dy = e.clientY - drag.y, r = stage.getBoundingClientRect(), moved = drag.moved; drag = null; root.style.removeProperty('--pull');
+    if (root.classList.contains('posing')) return;
+    if (dy > 90) { close(); onClose(); return; }
+    if (moved < 10) { const x = (e.clientX - r.left) / r.width; if (x < .3 && idx > 0) load(idx - 1); else if (x > .7 && idx < list.length - 1) load(idx + 1); }
+  };
+  stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', () => { drag = null; root.style.removeProperty('--pull'); });
+
   async function saveImage() {
     const src = engine.canvas, k = 4, c = document.createElement('canvas'); c.width = src.width * k; c.height = src.height * k;
     const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, c.width, c.height);
@@ -86,19 +122,22 @@ export function openViewer({ cardId, preview, onClose }) {
     if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: p.name }); return; } catch (e) { if (e.name === 'AbortError') return; } }
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
-  const onKey = e => { if (e.key === 'Escape') { close(); onClose(); } };
+  const onKey = e => { if (e.key === 'Escape') { close(); onClose(); } else if (e.key === 'ArrowLeft' && idx > 0) load(idx - 1); else if (e.key === 'ArrowRight' && idx < list.length - 1) load(idx + 1); };
   const close = () => { document.removeEventListener('keydown', onKey); engine.stop(); root.remove(); };
   root.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
-    if (b.dataset.a === 'clean') b.setAttribute('aria-pressed', String(el.classList.toggle('clean')));
-    else if (b.dataset.a === 'photo') { panel.hidden = !panel.hidden; b.setAttribute('aria-pressed', String(!panel.hidden)); el.classList.toggle('posing', !panel.hidden); if (!panel.hidden) sync(); }
+    if (b.classList.contains('tap')) { if (b.classList.contains('prev') && idx > 0) load(idx - 1); else if (b.classList.contains('next') && idx < list.length - 1) load(idx + 1); return; }
+    const a = b.dataset.a;
+    if (a === 'close') { close(); onClose(); }
+    else if (a === 'clean') b.setAttribute('aria-pressed', String(el.classList.toggle('clean')));
+    else if (a === 'photo') setPosing(sheet.hidden);
+    else if (a === 'save') saveImage();
     else if (b.dataset.light) { ph.light = b.dataset.light; sync(); }
     else if (b.dataset.pose) { ph.pose = +b.dataset.pose; sync(); }
-    else if (b.dataset.a === 'center') { ph.x = 0; ph.y = 0; sync(); }
-    else if (b.dataset.a === 'save') saveImage();
-    else if (b.dataset.a === 'keep') { setPhoto(card.id, { ...ph }); card.photo = { ...ph }; toast('この配置をカードに残しました'); }
-    else if (b.dataset.a === 'close') { close(); onClose(); }
+    else if (a === 'center') { ph.x = 0; ph.y = 0; sync(); }
+    else if (a === 'keep') { setPhoto(card.id, { ...ph }); card.photo = { ...ph }; toast('この配置をカードに残しました'); setPosing(false); }
   });
   document.addEventListener('keydown', onKey);
+  load(idx);
   return close;
 }
