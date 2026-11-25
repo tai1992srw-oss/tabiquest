@@ -27,8 +27,8 @@ const WEATHER = {
   snow: { mul: [.96, .98, 1.02], add: [.06, .07, .09], desat: .35 },
 };
 
-// ドット絵の名所（みなとみらいなど）と同じ 285×507 マスで描く。キャラの大きさをそろえるため
-const W = 285, H = 507, k = W / 360;
+// ドット絵の名所（みなとみらいなど）と同じ 229×407 マスで描く。キャラの大きさをそろえるため
+const W = 229, H = 407, k = W / 360;
 
 export async function build(place) {
   const scene = new THREE.Scene(); scene.userData = { W, H };

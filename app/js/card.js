@@ -70,6 +70,11 @@ export function makeParticles(scene, splash) {
       pctx.fillStyle = ['#E07A2E', '#C9452B', '#E8B23A'][i % 3]; const flip = ((f >> 2) + i) & 1;
       pctx.fillRect(x, y, flip ? 2 : 1, flip ? 1 : 2); if (i % 2) pctx.fillRect(x + 1, y + 1, 1, 1);
     }
+    // 湯気（屋台の蒸し器など）：決まった場所から、ゆれながら上がって消える白い粒
+    if (o.steam) for (const [sx, sy] of o.steam) for (let i = 0; i < 7; i++) {
+      const age = (f * .6 + i * 4.3) % 30, x = Math.round(sx + Math.sin(age / 4 + i) * 2 + (i % 3) - 1), y = Math.round(sy - age);
+      pctx.fillStyle = `rgba(240,240,236,${(.55 * (1 - age / 30)).toFixed(2)})`; pctx.fillRect(x, y, age > 12 ? 2 : 1, age > 12 ? 2 : 1);
+    }
     pTex.needsUpdate = true;
   }
   return { mesh, draw };

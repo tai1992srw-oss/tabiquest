@@ -9,18 +9,18 @@ const DOT = [
   {
     id: 'minatomirai', kind: 'dot', no: '014-01', name: 'みなとみらい', pref: '神奈川県', city: '横浜市西区',
     lat: 35.4556, lng: 139.6360, radius: 500, categories: ['街並み・港', '夜景'],
-    scene: 'minatomirai', times: ['evening', 'night'],
+    scene: 'minatomirai', times: ['day', 'morning', 'evening', 'night'],
     welcome: 'ようこそ、みなとみらいへ！',
     item: { id: 'mm-wheel', name: '観覧車のミニチュア（仮）' },
-    alt: 'みなとみらいの港の遊歩道に分身キャラが立つ、動くドット絵カード',
+    alt: 'みなとみらいの海ぞいの遊歩道に分身キャラが立つ、動くドット絵カード',
   },
   {
     id: 'chukagai', kind: 'dot', no: '014-02', name: '横浜中華街', pref: '神奈川県', city: '横浜市中区',
     lat: 35.4437, lng: 139.6466, radius: 400, categories: ['食・市場', '街並み・港'],
-    scene: 'chukagai', times: ['night', 'evening'],
+    scene: 'chukagai', times: ['day', 'morning', 'evening', 'night'],
     welcome: 'ようこそ、横浜中華街へ！',
     item: { id: 'ck-nikuman', name: 'ほかほか肉まん（仮）' },
-    alt: '夜の横浜中華街の門の前に分身キャラが立つ、動くドット絵カード',
+    alt: '横浜中華街の門の前に分身キャラが立つ、動くドット絵カード',
   },
   {
     // 絵は Codex で作った昼の1枚（みなとみらいの絵を見本にした）。朝・夕暮れ・夜は色づけだけ
