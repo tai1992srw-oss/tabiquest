@@ -46,6 +46,17 @@ const DOT = [
     item: { id: 'tokyotower-omiyage', name: '東京タワーの置物（仮）' },
     alt: '芝生から見上げる東京タワーの前に分身キャラが立つ、動くドット絵カード',
   },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。実物の写真を形の見本にした三ツ鳥居とオオカミの像
+    id: 'saitama-014', kind: 'dot', no: '011-14', name: '三峯神社', pref: '埼玉県', city: '秩父市',
+    lat: 35.925431, lng: 138.930397, radius: 400, categories: ['神社・寺'],
+    scene: 'mitsumine', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '奥秩父の山の上の神社。三ツ鳥居とオオカミの狛犬',
+    welcome: 'ようこそ、三峯神社へ！',
+    title: { lines: ['三峯神社'], top: 6.6 },   // 題字：鳥居にかからないよう、1行にして木と空のところへ
+    item: { id: 'saitama-014-omiyage', name: 'オオカミの置物（仮）' },
+    alt: '三峯神社の三ツ鳥居の前に分身キャラが立つ、動くドット絵カード',
+  },
 ];
 
 // 写真の名所は、時間帯の色づけをコードで行う（形は変えない）ので4つの時間帯すべてを持つ
@@ -58,7 +69,7 @@ const PHOTO = PHOTO_PLACES.filter(p => !DOT.some(d => d.id === p.id)).map(p => (
 
 // 絵も写真もまだの名所：背景は景色を描かない無地（空色の上下のぼかし）にして、時間帯の色づけだけする
 export const PLAIN_BG = 'assets/photos/plain.png';
-const PLAIN = PLAIN_PLACES.map(p => ({
+const PLAIN = PLAIN_PLACES.filter(p => !DOT.some(d => d.id === p.id)).map(p => ({   // ドット絵ができた名所は、無地のほうを外す
   ...p, kind: 'plain', scene: 'plain:' + p.id, times: ['morning', 'day', 'evening', 'night'],
   welcome: `ようこそ、${p.name}へ！`,
   item: { id: `${p.id}-omiyage`, name: `${p.name}のおみやげ（仮）` },

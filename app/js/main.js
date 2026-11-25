@@ -17,13 +17,15 @@ import { PERSONAS, charaPersona, setCharaPersona, loadSerifu, pick } from './ser
 import * as minatomirai from './scenes/minatomirai.js';
 import * as chukagai from './scenes/chukagai.js';
 import * as tokyotower from './scenes/tokyotower.js';
+import * as mitsumine from './scenes/mitsumine.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.44';
+export const VERSION = '0.10.45';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);
+engine.register('mitsumine', mitsumine.build);
 engine.register('kamakura', kamakura.build);
 for (const p of PLACES) if (p.kind === 'photo') engine.register(p.scene, () => photo.build(p));
 // 絵のない名所は、写真の名所のしくみに空の絵を渡して使う
