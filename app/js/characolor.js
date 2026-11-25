@@ -39,10 +39,10 @@ export function recolorChara(c, i, D, colors = charaColors()) {
   for (const k of ['skin', 'cloth', 'eye', 'hair']) {
     const r = R[k]; if (!r || i < r[0] || i > r[1] || !colors[k] || !F[k]) continue;
     const o = rgb2hsl(c), ref = rgb2hsl(F[k]), t = rgb2hsl(hex2rgb(colors[k]));
-    const s = Math.max(0, Math.min(1, ref[1] > .04 ? o[1] * t[1] / ref[1] : t[1]));
+    const s = Math.max(0, Math.min(1, ref[1] > .15 && ref[2] < .85 ? o[1] * t[1] / ref[1] : t[1]));
     // 明るさは「基準の色（いちばん多い色）→ 選んだ色」に合わせて、影は同じ割合で暗く、光は同じ割合で明るく（明暗の順番を変えない）
     const rl = Math.min(.98, Math.max(.02, ref[2]));
-    const l = Math.max(0, Math.min(1, o[2] <= rl ? o[2] * t[2] / rl : t[2] + (o[2] - rl) * (1 - t[2]) / (1 - rl)));
+    const l = Math.max(0, Math.min(1, o[2] <= rl ? o[2] * t[2] / rl : t[2] + (o[2] - rl) * (1 - t[2]) / (1 - rl) * .35));   // 基準より明るい光は、少しだけ明るく（白い服の光が白いまま残らないように）
     return hsl2rgb([t[0], s, l]);
   }
   return c;
