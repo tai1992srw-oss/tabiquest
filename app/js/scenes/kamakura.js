@@ -114,7 +114,7 @@ export async function build() {
       // 地面：踏切の手前まで奥に行ける。目の高さは海の水平線
       const cp = charaPlace(st, W, H, { base: .885, top: .70, hz: D.HOR / H }), cx = W / 2 + off(14) + cp.dx;
       ch.setPose(self.forcePose ?? st.photo?.pose ?? 0);   // 到着の演出では forcePose（喜び）が優先
-      placeChara(ch, cx, cp.feet, cp.s, H, self.drop);
+      placeChara(ch, cx, cp.feet, cp.s, H, self.drop, cp.r);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
       if (newF) {
         scn.material.uniforms.uF.value = front.material.uniforms.uF.value = rm ? 0 : f;

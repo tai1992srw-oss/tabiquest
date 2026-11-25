@@ -64,7 +64,7 @@ export async function build(place) {
       photo.material.uniforms.uOff.value.set(off(5), 0);
       const cp = charaPlace(st, W, H, { base: .885, top: .76, hz: .56 }), cx = W / 2 + off(12) + cp.dx;
       ch.setPose(self.forcePose ?? st.photo?.pose ?? 0);   // 到着の演出では forcePose（喜び）が優先
-      placeChara(ch, cx, cp.feet, cp.s, H, self.drop);
+      placeChara(ch, cx, cp.feet, cp.s, H, self.drop, cp.r);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
       if (newF) parts.draw(f, st.weather);
     },

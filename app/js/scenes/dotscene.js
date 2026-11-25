@@ -120,7 +120,7 @@ export async function buildDot(cfg) {
       });
       const cp = charaPlace(st, W, H, cfg.ground), cx = W / 2 + off(P[2]) + cp.dx;
       ch.setPose(self.forcePose ?? st.photo?.pose ?? 0);   // 到着の演出では forcePose（喜び）が優先
-      placeChara(ch, cx, cp.feet, cp.s, H, self.drop);
+      placeChara(ch, cx, cp.feet, cp.s, H, self.drop, cp.r);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
       if (newF) {
         scn.material.uniforms.uF.value = front.material.uniforms.uF.value = rm ? 0 : f;
