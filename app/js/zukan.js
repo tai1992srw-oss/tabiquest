@@ -44,7 +44,7 @@ export function renderPlace(view, id) {
 //   カードは画面いっぱい。上にバー（同じ名所のカードの何枚目か）と名前・×、右に縦のボタン（撮影・文字・保存）
 //   左右のタップで前後のカード、下へのスワイプで閉じる。撮影の操作はカードの上に重なるシート
 //   preview は デバッグの「試し見」（記録ではない仮のカード）
-export function openViewer({ cardId, preview, onClose }) {
+export function openViewer({ cardId, preview, onClose, posing = false }) {
   const first = preview ? { ...preview, at: new Date().toISOString(), n: 0 } : cardById(cardId);
   const p0 = first && placeById(first.placeId);
   if (!p0) { onClose(); return () => {}; }
@@ -61,10 +61,10 @@ export function openViewer({ cardId, preview, onClose }) {
         <button data-a="save"><i aria-hidden="true">↓</i>保存</button>
       </div>
       <div class="sheet" hidden>
-        <p class="hint">カードの上を指でなぞると、キャラが動きます（上へ動かすと奥へ）</p>
+        <p class="hint">指でなぞるとキャラが動きます。二本指で広げる・つまむと大きさが変わります</p>
         <div class="seg" role="group" aria-label="キャラの明るさ"><span class="lab">明るさ</span><button data-light="bright">明るいまま</button><button data-light="blend">景色になじませる</button></div>
         <div class="seg" role="group" aria-label="ポーズ"><span class="lab">ポーズ</span><button data-pose="0">立ち</button><button data-pose="1">喜び</button></div>
-        <div class="seg"><button data-a="center">真ん中に戻す</button>${preview ? '' : '<button class="primary" data-a="keep">この配置を残す</button>'}<button data-a="photo">とじる</button></div>
+        <div class="seg"><button data-a="center">元に戻す</button>${preview ? '' : '<button class="primary" data-a="keep">この配置を残す</button>'}<button data-a="photo">とじる</button></div>
       </div>
     </div>`;
   document.body.append(root);
@@ -73,7 +73,7 @@ export function openViewer({ cardId, preview, onClose }) {
 
   function load(i) {
     idx = i; card = list[i]; p = placeById(card.placeId);
-    ph = { x: 0, y: 0, light: 'bright', pose: 0, ...(card.photo || {}) };
+    ph = { x: 0, y: 0, s: 1, light: 'bright', pose: 0, ...(card.photo || {}) };
     stage.innerHTML = ''; el = cardEl(p, card); stage.append(el);
     if (btn('clean').getAttribute('aria-pressed') === 'true') el.classList.add('clean');
     root.setAttribute('aria-label', `${p.name}のカード`);
@@ -95,10 +95,17 @@ export function openViewer({ cardId, preview, onClose }) {
     el?.classList.toggle('posing', on); if (on) sync();
   }
 
-  // 指の操作：撮影中はキャラを動かす。それ以外は、下へのスワイプで閉じる
-  let drag = null;
-  stage.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, px: ph.x, py: ph.y, moved: 0 }; stage.setPointerCapture(e.pointerId); });
+  // 指の操作：撮影中は、一本指でキャラを動かし、二本指で大きさを変える。それ以外は、下へのスワイプで閉じる
+  let drag = null, pinch = null; const pts = new Map();
+  const pdist = () => { const [a, b] = [...pts.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]); };
+  stage.addEventListener('pointerdown', e => {
+    pts.set(e.pointerId, [e.clientX, e.clientY]); try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+    if (pts.size === 2 && root.classList.contains('posing')) { pinch = { d: pdist(), s: ph.s }; drag = null; return; }
+    drag = { x: e.clientX, y: e.clientY, px: ph.x, py: ph.y, moved: 0 };
+  });
   stage.addEventListener('pointermove', e => {
+    if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pinch && pts.size === 2) { ph.s = Math.max(.4, Math.min(2.2, pinch.s * pdist() / pinch.d)); engine.setState({ ...card, photo: { ...ph } }); return; }
     if (!drag) return; const r = stage.getBoundingClientRect(), dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
     if (root.classList.contains('posing')) {
       ph.x = Math.max(-.42, Math.min(.42, drag.px + dx / r.width));
@@ -107,12 +114,15 @@ export function openViewer({ cardId, preview, onClose }) {
     } else if (dy > 0) root.style.setProperty('--pull', `${Math.min(dy, 200)}px`);
   });
   const endDrag = e => {
+    pts.delete(e.pointerId); if (pts.size < 2) pinch = null;
     if (!drag) return; const dy = e.clientY - drag.y, r = stage.getBoundingClientRect(), moved = drag.moved; drag = null; root.style.removeProperty('--pull');
     if (root.classList.contains('posing')) return;
     if (dy > 90) { close(); onClose(); return; }
     if (moved < 10) { const x = (e.clientX - r.left) / r.width; if (x < .3 && idx > 0) load(idx - 1); else if (x > .7 && idx < list.length - 1) load(idx + 1); }
   };
-  stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', () => { drag = null; root.style.removeProperty('--pull'); });
+  stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', e => { pts.delete(e.pointerId); pinch = null; drag = null; root.style.removeProperty('--pull'); });
+  // パソコンでは、ホイールで大きさを変える
+  stage.addEventListener('wheel', e => { if (!root.classList.contains('posing')) return; e.preventDefault(); ph.s = Math.max(.4, Math.min(2.2, ph.s * (e.deltaY < 0 ? 1.08 : 1 / 1.08))); engine.setState({ ...card, photo: { ...ph } }); }, { passive: false });
 
   async function saveImage() {
     const src = engine.canvas, k = 4, c = document.createElement('canvas'); c.width = src.width * k; c.height = src.height * k;
@@ -134,10 +144,11 @@ export function openViewer({ cardId, preview, onClose }) {
     else if (a === 'save') saveImage();
     else if (b.dataset.light) { ph.light = b.dataset.light; sync(); }
     else if (b.dataset.pose) { ph.pose = +b.dataset.pose; sync(); }
-    else if (a === 'center') { ph.x = 0; ph.y = 0; sync(); }
+    else if (a === 'center') { ph.x = 0; ph.y = 0; ph.s = 1; sync(); }
     else if (a === 'keep') { setPhoto(card.id, { ...ph }); card.photo = { ...ph }; toast('この配置をカードに残しました'); setPosing(false); }
   });
   document.addEventListener('keydown', onKey);
   load(idx);
+  if (posing) setPosing(true);
   return close;
 }

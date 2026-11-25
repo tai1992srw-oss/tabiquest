@@ -18,7 +18,7 @@ export function playArrival(place, v, result, { onZukan } = {}) {
     root.innerHTML = `<div class="rays"></div><div class="stage"></div><canvas class="confetti" width="120" height="214"></canvas><div class="flash"></div>
       <div class="band"><span>${esc(bandText)}</span></div>
       <div class="after"><div class="gain">${gains.length ? gains.join(' ／ ') + ' を手に入れた' : 'きょうの到着は記録ずみ'}</div>
-        <div class="row"><button class="primary" data-a="zukan">図鑑で見る</button><button data-a="close">とじる</button></div></div>
+        <div class="row"><button class="primary" data-a="photo">撮影する</button><button data-a="close">あとで撮影する</button></div></div>
       <button class="skip">とばす</button>`;
     root.querySelector('.stage').append(card);
     document.body.append(root);

@@ -59,14 +59,14 @@ export function gradeChara([r, g, b], st) {
 }
 // キャラの置き場所（撮影で選べる）
 //   ground：名所ごとの地面の決まり { base：ふだんの足もとの高さ（絵の高さに対する割合）, top：いちばん奥に立てる足もと, hz：遠近の消える高さ（目の高さ・水平線） }
-//   st.photo：{ x：横のずれ（絵の幅に対する割合）, y：奥への進み具合（0＝ふだん、1＝いちばん奥、少しならマイナスで手前） }
-//   返す値：dx（横のずれ）、feet（足もとの行）、s（大きさ。奥ほど小さい。遠近は「足もと−目の高さ」に比例）
+//   st.photo：{ x：横のずれ（絵の幅に対する割合）, y：奥への進み具合（0＝ふだん、1＝いちばん奥、少しならマイナスで手前）, s：大きさ（撮影で二本指で決める） }
+//   返す値：dx（横のずれ）、feet（足もとの行）、s（大きさ）。奥へ動かしても大きさは変えない（2026-11-25 くりたの希望）
 export function charaPlace(st, W, H, ground) {
-  const g = { base: .885, top: .75, hz: .55, ...ground };
+  const g = { base: .885, top: .75, ...ground };
   const y = Math.max(-.15, Math.min(1, st.photo?.y || 0));
   const f = g.base - y * (g.base - g.top);
-  const s = Math.max(.35, Math.min(1.15, (f - g.hz) / (g.base - g.hz)));
-  return { dx: Math.round((st.photo?.x || 0) * W * Math.max(.6, s)), feet: Math.round(H * f), s };
+  const s = Math.max(.4, Math.min(2.2, st.photo?.s || 1));
+  return { dx: Math.round((st.photo?.x || 0) * W), feet: Math.round(H * f), s };
 }
 // キャラを置く（大きさ s のとき、足もとの位置がずれないように）
 export function placeChara(ch, cx, feet, s, H, drop) {

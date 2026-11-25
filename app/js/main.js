@@ -16,7 +16,7 @@ import * as chukagai from './scenes/chukagai.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.6.3';
+export const VERSION = '0.6.4';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('kamakura', kamakura.build);
@@ -48,7 +48,8 @@ function route() {
   else if (name === 'card') {
     const c = book().cards.find(x => x.id === args[0]);
     if (c) renderPlace(view, c.placeId); else renderZukan(view);
-    closeViewer = openViewer({ cardId: args[0], onClose: () => { closeViewer = null; history.length > 1 ? history.back() : (location.hash = '#/zukan'); } });
+    let posing = false; try { posing = sessionStorage.getItem('tabiquest:posing') === args[0]; } catch (e) {}
+    closeViewer = openViewer({ cardId: args[0], posing, onClose: () => { try { sessionStorage.removeItem('tabiquest:posing'); } catch (e) {} closeViewer = null; history.length > 1 ? history.back() : (location.hash = '#/zukan'); } });
   } else if (name === 'preview') {
     renderZukan(view);
     closeViewer = openViewer({ preview: { placeId: args[0], time: args[1], weather: args[2], season: args[3] }, onClose: () => { closeViewer = null; location.hash = '#/settings'; } });
@@ -105,7 +106,8 @@ function renderList() {
     const v = await conditionsAt(p, current()), r = arrive(p, v); header();
     const act = await playArrival(p, r.card, r, {});
     checkGoals(); header();
-    if (act === 'zukan') location.hash = `#/card/${r.card.id}`; else { renderList(); header(); }
+    // 「撮影する」：そのカードを、撮影の操作を開いた状態で出す。「あとで撮影する」：名所の一覧に戻る（図鑑からいつでも撮影できる）
+    if (act === 'photo') { try { sessionStorage.setItem('tabiquest:posing', r.card.id); } catch (e) {} location.hash = `#/card/${r.card.id}`; } else { renderList(); header(); }
   };
 }
 
