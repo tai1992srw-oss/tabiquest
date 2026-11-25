@@ -1,0 +1,9 @@
+{
+  "note": "比べる元の絵。Canva で作った見本を src/ に置き、ここに1行足すと選べるようになる（縦長 9:16、横720くらいが軽い）",
+  "chara": "src/chara.png",
+  "samples": [
+    { "id": "mm_evening", "name": "みなとみらい 夕暮れ（いまの見本）", "src": "src/mm_evening.jpg" },
+    { "id": "mm_night", "name": "みなとみらい 夜（いまの見本）", "src": "src/mm_night.jpg" },
+    { "id": "ck_night", "name": "横浜中華街 夜（いまの見本）", "src": "src/ck_night.jpg" }
+  ]
+}

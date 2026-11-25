@@ -24,6 +24,7 @@ main に送ると GitHub Actions が `app/` を GitHub Pages に公開する（h
 - `js/map.js` ドットの地図（`assets/map/` は Natural Earth の県境を1マス約1kmに落としたもの。R＝県番号、G＝県境・海岸）
 - `js/goals.js` アチーブメント（記録から自動で数える）
 - `js/debug.js` デバッグモード（設定のバージョン表記を7回つづけてタップ）
+- `lab/style/` スタイルの比べる場。見本の絵を縮める・色を減らす・色味を寄せる設定を変えて、4つ並べて比べる。見本は `src/` に置いて `samples.json` に足す
 - `sw.js` オフライン対応（Service Worker）
 - `vendor/three.r128.min.js` Three.js（MIT）
 - `assets/` Canva から写し取った層の絵とパレット、仮の写真

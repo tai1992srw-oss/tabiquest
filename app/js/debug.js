@@ -28,6 +28,8 @@ export function renderDebug(box, refresh) {
       <select class="sel" data-pv="time">${pp.times.map(t => `<option value="${t}" ${pv.time === t ? 'selected' : ''}>${LABEL.time[t]}</option>`).join('')}</select>
       <select class="sel" data-pv="weather">${WEATHERS.map(w => `<option value="${w}" ${pv.weather === w ? 'selected' : ''}>${LABEL.weather[w]}</option>`).join('')}</select>
       <button data-a="preview">見る</button></div>
+    <span class="lab">スタイル研究（見本の加工を変えて4つ並べて比べる）</span>
+    <div class="line"><a class="btn" href="lab/style/">スタイルの比べる場をひらく</a></div>
     <span class="lab">カード（付与＝いまの設定で到着を1回記録）</span>
     ${PLACES.map(p => { const n = cardsOf(p.id, 'debug').length; return `<div class="line"><span class="nm">${esc(p.name)}（${n}まい）</span><button data-grant="${p.id}">付与</button><button class="danger" data-rm="${p.id}" ${n ? '' : 'disabled'}>全部消す</button></div>`; }).join('')}
     <span class="lab">アイテム</span>
