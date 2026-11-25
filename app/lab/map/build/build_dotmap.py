@@ -5,10 +5,12 @@
 #   名所のまわり（名所から ±2.5km）だけ、さらに 20m のマス
 #   線路：国土数値情報 鉄道（N02, 2023年, CC BY 4.0）を 250m より細かい段に
 #   高速道路：国土数値情報 高速道路時系列（N06, 2024年, CC BY 4.0）を 2km より細かい段に（日本全体にも）
+#   名所のまわりの 20m の段だけ：OpenStreetMap（© OpenStreetMap contributors, ODbL）の道路・公園と森・水辺（fetch_osm.py で取る）
 # 出力（app/lab/map/data/）：<level>.png … R*256+G＝番号（0＝海）
 #                              B の下2ビット＝0:なし 1:市区町村の境 2:県境 3:海岸、4のビット＝線路、8のビット＝高速道路
+#                              （20m の段だけ）16＝太い道 32＝公園・森 64＝水辺 128＝細い道
 #                            levels.json … 各段の位置・大きさ・番号の表
-# 使い方：python build_dotmap.py <N03 の geojson を入れたフォルダ> <N02 を展開したフォルダ> <N06 を展開したフォルダ>
+# 使い方：python build_dotmap.py <N03 の geojson を入れたフォルダ> <N02 を展開したフォルダ> <N06 を展開したフォルダ> [osm_near*.json のフォルダ]
 import json, sys, glob, os, collections
 import numpy as np
 from PIL import Image, ImageDraw
@@ -125,6 +127,47 @@ for p, _, _ in feats:
 prefIdx = {n: c for c, n in prefs.items()}
 mpref = np.array([0] + [prefIdx.get(m['pref'], 0) for m in munis], np.int32)
 
+MAJOR = {'trunk', 'trunk_link', 'primary', 'primary_link', 'secondary', 'secondary_link'}
+def stitch(ways):
+    """リレーションの外側の線をつないで輪にする"""
+    segs = [w[:] for w in ways if len(w) > 1]; rings = []
+    while segs:
+        r = segs.pop()
+        while r[0] != r[-1]:
+            for i, sg in enumerate(segs):
+                if sg[0] == r[-1]: r += sg[1:]
+                elif sg[-1] == r[-1]: r += sg[::-1][1:]
+                elif sg[-1] == r[0]: r = sg[:-1] + r
+                elif sg[0] == r[0]: r = sg[::-1][:-1] + r
+                else: continue
+                segs.pop(i); break
+            else: break
+        if len(r) > 3 and r[0] == r[-1]: rings.append(r)
+    return rings
+
+def burn_osm(fl, fn, x0, y0, cell):
+    d = json.load(open(fn, encoding='utf-8'))
+    H, W = fl.shape
+    masks = {b: Image.new('L', (W, H), 0) for b in (16, 32, 64, 128)}
+    drs = {b: ImageDraw.Draw(m) for b, m in masks.items()}
+    pix = lambda pts: [((X - x0) / cell - 0.5, (Y - y0) / cell - 0.5) for X, Y in (proj(*c) for c in pts)]
+    area = lambda t: 64 if t.get('natural') == 'water' or t.get('waterway') == 'riverbank' else 32
+    for e in d['elements']:
+        t = e.get('tags', {})
+        if e['type'] == 'way':
+            pts = [(g['lon'], g['lat']) for g in e.get('geometry', [])]
+            if len(pts) < 2: continue
+            if 'highway' in t:
+                drs[16 if t['highway'] in MAJOR else 128].line(pix(pts), fill=1, width=2 if t['highway'] in MAJOR else 1)
+            elif t.get('waterway') in ('river', 'canal'):
+                drs[64].line(pix(pts), fill=1, width=2)
+            elif pts[0] == pts[-1] and len(pts) > 3:
+                drs[area(t)].polygon(pix(pts), fill=1)
+        elif e['type'] == 'relation':
+            outer = [[(g['lon'], g['lat']) for g in m.get('geometry', [])] for m in e.get('members', []) if m.get('role') == 'outer' and m.get('geometry')]
+            for ring in stitch(outer): drs[area(t)].polygon(pix(ring), fill=1)
+    for b, m in masks.items(): fl[np.array(m) > 0] |= b
+
 def raster(name, x0, y0, W, H, cell):
     im = Image.new('I', (W, H), 0); dr = ImageDraw.Draw(im)
     pix = lambda ring: [((X - x0) / cell - 0.5, (Y - y0) / cell - 0.5) for X, Y in (proj(*c) for c in ring)]
@@ -135,6 +178,8 @@ def raster(name, x0, y0, W, H, cell):
     fl = flags(a, mpref[a])
     if cell <= 0.25: burn(fl, RAIL, x0, y0, cell, 4)
     burn(fl, HW, x0, y0, cell, 8)
+    osm = os.path.join(sys.argv[4], f'osm_{name}.json') if len(sys.argv) > 4 else ''
+    if osm and os.path.exists(osm): burn_osm(fl, osm, x0, y0, cell)
     size = save(name, a, fl)
     levels.append(dict(id=name, cell=cell, x0=x0, y0=y0, W=W, H=H, kind='muni', bytes=size, src='n03'))
     print(name, a.shape, size)
@@ -166,5 +211,6 @@ json.dump(dict(proj=dict(lon0=LON0, lat0=LAT0, kx=KX, ky=KY), levels=levels, pre
                sources=dict(ne='Natural Earth（Admin 1, パブリックドメイン）',
                             n03='国土数値情報（行政区域データ N03, 2024年1月1日）国土交通省, CC BY 4.0 を加工して作成',
                             n02='国土数値情報（鉄道データ N02, 2023年）国土交通省, CC BY 4.0 を加工して作成',
-                            n06='国土数値情報（高速道路時系列データ N06, 2024年）国土交通省, CC BY 4.0 を加工して作成')),
+                            n06='国土数値情報（高速道路時系列データ N06, 2024年）国土交通省, CC BY 4.0 を加工して作成',
+                            osm='© OpenStreetMap contributors（ODbL）。名所のまわりの 20m の段の道路・公園・森・水辺')),
           open(os.path.join(OUT, 'levels.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))

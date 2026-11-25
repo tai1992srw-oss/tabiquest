@@ -17,14 +17,16 @@ const P = {
   pref: hex('#B9C99A'), prefV: hex('#FFF0C0'),
   coast: hex('#A9C2B2'), coastV: hex('#FFE6A6'),
   rail: hex('#1B1628'), hw: hex('#F07850'),
+  road: hex('#FFF6E0'), minor: hex('#A9C2A8'), minorV: hex('#F6E2B0'),   // 20m の段だけ（OpenStreetMap）
+  park: hex('#5E9150'), parkV: hex('#BFA34A'), water: hex('#2E5096'),
 };
-export const PALETTE = ['#10183E', '#131C46', '#48685C', '#4E705F', '#44645A', '#D2A458', '#DBAE62', '#38564F', '#9A6A3A', '#B9C99A', '#FFF0C0', '#A9C2B2', '#FFE6A6', '#1B1628', '#F07850'];
+export const PALETTE = ['#10183E', '#131C46', '#48685C', '#4E705F', '#44645A', '#D2A458', '#DBAE62', '#38564F', '#9A6A3A', '#B9C99A', '#FFF0C0', '#A9C2B2', '#FFE6A6', '#1B1628', '#F07850', '#FFF6E0', '#A9C2A8', '#F6E2B0', '#5E9150', '#BFA34A', '#2E5096'];
 
 let meta, lv = {}, el, cv, ctx, dpr = 1, Wc = 0, Hc = 0;
 let cx = 1500, cy = 1200, s = 0.17;  // 画面の真ん中（km）と拡大率（css px / km）
 let dirty = true, pinRects = [], interacting = false, lastDraw = 0, sel = null;
 const vPrefs = new Set(), vMunis = new Set();
-export const layers = { rail: true, hw: true };
+export const layers = { rail: true, hw: true, minor: true };
 
 const proj = (lng, lat) => [(lng - meta.proj.lon0) * meta.proj.kx, (meta.proj.lat0 - lat) * meta.proj.ky];
 
@@ -65,7 +67,7 @@ function updateVisited() {
 }
 
 function paint(v) {
-  const set = v.L.kind === 'pref' ? vPrefs : vMunis, key = [...set].sort().join(',') + '|' + layers.rail + layers.hw;
+  const set = v.L.kind === 'pref' ? vPrefs : vMunis, key = [...set].sort().join(',') + '|' + layers.rail + layers.hw + layers.minor;
   if (v.key === key) return;
   const t0 = performance.now(), { W, H } = v.L, r = v.raw;
   const img = v.ctx.createImageData(W, H), o = new Uint32Array(img.data.buffer);
@@ -74,11 +76,14 @@ function paint(v) {
     let c;
     if (b & 8 && layers.hw) c = P.hw;                          // 高速道路
     else if (b & 4 && layers.rail) c = P.rail;                 // 線路（250m より細かい段だけ）
+    else if (b & 16) c = P.road;                               // ここから下の道・水辺・公園は 20m の段だけ
+    else if (b & 128 && layers.minor && id) c = set.has(id) ? P.minorV : P.minor;
+    else if (b & 64 && id && f !== 3) c = P.water;
     else if (!id) c = ((x >> 1) + (y >> 1)) & 1 ? P.seaB : P.seaA;   // 海：2マスごとの市松で、ドットの手ざわり
     else {
       const vv = set.has(id);
       c = f === 3 ? (vv ? P.coastV : P.coast) : f === 2 ? (vv ? P.prefV : P.pref) : f === 1 ? (vv ? P.muniV : P.muni)
-        : vv ? P.landV[(x + y) & 1] : P.land[id % 3];
+        : b & 32 ? (vv ? P.parkV : P.park) : vv ? P.landV[(x + y) & 1] : P.land[id % 3];
     }
     o[i] = c;
   }
