@@ -630,3 +630,5 @@ body.du-open{overflow:hidden}
 .du-colorbar .du-note{padding:0 12px}
 .du-body{padding-top:10px}
 .du-grid.body .du-item canvas,.du-grid.coord .du-item canvas{width:auto;height:112px;max-width:100%}
+.persona .chips-row{flex-wrap:wrap;overflow:visible}
+.persona .pv{min-height:2.9em;margin-top:6px}

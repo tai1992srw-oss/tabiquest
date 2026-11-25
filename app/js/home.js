@@ -13,7 +13,7 @@ import { loadParts, sheet as partsSheet, charaHair, charaOutfit } from './charap
 import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, toast, icon } from './ui.js';
-import { serifuOf } from './serifu.js';
+import { loadSerifu, pick, fill } from './serifu.js';
 
 const DOTS = PLACES.filter(p => p.kind === 'dot');
 const dayNo = d => Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000);
@@ -38,7 +38,6 @@ function homeScene(now) {
   if (pos) { const n = [...DOTS].sort((a, z) => distance(pos, a) - distance(pos, z))[0]; if (distance(pos, n) < 30000) return n; }
   return DOTS[dayNo(now) % DOTS.length];
 }
-const GREET = { morning: 'おはよう', day: 'こんにちは', evening: 'おつかれさま', night: 'こんばんは' };
 
 // ぼかし具合（px）。この端末に覚えておく
 const BLUR_MAX = 24;
@@ -103,21 +102,22 @@ export function renderHome(view, { header } = {}) {
     view.querySelector('.hh-tk .cond').textContent = cond();
   }).catch(() => {});
 
-  // ふきだし：次にやることを話す
+  // ふきだし：次にやることを話す（キャラの性格ごとのセリフ。serifu.js）
+  let S = null;
   const lines = () => {
-    const pos = current(), L = [], when = { time: timeReal, season: st.season };
+    const pos = current(), L = [], when = { time: timeReal, season: st.season }, C = S.common;
     let near = null;
     if (pos) { near = [...PLACES].sort((a, z) => distance(pos, a) - distance(pos, z))[0]; const m = distance(pos, near);
-      L.push(m < 1000 ? `${near.name}がすぐそこ！行ってみる？` : `${near.name}まで ${(m / 1000).toFixed(m < 10000 ? 1 : 0)}km。きょう行ってみる？`); }
-    L.push(...serifuOf(scene.id, when));   // 後ろの景色の名所のセリフ
-    if (near && near.id !== scene.id) L.push(...serifuOf(near.id, when));   // いちばん近い名所のセリフ
-    if (!b.cards.length) L.push('近くの名所に行って、さいしょのカードを手に入れよう！');
-    else L.push('撮ったカード、図鑑で見かえしてみない？', 'お着替えして、写真を撮りなおすのもいいね');
-    if (!lg.got) L.push(`ログインボーナス、${lg.next}日めだよ！`);
-    return L;
+      L.push(fill(m < 1000 ? C.nearClose : C.near, { name: near.name, km: (m / 1000).toFixed(m < 10000 ? 1 : 0) })); }
+    L.push(...pick(S.places[scene.id], when));   // 後ろの景色の名所のセリフ
+    if (near && near.id !== scene.id) L.push(...pick(S.places[near.id], when));   // いちばん近い名所のセリフ
+    if (!b.cards.length) L.push(C.firstCard); else L.push(C.zukan, C.dress);
+    if (!lg.got) L.push(fill(C.login, { n: lg.next }));
+    L.push(...pick(S.extra, when));   // その性格らしい一言
+    return L.filter(Boolean);
   };
-  let li = 0; const talk = () => { const L = lines(); say.textContent = (li === 0 ? `${GREET[timeReal]}！` : '') + L[li % L.length]; li++; };
-  talk();
+  let li = 0; const talk = () => { if (!S) return; const L = lines(); say.textContent = (li === 0 ? S.greet[timeReal] : '') + L[li % L.length]; li++; };
+  loadSerifu().then(d => { S = d; talk(); }).catch(() => { say.hidden = true; });
 
   // キャラ：2倍（1ドット＝2マス）。入らない画面だけ小さく。足もとをナビの上にそろえる
   let C = null, pose = '立ち', joyUntil = 0, waveUntil = 0, nextWave = performance.now() + 4000, raf = 0, alive = true;

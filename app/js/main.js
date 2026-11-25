@@ -13,6 +13,7 @@ import { renderMap } from './map.js';
 import { renderGoals, checkGoals, goalList } from './goals.js';
 import { renderTimeline } from './calendar.js';
 import { renderHome } from './home.js';
+import { PERSONAS, charaPersona, setCharaPersona, loadSerifu, pick } from './serifu.js';
 import * as minatomirai from './scenes/minatomirai.js';
 import * as chukagai from './scenes/chukagai.js';
 import * as tokyotower from './scenes/tokyotower.js';
@@ -176,6 +177,9 @@ async function renderSettings() {
     ${items.length ? `<p class="note pad">${items.join('　')}</p>` : ''}
     <h3 class="gh">キャラ</h3>
     <div class="group" id="chcolors"></div>
+    <div class="group persona"><h2>キャラの性格</h2><p class="note">ホームのふきだしの話し方が変わります。</p>
+      <div class="chips-row">${PERSONAS.map(p => `<button data-persona="${p.id}" aria-pressed="${p.id === charaPersona()}">${esc(p.name)}</button>`).join('')}</div>
+      <p class="note pv"></p></div>
     <div class="srows">${row('a', 'href="#/goals"', 'star', '称号とアチーブメント')}</div>
     <h3 class="gh">記録の保存</h3>
     <div class="srows">${row('button', 'data-a="export"', 'down', 'ファイルに書き出す')}${row('button', 'data-a="import"', 'up', 'ファイルから読み込む')}</div>
@@ -195,6 +199,9 @@ async function renderSettings() {
     <div id="dbg"></div>
     <button class="ver" id="ver">タビクエ v${VERSION}</button>`;
   renderCharaColors(view.querySelector('#chcolors'), () => clearSnaps());
+  const pv = view.querySelector('.persona .pv'), sample = () => loadSerifu().then(d => { pv.textContent = `「${pick(d.places.minatomirai)[0]}」`; }).catch(() => {});
+  sample();
+  view.querySelectorAll('[data-persona]').forEach(bt => bt.onclick = () => { setCharaPersona(bt.dataset.persona); view.querySelectorAll('[data-persona]').forEach(x => x.setAttribute('aria-pressed', String(x === bt))); sample(); });
   const dbgBox = view.querySelector('#dbg');
   if (settings.debugUnlocked) renderDebug(dbgBox, () => { header(); renderSettings(); });
   view.querySelector('#ver').addEventListener('click', () => {
