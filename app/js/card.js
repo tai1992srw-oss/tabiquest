@@ -1,7 +1,8 @@
 // カード描画の共通部分（canva_layers / chukagai_canva の page.html から移したもの）
 // 絵は Canva の見本を写し取った層だけを使う。ここでは背景を描き足さない。
 const THREE = window.THREE;
-export const W = 360, H = 640;
+export const W = 360, H = 640;   // 写真の名所の大きさ。ドット絵の名所は data.json の W・H（scene.userData に入れる）
+const dims = scene => [scene.userData.W || W, scene.userData.H || H];
 export const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export const near = t => { t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t; };
@@ -31,11 +32,13 @@ float bayer(vec2 p){vec2 q=mod(p,4.);float x=q.x,y=q.y;float v=y<1.?(x<1.?0.:x<2
 bool hidden(vec2 px){return bayer(px)>=uReveal;}
 `;
 
-export function makeLayer(scene, z, frag, w = W, h = H) {
+export function makeLayer(scene, z, frag, w, h) {
+  if (w === undefined) [w, h] = dims(scene);
   const m = new THREE.ShaderMaterial({ transparent: true, depthTest: false, vertexShader: VERT, fragmentShader: COMMON + frag,
     uniforms: { tIdx: { value: null }, tPal: { value: null }, uOff: { value: new THREE.Vector2() }, uSize: { value: new THREE.Vector2(w, h) },
       uF: { value: 0 }, uNight: { value: 0 }, uStretch: { value: 1 }, uWet: { value: 0 }, uLamp: { value: 1 }, uReveal: { value: 1 } } });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); mesh.position.set(W / 2, H / 2, z); mesh.renderOrder = z; scene.add(mesh); return mesh;
+  const [SW, SH] = dims(scene);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); mesh.position.set(SW / 2, SH / 2, z); mesh.renderOrder = z; scene.add(mesh); return mesh;
 }
 
 // キャラ（背景と別の層。あとで着せ替えのパーツ層にする）
@@ -49,6 +52,7 @@ export function makeChara(scene, size, shadowColor, shadowOpacity) {
 
 // 雨・雪の粒（コードで動かすもの）。splash は雨のはね返りを出す高さの範囲
 export function makeParticles(scene, splash) {
+  const [W, H] = dims(scene);
   const pc = document.createElement('canvas'); pc.width = W; pc.height = H; const pctx = pc.getContext('2d'), pTex = near(new THREE.CanvasTexture(pc));
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: pTex, transparent: true, depthTest: false })); mesh.position.set(W / 2, H / 2, 5); mesh.renderOrder = 5; scene.add(mesh);
   let seed = 9; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647; const P = Array.from({ length: 320 }, (_, i) => [rnd() * W, rnd() * H, rnd(), i]);
@@ -82,12 +86,17 @@ class Engine {
   }
   register(id, builder) { this.builders[id] = builder; }
   // 組み上がりの途中の状態を元に戻す
+  // 名所ごとの絵の大きさにキャンバスとカメラを合わせる
+  fit(s) {
+    const [w, h] = dims(s.scene); if (this.canvas.width === w && this.canvas.height === h) return;
+    this.renderer.setSize(w, h, false); this.cam.right = w; this.cam.top = h; this.cam.updateProjectionMatrix();
+  }
   reset(s) { for (const m of [...s.layers, s.ch.chara]) m.material.uniforms.uReveal.value = 1; s.drop = 0; s.ch.shadow.material.opacity = s.ch.shadowOpacity; }
   get(id) { return this.built[id] || (this.built[id] = this.builders[id]()); }
   // container の中に動くカードを出す
   async show(container, id, state) {
     const s = await this.get(id);
-    this.cur = s; this.state = drawState(state); s.apply(this.state); this.reset(s); this.lastF = -1; this.par = 0; this.target = null;
+    this.cur = s; this.fit(s); this.state = drawState(state); s.apply(this.state); this.reset(s); this.lastF = -1; this.par = 0; this.target = null;
     container.prepend(this.canvas);
     if (!this.running) { this.running = true; requestAnimationFrame(this.loop); }
     return s;
@@ -106,10 +115,10 @@ class Engine {
   async snapshot(id, state) {
     state = drawState(state); const s = await this.get(id);
     const keep = s === this.cur ? [...s.layers, s.ch.chara].map(m => m.material.uniforms.uReveal.value).concat([s.drop, s.ch.shadow.material.opacity]) : null;
-    s.apply(state); this.reset(s); s.frame(0, 0, true, true, state); this.renderer.render(s.scene, this.cam);
+    this.fit(s); s.apply(state); this.reset(s); s.frame(0, 0, true, true, state); this.renderer.render(s.scene, this.cam);
     if (keep) { [...s.layers, s.ch.chara].forEach((m, i) => { m.material.uniforms.uReveal.value = keep[i]; }); s.drop = keep.at(-2); s.ch.shadow.material.opacity = keep.at(-1); }
     const url = this.canvas.toDataURL('image/png');
-    if (this.cur === s) { s.apply(this.state); this.lastF = -1; }
+    if (this.cur) { this.fit(this.cur); if (this.cur === s) s.apply(this.state); this.lastF = -1; }
     return url;
   }
 }

@@ -1,12 +1,14 @@
 // 横浜中華街：chukagai_canva/page.html の層と動きを移したもの
-import { W, H, loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
+import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles } from '../card.js';
 const THREE = window.THREE;
 
 export async function build() {
   const base = 'assets/chukagai/';
   const D = await (await fetch(base + 'data.json')).json();
   const tex = await loadTextures(base, ['sky_night', 'sky_evening', 'scene_night', 'chara']);
-  const scene = new THREE.Scene();
+  // 絵の大きさは data.json の W・H（285×507）。前の座標（360×640）で決めた数は k 倍する
+  const W = D.W, H = D.H, k = W / 360, n1 = v => (v * k).toFixed(2);
+  const scene = new THREE.Scene(); scene.userData = { W, H };
 
   // 夕暮れは夜の絵の色番号を差し替えて作った差分（空はみなとみらいの夕暮れを流用）
   function grade(c, layer, st) {
@@ -23,12 +25,12 @@ export async function build() {
   float ph=hash(s); if(uNight>.5 && lum(c)>.45 && mod(ph*40.+uF,40.)<5.) c*=.45;
   gl_FragColor=vec4(c,1.); }`);
   const scn = makeLayer(scene, 1, `void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; if(hidden(px)) discard; vec2 s=px-uOff; vec4 t=smp(s); if(t.a<.5) discard; vec3 c=pal(t.r); float fl=floor(t.g*255.+.5), ph=hash(s);
-  if(mod(fl,2.)>.5){ float w=.5+.5*sin(uF*.35+floor(s.x/14.)*1.7+floor(s.y/30.)); c*= .88+.2*w; }
+  if(mod(fl,2.)>.5){ float w=.5+.5*sin(uF*.35+floor(s.x/${n1(14)})*1.7+floor(s.y/${n1(30)})); c*= .88+.2*w; }
   if(fl>1.5 && fract(ph*7.)<.08 && mod(ph*60.+uF,60.)<3.) c*=.55;
-  if(uWet>.5 && s.y>430. && lum(c)>.42 && mod(ph*20.+uF,20.)<2.) c=mix(c,vec3(1.,.9,.8),.55);
+  if(uWet>.5 && s.y>${n1(430)} && lum(c)>.42 && mod(ph*20.+uF,20.)<2.) c=mix(c,vec3(1.,.9,.8),.55);
   gl_FragColor=vec4(c,1.); }`);
   const ch = makeChara(scene, D.chara, 0x0c0620, .5);
-  const parts = makeParticles(scene, [470, 630]);
+  const parts = makeParticles(scene, [Math.round(470 * k), Math.round(630 * k)]);
 
   scn.material.uniforms.tIdx.value = tex.scene_night; ch.chara.material.uniforms.tIdx.value = tex.chara;
   const self = {
@@ -41,9 +43,9 @@ export async function build() {
       setPal(ch.chara, palTex(D.pal.chara, c => grade(c, 'chara', st)));
     },
     frame(par, f, newF, rm, st) {
-      const off = k => Math.round(-par * k);
+      const off = v => Math.round(-par * v * k);
       sky.material.uniforms.uOff.value.set(off(2), 0); scn.material.uniforms.uOff.value.set(off(8), 0);
-      const cx = W / 2 + off(13), feet = 606;
+      const cx = W / 2 + off(13), feet = Math.round(606 * k);
       ch.chara.position.set(cx, H - (feet - ch.CH / 2) + self.drop, 4); ch.shadow.position.set(cx, H - feet + 1, 3);
       ch.chara.material.uniforms.uOff.value.set(0, rm ? 0 : (Math.floor(f / 9) & 1));
       if (newF) { sky.material.uniforms.uF.value = f; scn.material.uniforms.uF.value = rm ? 0 : f; parts.draw(f, st.weather); }
