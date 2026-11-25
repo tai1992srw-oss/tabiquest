@@ -10,13 +10,13 @@ import { renderZukan, renderPlace, openViewer } from './zukan.js';
 import { renderDebug } from './debug.js';
 import { renderMap } from './map.js';
 import { renderGoals, checkGoals } from './goals.js';
-import { renderCalendar } from './calendar.js';
+import { renderTimeline } from './calendar.js';
 import * as minatomirai from './scenes/minatomirai.js';
 import * as chukagai from './scenes/chukagai.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.8.1';
+export const VERSION = '0.8.2';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('kamakura', kamakura.build);
@@ -37,7 +37,7 @@ function header() {
 function route() {
   closeViewer?.(); closeViewer = null;
   const [name, ...args] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
-  const tab = ['zukan', 'place', 'card', 'preview', 'goals', 'calendar'].includes(name) ? 'zukan' : ['settings', 'map'].includes(name) ? name : 'list';
+  const tab = ['zukan', 'place', 'card', 'preview', 'goals', 'calendar', 'timeline'].includes(name) ? 'zukan' : ['settings', 'map'].includes(name) ? name : 'list';
   document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   header();
   view.classList.toggle('mapmode', tab === 'map');
@@ -45,7 +45,7 @@ function route() {
   else if (tab === 'list') renderList();
   else if (tab === 'settings') renderSettings();
   else if (name === 'goals') renderGoals(view);
-  else if (name === 'calendar') renderCalendar(view, args[0]);
+  else if (name === 'calendar' || name === 'timeline') renderTimeline(view);   // calendar は前の版のリンク用
   else if (name === 'place') renderPlace(view, args[0]);
   else if (name === 'card') {
     const c = book().cards.find(x => x.id === args[0]);

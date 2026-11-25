@@ -348,3 +348,24 @@ ul.goals .gl{gap:5px}
 .col button{min-height:50px;border-radius:14px;font-size:15px}
 .group button{border-radius:12px}
 .credits{line-height:1.6}
+
+/* 図鑑のエリアの絞り込み：市区町村の列は小さめ */
+.chips-row.sub button{min-height:34px;font-size:12px;padding:3px 12px;background:#141938}
+.chips-row.sub button[aria-pressed=true]{background:var(--teal);border-color:var(--teal);color:#0B0E22}
+
+/* タイムライン：旅をした日だけを、新しい順に縦に並べる。左に日付、右にその日のカード */
+ol.tl{list-style:none;margin:0;padding:0;position:relative}
+ol.tl::before{content:'';position:absolute;left:23px;top:10px;bottom:10px;width:2px;background:var(--line)}
+.tl-month{position:relative;margin:6px 0 10px 50px;font:400 15px var(--dot);color:var(--gold)}
+.tl-day{position:relative;display:flex;gap:10px;margin-bottom:18px}
+.tl-date{flex:none;width:48px;display:flex;flex-direction:column;align-items:center;padding-top:4px;z-index:1}
+.tl-date b{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--paper);border:2px solid var(--gold);font:400 20px var(--dot)}
+.tl-date span{font:400 12px var(--dot);color:var(--sub);margin-top:3px}
+.tl-date span.sun{color:#FF8A7A}.tl-date span.sat{color:#8FB8FF}
+.tl-body{flex:1;min-width:0}
+.tl-head{margin:8px 0 8px;font:400 13px var(--dot);color:var(--sub);display:flex;gap:8px;align-items:center}
+.tl-head .gap{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:#8E88B8}
+.tl-body .tile{margin-bottom:8px}
+.tile .tm{position:absolute;left:10px;top:9px;z-index:3;font:400 12px var(--dot);padding:2px 8px;border-radius:999px;background:rgba(10,12,30,.65);color:#fff;pointer-events:none}
+.tile.sm .t{right:96px}
+.tile.sm .go{min-height:40px;padding:4px 12px}

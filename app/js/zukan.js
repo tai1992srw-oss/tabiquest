@@ -6,7 +6,7 @@ import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast } from './ui.js';
 
 // 図鑑・カレンダー・称号の上に出す切り替え（同じ図鑑タブの中の3つの見方）
 export function zukanTabs(on) {
-  return `<div class="seg3" role="tablist">${[['zukan', 'カード'], ['calendar', 'カレンダー'], ['goals', '称号']].map(([k, l]) =>
+  return `<div class="seg3" role="tablist">${[['zukan', 'カード'], ['timeline', 'タイムライン'], ['goals', '称号']].map(([k, l]) =>
     `<a role="tab" href="#/${k}" aria-selected="${k === on}">${l}</a>`).join('')}</div>`;
 }
 
@@ -16,13 +16,35 @@ function art(p, c, cls = '') {
   snapshot(p.scene, c).then(u => el.prepend(img(u, p.alt))); return el;
 }
 
+// 図鑑の絞り込み（エリア・集めたものだけ）。この端末に覚えておく
+const zf = (() => { try { return Object.assign({ pref: 'all', city: 'all', got: false }, JSON.parse(localStorage.getItem('tabiquest:zukan') || '{}')); } catch (e) { return { pref: 'all', city: 'all', got: false }; } })();
+const saveZf = () => { try { localStorage.setItem('tabiquest:zukan', JSON.stringify(zf)); } catch (e) {} };
+const cityOf = p => p.city.replace(/[^市]*$/, '') || p.city;   // 横浜市西区 → 横浜市、千代田区はそのまま
+
 export function renderZukan(view) {
-  const b = book(), got = PLACES.filter(p => cardsOf(p.id).length);
-  view.innerHTML = `<div class="phead"><h1>図鑑</h1><span class="prog">${got.length} / ${PLACES.length} か所 ・ ${b.cards.length} まい</span></div>
-    ${zukanTabs('zukan')}<div class="shelf"></div>`;
+  const b = book(), prefs = [...new Set(PLACES.map(p => p.pref))];
+  if (zf.pref !== 'all' && !prefs.includes(zf.pref)) { zf.pref = 'all'; zf.city = 'all'; }
+  const inPref = PLACES.filter(p => zf.pref === 'all' || p.pref === zf.pref);
+  const cities = zf.pref === 'all' ? [] : [...new Set(inPref.map(cityOf))];
+  if (!cities.includes(zf.city)) zf.city = 'all';
+  const area = inPref.filter(p => zf.city === 'all' || cityOf(p) === zf.city);
+  const got = area.filter(p => cardsOf(p.id).length), cards = got.reduce((n, p) => n + cardsOf(p.id).length, 0);
+  const chip = (k, v, l, on) => `<button data-${k}="${esc(v)}" aria-pressed="${on}">${esc(l)}</button>`;
+  view.innerHTML = `<div class="phead"><h1>図鑑</h1><span class="prog">${got.length} / ${area.length} か所 ・ ${cards} まい</span></div>
+    ${zukanTabs('zukan')}
+    <div class="filters">
+      <div class="chips-row" role="group" aria-label="エリア">${chip('pref', 'all', 'ぜんぶ', zf.pref === 'all')}${prefs.map(x => chip('pref', x, x, zf.pref === x)).join('')}<span class="sep"></span>${chip('got', '1', '集めたものだけ', zf.got)}</div>
+      ${cities.length > 1 ? `<div class="chips-row sub" role="group" aria-label="市区町村">${chip('city', 'all', '市区町村ぜんぶ', zf.city === 'all')}${cities.map(x => chip('city', x, x, zf.city === x)).join('')}</div>` : ''}
+    </div><div class="shelf"></div>`;
+  view.querySelector('.filters').onclick = e => {
+    const t = e.target.closest('button'); if (!t) return; const d = t.dataset;
+    if (d.pref) { zf.pref = d.pref; zf.city = 'all'; } else if (d.city) zf.city = d.city; else if (d.got) zf.got = !zf.got;
+    saveZf(); renderZukan(view);
+  };
   const grid = view.querySelector('.shelf');
   // 手に入れた名所を先に（新しく到着した順）、まだの名所はあとに番号順で
-  const order = [...got.sort((a, z) => cardsOf(z.id)[0].at.localeCompare(cardsOf(a.id)[0].at)), ...PLACES.filter(p => !cardsOf(p.id).length)];
+  const order = [...got.sort((a, z) => cardsOf(z.id)[0].at.localeCompare(cardsOf(a.id)[0].at)), ...(zf.got ? [] : area.filter(p => !cardsOf(p.id).length))];
+  if (!order.length) grid.outerHTML = `<p class="note empty">${zf.got ? 'このエリアで集めたカードはまだありません。' : 'このエリアの名所はありません。'}</p>`;
   for (const p of order) {
     const cs = cardsOf(p.id);
     if (!cs.length) {
