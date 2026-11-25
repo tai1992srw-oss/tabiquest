@@ -90,13 +90,14 @@ export function placeChara(ch, cx, feet, s, H, drop, r = 0, st) {
   u.uC.value.set(left + w / 2, bottom + h / 2); u.uFoot.value.set(cx, Math.round(H - feet)); u.uS.value = s; u.uR.value = r;
   u.uK.value.set(L.k[0], L.k[1]); u.uFade.value = L.fade; u.uMul.value = L.op;
   ch.shadow.visible = feet < H;
-  // 半逆光（撮影で選ぶ）：影と反対の側・上から光が当たる。色は時間帯と天気で変える。キャラを回したら、光の向きも絵の中で回す
-  const cu = ch.chara.material.uniforms, rim = st?.photo?.rim ? 1 : 0; cu.uRim.value = rim;
-  if (rim) {
+  // 光の当て方（撮影で選ぶ。photo.rim：0＝無光、1＝半逆光、2＝逆光、3＝順光）。光は影と反対の側・上から。色は時間帯と天気で変える。キャラを回したら、光の向きも絵の中で回す
+  const cu = ch.chara.material.uniforms, mode = st?.photo?.rim | 0; cu.uMode.value = mode; cu.uRim.value = 0;
+  if (mode) {
     const lx = -(Math.sign(L.k[0]) || 1) * Math.max(.6, Math.abs(L.k[0]) * 1.2), ly = .7, n = Math.hypot(lx, ly), c = Math.cos(r), sn = Math.sin(r);
     cu.uRimDir.value.set((c * lx + sn * ly) / n, -(-sn * lx + c * ly) / n);
     const gray = ['cloudy', 'rain', 'snow'].includes(st.weather);
     const col = gray ? [236, 240, 250] : { morning: [255, 240, 206], evening: [255, 196, 128], night: [196, 214, 255] }[st.time] || [255, 250, 232];
     cu.uRimCol.value.set(col[0] / 255, col[1] / 255, col[2] / 255); cu.uRim.value = gray ? .7 : 1;
+    if (mode === 2) u.uK.value.set(L.k[0] * .3, -Math.max(.16, L.k[1]));   // 逆光：光がうしろから来るので、影は手前へ落ちる
   }
 }

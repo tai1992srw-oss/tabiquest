@@ -50,15 +50,21 @@ export function makeLayer(scene, z, frag, w, h) {
 // poseIds：コマごとのポーズ番号（保存ずみのカードの photo.pose は前の13ポーズの番号。なくなった番号は立ち＝0コマ目にする）
 export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1, blink = 0, poseIds = null) {
   const [CW, CH] = size;
-  // 半逆光（uRim＞0）：光の来る側のふち（uRimDir の向きに、すぐ外が透明なドット）を光の色にして、ほかは少しだけ陰にする
-  const chara = makeLayer(scene, 4, `uniform float uPose,uFrames,uRim; uniform vec2 uRimDir; uniform vec3 uRimCol;
+  // 光の当て方（uMode：0＝無光、1＝半逆光、2＝逆光、3＝順光。uRim＝強さ、uRimDir＝光の来る向き、uRimCol＝光の色）
+  //   半逆光：光の来る側のふちを光の色に、体は少し陰に。逆光：体を陰にして、ぐるりのふちから光がもれる。順光：光の側を明るく、反対側のふちを少し陰に
+  //   uLightOnly＝1 のときは「光の分だけ」を描く（グロー用。Engine.present がこれをぼかして重ねる）
+  const chara = makeLayer(scene, 4, `uniform float uPose,uFrames,uRim,uMode,uLightOnly; uniform vec2 uRimDir; uniform vec3 uRimCol;
     float al(vec2 q){ q=floor(q+.5); if(q.x<0.||q.y<0.||q.x>=uSize.x||q.y>=uSize.y) return 0.; return step(.5,texture2D(tIdx,(vec2(q.x+uPose*uSize.x,q.y)+.5)/vec2(uSize.x*uFrames,uSize.y)*vec2(1.,-1.)+vec2(0.,1.)).a); }
     void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; vec2 s=px; if(s.y<uSize.y*.62) s.y-=uOff.y;
-    vec4 t=texture2D(tIdx,(vec2(s.x+uPose*uSize.x,s.y)+.5)/vec2(uSize.x*uFrames,uSize.y)*vec2(1.,-1.)+vec2(0.,1.)); if(t.a<.5||s.y<0.||hidden(px)) discard; vec3 c=pal(t.r);
-    if(uRim>0.){ float w=ceil(uSize.y/120.), e=0.; for(int i=1;i<=4;i++){ float d=float(i); if(d<=w) e=max(e,1.-al(s+uRimDir*d)); }
-      float soft=1.-al(s+uRimDir*(w*2.5)); c=mix(c*mix(vec3(1.),vec3(.84,.85,.93),uRim),c+(uRimCol-c)*.3,soft*.5*uRim); c=mix(c,uRimCol,e*.85*uRim); }
-    gl_FragColor=vec4(c,1.); }`, CW, CH);
-  Object.assign(chara.material.uniforms, { uPose: { value: 0 }, uFrames: { value: frames }, uRim: { value: 0 }, uRimDir: { value: new THREE.Vector2(-.8, -.6) }, uRimCol: { value: new THREE.Vector3(1, .98, .92) } }); chara.material.needsUpdate = true;
+    vec4 t=texture2D(tIdx,(vec2(s.x+uPose*uSize.x,s.y)+.5)/vec2(uSize.x*uFrames,uSize.y)*vec2(1.,-1.)+vec2(0.,1.)); if(t.a<.5||s.y<0.||hidden(px)) discard; vec3 c=pal(t.r), L=vec3(0.);
+    if(uMode>.5){ float w=ceil(uSize.y/120.), e=0., soft=0.;
+      if(uMode<1.5||uMode>2.5){ for(int i=1;i<=4;i++){ float d=float(i); if(d<=w) e=max(e,1.-al(s+uRimDir*d)); } soft=1.-al(s+uRimDir*(w*2.5)); }
+      else { for(int i=0;i<8;i++){ float a=float(i)*.7854; vec2 d=vec2(cos(a),sin(a)); e=max(e,1.-al(s+d*w)); soft=max(soft,1.-al(s+d*(w*2.5))); } }
+      if(uMode<1.5){ c=mix(c*mix(vec3(1.),vec3(.84,.85,.93),uRim),c+(uRimCol-c)*.3,soft*.5*uRim); c=mix(c,uRimCol,e*.85*uRim); L=uRimCol*(e*.9+soft*.25)*uRim; }
+      else if(uMode<2.5){ c=mix(c*mix(vec3(1.),vec3(.64,.66,.8),uRim),c+(uRimCol-c)*.35,soft*.45*uRim); c=mix(c,uRimCol,e*.92*uRim); L=uRimCol*(e*.5+soft*.16)*uRim; }
+      else { float far=1.-al(s-uRimDir*(w*2.)); c=c*(1.+.05*uRim)+uRimCol*.03*uRim; c=mix(c,c+(uRimCol-c)*.5,soft*.45*uRim)*(1.-.14*far*(1.-soft)*uRim); L=uRimCol*soft*.35*uRim; } }
+    gl_FragColor=vec4(uLightOnly>.5?L:c,1.); }`, CW, CH);
+  Object.assign(chara.material.uniforms, { uPose: { value: 0 }, uFrames: { value: frames }, uRim: { value: 0 }, uMode: { value: 0 }, uLightOnly: { value: 0 }, uRimDir: { value: new THREE.Vector2(-.8, -.6) }, uRimCol: { value: new THREE.Vector3(1, .98, .92) } }); chara.material.needsUpdate = true;
   const poses = blink ? blink : frames;
   const blinkNow = f => { const q = f % 52; return q < 2 || (f % 156 >= 104 && q >= 5 && q < 7); };   // 約4秒に1回、ときどき2回つづけて
   const setPose = (i, f = 0, rm = true) => {
@@ -181,28 +187,28 @@ class Engine {
     s.frame(this.par, f, f !== this.lastF, rm, this.state); this.lastF = f;
     this.present(s, this.state);
   }
-  // 描く。撮影で「グロー」を選んだカードは、明るい所の光をにじませて重ねる（1＝弱い、2＝強い）
-  //   カードの絵 → 明るい所だけ取り出して横にぼかす（半分の大きさ）→ たてにぼかす → 元の絵に重ねる
+  // 描く。撮影で光（半逆光・逆光・順光）とグローを選んだカードは、キャラに当たる光だけをぼかして重ね、ふわっと光らせる（1＝弱い、2＝強い）
+  //   カードの絵 → キャラの「光の分だけ」を別に描く → 横・たてにぼかす（半分の大きさ）→ 元の絵に重ねる
   present(s, state) {
-    const g = state?.photo?.glow | 0, R = this.renderer;
-    if (!g) { R.setRenderTarget(null); R.render(s.scene, this.cam); return; }
+    const g = state?.photo?.glow | 0, R = this.renderer, cu = s.ch.chara.material.uniforms;
+    if (!g || !(state?.photo?.rim | 0)) { R.setRenderTarget(null); R.render(s.scene, this.cam); return; }
     const W = this.canvas.width, H = this.canvas.height;
     if (!this.fx || this.fx.w !== W || this.fx.h !== H) {
       this.fx?.rt.forEach(t => t.dispose());
       const mk = (w, h, f) => new THREE.WebGLRenderTarget(w, h, { minFilter: f, magFilter: f, depthBuffer: false });
       const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)), sc = new THREE.Scene(); sc.add(quad);
       const mat = frag => new THREE.ShaderMaterial({ depthTest: false, vertexShader: 'varying vec2 vUv; void main(){vUv=uv; gl_Position=vec4(position.xy,0.,1.);}',
-        uniforms: { tA: { value: null }, tB: { value: null }, uPx: { value: new THREE.Vector2() }, uStr: { value: 1 }, uThr: { value: .6 } }, fragmentShader: 'uniform sampler2D tA,tB; uniform vec2 uPx; uniform float uStr,uThr; varying vec2 vUv;' + frag });
-      const blur = pre => `void main(){ vec3 a=vec3(0.); float n=0.; for(int i=-7;i<=7;i++){ float w=exp(-float(i*i)/18.); vec3 c=texture2D(tA,vUv+uPx*float(i)).rgb; ${pre} a+=c*w; n+=w; } gl_FragColor=vec4(a/n,1.); }`;
-      this.fx = { w: W, h: H, rt: [mk(W, H, THREE.NearestFilter), mk(W >> 1, H >> 1, THREE.LinearFilter), mk(W >> 1, H >> 1, THREE.LinearFilter)], sc, quad, cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1),
-        bright: mat(blur('float l=dot(c,vec3(.3,.59,.11)); c*=smoothstep(uThr,uThr+.3,l);')), blur: mat(blur('')),
-        mix: mat('void main(){ vec3 c=texture2D(tA,vUv).rgb, g=texture2D(tB,vUv).rgb*uStr; gl_FragColor=vec4(1.-(1.-c)*(1.-g),1.); }') };
+        uniforms: { tA: { value: null }, tB: { value: null }, uPx: { value: new THREE.Vector2() }, uStr: { value: 1 } }, fragmentShader: 'uniform sampler2D tA,tB; uniform vec2 uPx; uniform float uStr; varying vec2 vUv;' + frag });
+      this.fx = { w: W, h: H, rt: [mk(W, H, THREE.NearestFilter), mk(W, H, THREE.LinearFilter), mk(W >> 1, H >> 1, THREE.LinearFilter), mk(W >> 1, H >> 1, THREE.LinearFilter)], sc, quad, cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1),
+        blur: mat('void main(){ vec3 a=vec3(0.); float n=0.; for(int i=-8;i<=8;i++){ float w=exp(-float(i*i)/24.); a+=texture2D(tA,vUv+uPx*float(i)).rgb*w; n+=w; } gl_FragColor=vec4(a/n,1.); }'),
+        mix: mat('void main(){ vec3 c=texture2D(tA,vUv).rgb, g=texture2D(tB,vUv).rgb*uStr; gl_FragColor=vec4(1.-(1.-c)*(1.-min(g,vec3(1.))),1.); }') };
     }
     const F = this.fx, pass = (m, a, b, out) => { m.uniforms.tA.value = a; m.uniforms.tB.value = b; F.quad.material = m; R.setRenderTarget(out); R.render(F.sc, F.cam); };
     R.setRenderTarget(F.rt[0]); R.render(s.scene, this.cam);
-    F.bright.uniforms.uPx.value.set(2.2 / W, 0); F.bright.uniforms.uThr.value = g > 1 ? .6 : .68; pass(F.bright, F.rt[0].texture, null, F.rt[1]);
-    F.blur.uniforms.uPx.value.set(0, 2.2 / H); pass(F.blur, F.rt[1].texture, null, F.rt[2]);
-    F.mix.uniforms.uStr.value = g > 1 ? .75 : .42; pass(F.mix, F.rt[0].texture, F.rt[2].texture, null);
+    s.ch.chara.layers.enable(1); this.cam.layers.set(1); cu.uLightOnly.value = 1; R.setRenderTarget(F.rt[1]); R.render(s.scene, this.cam); cu.uLightOnly.value = 0; this.cam.layers.set(0);
+    F.blur.uniforms.uPx.value.set(2.6 / W, 0); pass(F.blur, F.rt[1].texture, null, F.rt[2]);
+    F.blur.uniforms.uPx.value.set(0, 2.6 / H); pass(F.blur, F.rt[2].texture, null, F.rt[3]);
+    F.mix.uniforms.uStr.value = g > 1 ? 3.2 : 1.8; pass(F.mix, F.rt[0].texture, F.rt[3].texture, null);
   }
   // 一覧・図鑑の小さな絵（止まった1コマ）を作る
   async snapshot(id, state) {

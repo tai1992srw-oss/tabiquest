@@ -141,7 +141,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
       <div class="sheet" hidden>
         <p class="hint">指でなぞると動く（下へはみ出せます）。二本指で広げる・つまむと大きさ、ひねると角度が変わります</p>
         <div class="seg" role="group" aria-label="キャラの明るさ"><span class="lab">明るさ</span><button data-light="bright">明るいまま</button><button data-light="blend">景色になじませる</button></div>
-        <div class="seg" role="group" aria-label="光の当て方"><span class="lab">光</span><button data-rim="0">ふつう</button><button data-rim="1">半逆光</button></div>
+        <div class="seg" role="group" aria-label="光の当て方"><span class="lab">光</span><button data-rim="0">無光</button><button data-rim="3">順光</button><button data-rim="1">半逆光</button><button data-rim="2">逆光</button></div>
         <div class="seg" role="group" aria-label="光のにじみ"><span class="lab">グロー</span><button data-glow="0">なし</button><button data-glow="1">弱い</button><button data-glow="2">強い</button></div>
         <div class="seg" role="group" aria-label="ポーズ"><span class="lab">ポーズ</span>${POSES.map(([i, n]) => `<button data-pose="${i}">${n}</button>`).join('')}</div>
         <div class="seg"><button data-a="center">元に戻す</button>${preview ? '' : '<button class="primary" data-a="keep">この配置を残す</button>'}<button data-a="photo">とじる</button></div>
