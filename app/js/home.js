@@ -11,7 +11,7 @@ import { engine, snapshot, reduceMotion } from './card.js';
 import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, img, cardEl, fmtDate, toast } from './ui.js';
-import { mountVoxelRoom, V as VOX } from './room_voxel.js';
+import { mountVoxelRoom, V as VOX, WH as VWH } from './room_voxel.js';
 import { S, N, TW, TH, OX, OY, RW, RH, P, LEFT, RIGHT, PHOTO_SLOTS, WINDOW, onWall as wallAt, buildRoom, drawGarland, furnSprite } from './room_art.js';
 
 const DOTS = PLACES.filter(p => p.kind === 'dot');
@@ -165,8 +165,8 @@ export function renderHome(view, { header } = {}) {
   // はじめはキャラが画面のまん中に来るようにスクロール
   requestAnimationFrame(() => { const [sx] = P(me.x, me.y); scroller.scrollLeft = sx / RW * cv.clientWidth - scroller.clientWidth / 2; });
   if (voxel) {   // ボクセル版：2D の絵のかわりに Three.js の部屋を出す
-    cv.remove();
-    const NV = 10 * VOX, k = NV / (N * TW / 2), vy = 32 / 300;
+    cv.remove(); view.querySelector('.hm-stage').classList.add('vox'); view.querySelector('.hm-stage').classList.toggle('night', st.time === 'night');
+    const NV = 10 * VOX, k = NV / (N * TW / 2), vy = VWH / 300;
     vox = mountVoxelRoom({ stage: scroller, objects: r.objects, furn, me: r.me, blocked: (i, j) => blocked(r, i, j), onMove: (i, j) => { r.me = { i, j }; saveBook(); },
       chara: loadChara(), engineCanvas: engine.canvas, night: () => (st.time === 'night' ? 1 : st.time === 'evening' ? .55 : 0),
       photoSlots: PHOTO_SLOTS.map(s => ({ z: NV - s.u * k, w: s.w * k, y: s.v * vy, h: s.h * vy })) });
