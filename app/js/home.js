@@ -11,6 +11,7 @@ import { engine, snapshot, reduceMotion } from './card.js';
 import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, img, cardEl, fmtDate, toast } from './ui.js';
+import { mountVoxelRoom, V as VOX } from './room_voxel.js';
 import { S, N, TW, TH, OX, OY, RW, RH, P, LEFT, RIGHT, PHOTO_SLOTS, WINDOW, onWall as wallAt, buildRoom, drawGarland, furnSprite } from './room_art.js';
 
 const DOTS = PLACES.filter(p => p.kind === 'dot');
@@ -112,6 +113,7 @@ export function renderHome(view, { header } = {}) {
     season: dbg && settings.season && settings.season !== 'auto' ? settings.season : seasonOf(now), at: now.toISOString() };
   const lg = loginState(b, now);
   let edit = false, sel = null;   // 模様がえ中か、動かそうとしている家具
+  const voxel = location.hash.startsWith('#/home/voxel');   // ボクセル版（ためし）
 
   view.classList.add('homemode');
   view.innerHTML = `
@@ -123,7 +125,7 @@ export function renderHome(view, { header } = {}) {
         ${lg.got ? '' : `<button class="hm-bonus" data-a="login"><b>ログインボーナス</b><small>${lg.next}日め ・ +${bonusOf(lg.next)}pt を受け取る</small></button>`}
       </div>
       <div class="hm-ov side">
-        <button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button>
+        ${voxel ? '<a href="#/home"><i aria-hidden="true">▚</i><span>ドット版</span></a>' : '<button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button><a href="#/home/voxel"><i aria-hidden="true">▣</i><span>ボクセル</span></a>'}
         <a href="#/shop"><i aria-hidden="true">¥</i><span>ショップ</span></a>
         <a href="#/zukan"><i aria-hidden="true">▦</i><span>図鑑</span></a>
         <a href="#/list"><i aria-hidden="true">◆</i><span>名所</span></a>
@@ -136,7 +138,7 @@ export function renderHome(view, { header } = {}) {
   const scroller = view.querySelector('.hm-scroll'), cv = view.querySelector('.hm-iso'), ctx = cv.getContext('2d');
   const tip = view.querySelector('.hm-tip'), selbar = view.querySelector('.hm-selbar');
   const setTip = () => {
-    tip.textContent = !edit ? '床を押すと、そこまで歩きます。横にスクロールすると部屋を見わたせます。'
+    tip.textContent = voxel ? 'ボクセル版のためしです。床を押すと歩きます（模様がえはドット版で）。' : !edit ? '床を押すと、そこまで歩きます。横にスクロールすると部屋を見わたせます。'
       : sel ? `「${itemName(sel.id)}」を置きたいマスを押してください。` : 'マスを押すと家具を置けます。家具を押すと動かしたり外したりできます。左のかべの枠には写真を貼れます。';
     selbar.hidden = !(edit && sel);
   };
@@ -153,7 +155,8 @@ export function renderHome(view, { header } = {}) {
 
   // 写真（左のかべ）
   const photos = PHOTO_SLOTS.map(() => null);
-  const loadPhotos = () => r.photos.forEach((id, k) => { photos[k] = null; const c = b.cards.find(x => x.id === id), p = c && placeById(c.placeId); if (p) snapshot(p.scene, c).then(u => { const im = new Image(); im.onload = () => { photos[k] = im; }; im.src = u; }); });
+  const loadPhotos = () => r.photos.forEach((id, k) => { photos[k] = null; const c = b.cards.find(x => x.id === id), p = c && placeById(c.placeId); if (p) snapshot(p.scene, c).then(u => { const im = new Image(); im.onload = () => { photos[k] = im; vox?.setPhotos(photos); }; im.src = u; }); });
+  let vox = null;
   loadPhotos();
 
   // キャラ（位置は床のマスの単位）
@@ -161,6 +164,15 @@ export function renderHome(view, { header } = {}) {
   const me = { x: r.me.i + .5, y: r.me.j + .5, tx: null, ty: null, flip: false, jump: 0 };
   // はじめはキャラが画面のまん中に来るようにスクロール
   requestAnimationFrame(() => { const [sx] = P(me.x, me.y); scroller.scrollLeft = sx / RW * cv.clientWidth - scroller.clientWidth / 2; });
+  if (voxel) {   // ボクセル版：2D の絵のかわりに Three.js の部屋を出す
+    cv.remove();
+    const NV = 10 * VOX, k = NV / (N * TW / 2), vy = 32 / 300;
+    vox = mountVoxelRoom({ stage: scroller, objects: r.objects, furn, me: r.me, blocked: (i, j) => blocked(r, i, j), onMove: (i, j) => { r.me = { i, j }; saveBook(); },
+      chara: loadChara(), engineCanvas: engine.canvas, night: () => (st.time === 'night' ? 1 : st.time === 'evening' ? .55 : 0),
+      photoSlots: PHOTO_SLOTS.map(s => ({ z: NV - s.u * k, w: s.w * k, y: s.v * vy, h: s.h * vy })) });
+    vox.setPhotos(photos);
+    requestAnimationFrame(() => { scroller.scrollLeft = vox.screenX() * vox.canvas.clientWidth - scroller.clientWidth / 2; });
+  }
 
   // ---- 描く ----
   const { bg, front } = buildRoom();
@@ -240,7 +252,7 @@ export function renderHome(view, { header } = {}) {
     drawLight(t);
     if (night()) drawGarland(ctx, reduceMotion() ? 0 : t, night());   // 夜はガーランドの電球が光る
   }
-  raf = requestAnimationFrame(frame);
+  if (!voxel) raf = requestAnimationFrame(frame);
 
   // ---- さわる ----
   const at = e => { const rc = cv.getBoundingClientRect(); return [(e.clientX - rc.left) / rc.width * RW, (e.clientY - rc.top) / rc.height * RH]; };
@@ -276,7 +288,7 @@ export function renderHome(view, { header } = {}) {
     else if (a === 'remove' && sel) { r.objects = r.objects.filter(o => o !== sel); toast(`「${itemName(sel.id)}」を外しました`); sel = null; saveBook(); setTip(); }
     else if (a === 'cancel') { sel = null; setTip(); }
   };
-  const cleanup = () => { cancelAnimationFrame(raf); engine.stop(); view.classList.remove('homemode'); view.onclick = null; document.querySelector('.hm-pick')?.remove(); };
+  const cleanup = () => { cancelAnimationFrame(raf); vox?.stop(); engine.stop(); view.classList.remove('homemode'); view.onclick = null; document.querySelector('.hm-pick')?.remove(); };
   return cleanup;
 }
 
