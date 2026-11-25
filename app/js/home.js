@@ -129,7 +129,7 @@ export function renderHome(view, { header } = {}) {
         ${lg.got ? '' : `<button class="hm-bonus" data-a="login"><b>ログインボーナス</b><small>${lg.next}日め ・ +${bonusOf(lg.next)}pt を受け取る</small></button>`}
       </div>
       <div class="hm-ov side">
-        ${voxel ? `<a href="#/home"><i aria-hidden="true">▚</i><span>ドット版</span></a><button data-a="light" aria-pressed="${vlight}"><i aria-hidden="true">💡</i><span>でんき</span></button><button data-a="fx"><i aria-hidden="true">✿</i><span>工夫</span></button>` : '<button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button><a href="#/home/voxel"><i aria-hidden="true">▣</i><span>ボクセル</span></a>'}
+        ${voxel ? `<button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button><a href="#/home"><i aria-hidden="true">▚</i><span>ドット版</span></a><button data-a="light" aria-pressed="${vlight}"><i aria-hidden="true">💡</i><span>でんき</span></button><button data-a="fx"><i aria-hidden="true">✿</i><span>工夫</span></button>` : '<button data-a="edit" aria-pressed="false"><i aria-hidden="true">✎</i><span>模様がえ</span></button><a href="#/home/voxel"><i aria-hidden="true">▣</i><span>ボクセル</span></a>'}
         <a href="#/shop"><i aria-hidden="true">¥</i><span>ショップ</span></a>
         <a href="#/zukan"><i aria-hidden="true">▦</i><span>図鑑</span></a>
         <a href="#/list"><i aria-hidden="true">◆</i><span>名所</span></a>
@@ -142,7 +142,7 @@ export function renderHome(view, { header } = {}) {
   const scroller = view.querySelector('.hm-scroll'), cv = view.querySelector('.hm-iso'), ctx = cv.getContext('2d');
   const tip = view.querySelector('.hm-tip'), selbar = view.querySelector('.hm-selbar');
   const setTip = () => {
-    tip.textContent = voxel ? 'ボクセル版のためし。床を押すと歩きます。ライトを押すとでんき、キャラやくまを押すとハート。' : !edit ? '床を押すと、そこまで歩きます。横にスクロールすると部屋を見わたせます。'
+    tip.textContent = voxel && !edit ? 'ボクセル版のためし。床を押すと歩きます。ライトを押すとでんき、キャラやくまを押すとハート。' : !edit ? '床を押すと、そこまで歩きます。横にスクロールすると部屋を見わたせます。'
       : sel ? `「${itemName(sel.id)}」を置きたいマスを押してください。` : 'マスを押すと家具を置けます。家具を押すと動かしたり外したりできます。左のかべの枠には写真を貼れます。';
     selbar.hidden = !(edit && sel);
   };
@@ -171,8 +171,15 @@ export function renderHome(view, { header } = {}) {
   if (voxel) {   // ボクセル版：2D の絵のかわりに Three.js の部屋を出す
     cv.remove(); view.querySelector('.hm-stage').classList.add('vox'); view.querySelector('.hm-stage').classList.toggle('night', st.time === 'night');
     const NV = 10 * VOX, k = NV / (N * TW / 2), vy = VWH / 300;
-    vox = mountVoxelRoom({ stage: scroller, objects: r.objects, furn, me: r.me, blocked: (i, j) => blocked(r, i, j), onMove: (i, j) => { r.me = { i, j }; saveBook(); },
+    vox = mountVoxelRoom({ stage: scroller, objects: () => r.objects, furn, me: r.me, blocked: (i, j) => blocked(r, i, j), onMove: (i, j) => { r.me = { i, j }; saveBook(); },
       chara: loadChara(), engineCanvas: engine.canvas, night: () => (st.time === 'night' ? 1 : st.time === 'evening' ? .55 : 0),
+      // 模様がえ（ドット版と同じ決まり：家具を押して選ぶ → マスを押して動かす。空いたマスで家具を置く。左のかべの枠で写真）
+      onTapFurniture: o => { sel = sel === o ? null : o; vox.setSelected(sel); setTip(); },
+      onTapTile: (i, j) => {
+        if (sel) { if (fits(sel, i, j, r.objects)) { sel.i = i; sel.j = j; saveBook(); sel = null; vox.sync(); vox.setSelected(null); setTip(); } else toast('そこには置けません'); return; }
+        pickObject(b, r, [i, j], () => { saveBook(); vox.sync(); });
+      },
+      onTapPhoto: k => pickPhoto(b, r, k, () => { saveBook(); loadPhotos(); vox.setPhotos(photos); }),
       fx: vfx, light: vlight, onLight: v => { vlight = v; view.querySelector('[data-a=light]')?.setAttribute('aria-pressed', String(v)); },
       photoSlots: PHOTO_SLOTS.map(s => ({ z: NV - s.u * k, w: s.w * k, y: s.v * vy, h: s.h * vy })) });
     vox.setPhotos(photos);
@@ -289,9 +296,9 @@ export function renderHome(view, { header } = {}) {
     const t = e.target.closest('button'); if (!t) return;
     const a = t.dataset.a;
     if (a === 'login') { const pts = claimLogin(b, new Date()); if (pts) { toast(`ログインボーナス +${pts}pt`); header?.(); } t.remove(); }
-    else if (a === 'edit') { edit = !edit; sel = null; t.setAttribute('aria-pressed', String(edit)); t.querySelector('span').textContent = edit ? 'できた' : '模様がえ'; setTip(); }
-    else if (a === 'remove' && sel) { r.objects = r.objects.filter(o => o !== sel); toast(`「${itemName(sel.id)}」を外しました`); sel = null; saveBook(); setTip(); }
-    else if (a === 'cancel') { sel = null; setTip(); }
+    else if (a === 'edit') { edit = !edit; sel = null; t.setAttribute('aria-pressed', String(edit)); t.querySelector('span').textContent = edit ? 'できた' : '模様がえ'; vox?.setEdit(edit); setTip(); }
+    else if (a === 'remove' && sel) { r.objects = r.objects.filter(o => o !== sel); toast(`「${itemName(sel.id)}」を外しました`); sel = null; saveBook(); vox?.sync(); vox?.setSelected(null); setTip(); }
+    else if (a === 'cancel') { sel = null; vox?.setSelected(null); setTip(); }
     else if (a === 'light') { vlight = !vlight; vox?.setLight(vlight); t.setAttribute('aria-pressed', String(vlight)); }
     else if (a === 'fx') {   // かわいく見せる工夫を、1つずつオン・オフして見比べる
       const box = document.createElement('div'); box.className = 'hm-fx';

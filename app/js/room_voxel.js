@@ -11,10 +11,11 @@ export const WH = Math.round(260 * CM);   // かべの高さ（ボクセル）
 const NV = 10 * V;
 
 // ---- ボクセルの箱 ----
-const X0 = -4, Y0 = -8, Z0 = -4, SX = NV + 8, SY = WH + 24, SZ = NV + 8;
-const SXS = SY * SZ, SYS = SZ;
+// 部屋の箱の大きさ（家具は1つずつ小さな箱で作る）
+const ROOM_BOX = { X0: -4, Y0: -8, Z0: -4, SX: NV + 8, SY: WH + 24, SZ: NV + 8 };
 const cols = new Map(); const colInt = c => { let v = cols.get(c); if (v === undefined) { v = (parseInt(c.slice(1), 16) + 1) >>> 0; cols.set(c, v); } return v; };
-function grid() {
+function grid(B = ROOM_BOX) {
+  const { X0, Y0, Z0, SX, SY, SZ } = B, SXS = SY * SZ, SYS = SZ;
   const g = new Uint32Array(SX * SY * SZ);
   const at = (x, y, z) => (x - X0) * SXS + (y - Y0) * SYS + (z - Z0);
   const ok = (x, y, z) => x >= X0 + 1 && x < X0 + SX - 1 && y >= Y0 + 1 && y < Y0 + SY - 1 && z >= Z0 + 1 && z < Z0 + SZ - 1;
@@ -53,7 +54,7 @@ function grid() {
     };
     return P;
   };
-  return { g, at, pen };
+  return { g, at, pen, B, SXS, SYS };
 }
 
 // ---- 家具（cm。x＝右のかべにそう向き、z＝左のかべにそう向き、y＝上。こちら向き＝ +x と +z） ----
@@ -204,7 +205,7 @@ function buildRoom(G) {
 
 // ---- まとめて形にする：見える向き（+x・+y・+z）の、となりが空いている面だけ。AO（すき間の影）つきと、なしの色を両方つくる ----
 function mesh(G) {
-  const { g } = G, C = new THREE.Color(), AO = [.62, .78, .9, 1];
+  const { g, SXS, SYS } = G, { X0, Y0, Z0, SX, SY, SZ } = G.B, C = new THREE.Color(), AO = [.62, .78, .9, 1];
   const DIRS = [
     { s: SXS, u: SYS, v: 1, n: [1, 0, 0], du: [0, 1, 0], dv: [0, 0, 1] },
     { s: SYS, u: 1, v: SXS, n: [0, 1, 0], du: [0, 0, 1], dv: [1, 0, 0] },
@@ -245,7 +246,15 @@ const heartTex = () => { const t = spriteTex((g, n) => { g.fillStyle = '#FF7FA8'
 export const FX = [['toon', 'アニメ塗り'], ['ao', 'すき間の影'], ['beam', '窓からの光'], ['sparkle', '光のつぶ'], ['glow', 'ふんわり光る'], ['heart', 'タップでハート']];
 
 // ---- 表示 ----
-// opts：{ stage, objects, furn, me, blocked(i,j), onMove(i,j), chara（Promise<canvas>）, engineCanvas, night(), photoSlots, fx, light }
+// opts：{ stage, objects()（いまの家具の配列を返す）, furn, me, blocked(i,j), onMove(i,j), chara（Promise<canvas>）, engineCanvas, night(), photoSlots, fx, light, onLight(v),
+//         模様がえ中の押したもの：onTapFurniture(o), onTapTile(i,j), onTapPhoto(k) }
+// 家具は1つずつ別の形（furnGeo）にして、動かしても部屋ぜんたいを作り直さない
+const FURN_BOX = f => ({ X0: -4, Y0: -2, Z0: -4, SX: f.w * V + 8, SY: Math.round(200 * CM), SZ: f.d * V + 8 });
+const geoCache = new Map();
+function furnGeo(f) {
+  if (!geoCache.has(f.id)) { const G = grid(FURN_BOX(f)); (M[f.art] || M.gift)(G.pen(CM, 0, 0), f); geoCache.set(f.id, mesh(G)); }
+  return geoCache.get(f.id);
+}
 export function mountVoxelRoom(opts) {
   const { stage } = opts; let fx = { ...opts.fx }, light = !!opts.light;
   const cv = document.createElement('canvas'); cv.className = 'hm-iso vox'; stage.append(cv);
@@ -254,7 +263,6 @@ export function mountVoxelRoom(opts) {
   const scene = new THREE.Scene();
 
   const G = grid(); const info = buildRoom(G);
-  for (const o of opts.objects) { const f = opts.furn(o.id); (M[f.art] || M.gift)(G.pen(CM, o.i * V, o.j * V), f); }
   const { geo, colA, colF } = mesh(G);
   const grad = new THREE.DataTexture(new Uint8Array([120, 120, 120, 255, 175, 175, 175, 255, 220, 220, 220, 255]), 3, 1, THREE.RGBAFormat); grad.magFilter = grad.minFilter = THREE.NearestFilter; grad.needsUpdate = true;
   const matL = new THREE.MeshLambertMaterial({ vertexColors: true }), matT = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: grad });
@@ -283,7 +291,8 @@ export function mountVoxelRoom(opts) {
     pm.position.set(.1, s.y + s.h / 2, s.z - s.w / 2); pm.visible = false; pm.receiveShadow = true; scene.add(pm); return pm;
   });
   function setPhotos(imgs) {
-    imgs.forEach((im, k) => { const pm = photoMeshes[k]; if (!pm) return; if (!im) { pm.visible = false; return; }
+    imgs.forEach((im, k) => { const pm = photoMeshes[k]; if (!pm) return; if (!im) { pm.visible = false; slotMarks[k] && (slotMarks[k].visible = edit); return; }
+      if (slotMarks[k]) slotMarks[k].visible = false;
       const c = document.createElement('canvas'); c.width = 70; c.height = 90; const g = c.getContext('2d'); g.fillStyle = '#FFFDF8'; g.fillRect(0, 0, 70, 90);
       const iw = 60, ih = 68, sw = im.width, shh = sw * ih / iw; g.imageSmoothingEnabled = false; g.drawImage(im, 0, im.height * .55 - shh / 2, sw, shh, 5, 5, iw, ih);
       g.fillStyle = ['rgba(249,180,200,.9)', 'rgba(195,235,220,.9)', 'rgba(220,200,242,.9)'][k % 3]; g.fillRect(21, 0, 28, 8);
@@ -302,10 +311,21 @@ export function mountVoxelRoom(opts) {
   const sun = new THREE.DirectionalLight(0xfff0e0, .5); sun.position.set(NV / 2 + 120, 260, NV / 2 + 70); sun.target.position.set(NV / 2, 0, NV / 2); scene.add(sun, sun.target);
   sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -180, right: 180, top: 180, bottom: -180, near: 1, far: 700 }); sun.shadow.bias = -.0006; sun.shadow.radius = 3;
   const roomLight = new THREE.PointLight(0xfff0e6, 0, 400, 1.2); roomLight.position.set(NV * .55, WH + 30, NV * .55); scene.add(roomLight);   // 天井の明かり
-  const lampObjs = opts.objects.filter(o => opts.furn(o.id).light);
-  const lamps = lampObjs.map(o => { const p = new THREE.PointLight(0xffb48a, 0, 150, 2); p.position.set(o.i * V + 10, 140 * CM, o.j * V + 10); scene.add(p);
-    const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: GT, color: 0xffc8a0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); gl.scale.set(50, 50, 1); gl.position.set(o.i * V + 10, 140 * CM, o.j * V + 10); scene.add(gl);
-    return { p, gl }; });
+
+  // 家具：1つずつの形。ライトには明かりとグローをつける。sync() で、いまの配置に合わせる
+  const furn = new Map();   // o → { mesh, p, gl }
+  function sync() {
+    const list = opts.objects();
+    for (const [o, e] of furn) if (!list.includes(o)) { scene.remove(e.mesh); if (e.p) scene.remove(e.p, e.gl); furn.delete(o); }
+    for (const o of list) {
+      const f = opts.furn(o.id); let e = furn.get(o);
+      if (!e) { const g = furnGeo(f); e = { mesh: new THREE.Mesh(g.geo, fx.toon ? matT : matL), g }; e.mesh.castShadow = e.mesh.receiveShadow = true; e.mesh.userData.o = o; scene.add(e.mesh);
+        if (f.light) { e.p = new THREE.PointLight(0xffb48a, 0, 150, 2); e.gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: GT, color: 0xffc8a0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); e.gl.scale.set(50, 50, 1); scene.add(e.p, e.gl); }
+        furn.set(o, e); }
+      e.mesh.position.set(o.i * V, 0, o.j * V);
+      if (e.p) { e.p.position.set(o.i * V + 10, 140 * CM, o.j * V + 10); e.gl.position.copy(e.p.position); }
+    }
+  }
 
   // 光のつぶ（きらきら）：部屋の中をゆっくりのぼる
   const SPN = 70, spPos = new Float32Array(SPN * 3), spCol = new Float32Array(SPN * 3), spSeed = [];
@@ -345,22 +365,44 @@ export function mountVoxelRoom(opts) {
   function applyFx() {
     room.material = fx.toon ? matT : matL;
     geo.attributes.color.array.set(fx.ao ? colA : colF); geo.attributes.color.needsUpdate = true;
+    for (const g of geoCache.values()) { g.geo.attributes.color.array.set(fx.ao ? g.colA : g.colF); g.geo.attributes.color.needsUpdate = true; }
+    for (const e of furn.values()) e.mesh.material = fx.toon ? matT : matL;
   }
-  applyFx();
+  sync(); applyFx();
+
+  // 模様がえ：床のマス目、選んだ家具の足もとの金色の枠、写真の空いた枠
+  let edit = false, sel = null;
+  const gridPts = []; for (let k = 0; k <= 10; k++) gridPts.push(k * V, .4, 0, k * V, .4, NV, 0, .4, k * V, NV, .4, k * V);
+  const gridLines = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(gridPts, 3)), new THREE.LineBasicMaterial({ color: 0xe0709a, transparent: true, opacity: .45 }));
+  gridLines.visible = false; scene.add(gridLines);
+  const selMark = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffc857, transparent: true, opacity: .45, depthWrite: false }));
+  selMark.visible = false; selMark.renderOrder = 6; scene.add(selMark);
+  const plusTex = spriteTex((g, n) => { g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(0, 0, n, n); g.strokeStyle = '#E0709A'; g.lineWidth = 4; g.setLineDash([8, 6]); g.strokeRect(3, 3, n - 6, n - 6); g.setLineDash([]); g.fillStyle = '#E0709A'; g.fillRect(n / 2 - 3, n / 4, 6, n / 2); g.fillRect(n / 4, n / 2 - 3, n / 2, 6); }, 64);
+  const slotMarks = (opts.photoSlots || []).map(s2 => { const pm = new THREE.Mesh(new THREE.PlaneGeometry(s2.w, s2.h), new THREE.MeshBasicMaterial({ map: plusTex, transparent: true })); pm.rotation.y = Math.PI / 2; pm.position.set(.12, s2.y + s2.h / 2, s2.z - s2.w / 2); pm.visible = false; scene.add(pm); return pm; });
+  function showEdit() {
+    gridLines.visible = edit; slotMarks.forEach((m2, k) => { m2.visible = edit && !photoMeshes[k].visible; });
+    const e = sel && furn.get(sel); selMark.visible = !!e;
+    if (e) { const f = opts.furn(sel.id); selMark.scale.set(f.w * V, 1, f.d * V); selMark.position.set(sel.i * V + f.w * V / 2, .6, sel.j * V + f.d * V / 2); }
+  }
 
   // さわる：床を押すとそこへ歩く。キャラ・くまを押すとハート、ライトを押すとでんきのオン・オフ
   const ray = new THREE.Raycaster(), floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit = new THREE.Vector3(), nd = new THREE.Vector2();
-  const objAtTile = (i, j) => opts.objects.find(o => { const f = opts.furn(o.id); return !f.flat && i >= o.i && i < o.i + f.w && j >= o.j && j < o.j + f.d; });
   cv.addEventListener('click', e => {
     const r = cv.getBoundingClientRect(); nd.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(nd, cam);
     // キャラを押したか：画面の上で、足もとから頭までの四角に入っているか
     const onChara = () => { if (!chara) return false; const p0 = new THREE.Vector3(chara.position.x, chara.position.y, chara.position.z).project(cam), p1 = new THREE.Vector3(chara.position.x, chara.position.y + CH, chara.position.z).project(cam);
       const hw = (CH * .2) / ((cam.right - cam.left) / 2); return Math.abs(nd.x - p0.x) < hw && nd.y > p0.y && nd.y < p1.y; };
+    const fh = ray.intersectObjects([...furn.values()].map(e => e.mesh))[0], fo = fh?.object.userData.o, ff = fo && opts.furn(fo.id);
+    if (edit) {   // 模様がえ：写真の枠 → 家具 → 床のマス
+      const ph = ray.intersectObjects([...photoMeshes.filter(m2 => m2.visible), ...slotMarks.filter(m2 => m2.visible)])[0];
+      if (ph) { const k = Math.max(photoMeshes.indexOf(ph.object), slotMarks.indexOf(ph.object)); opts.onTapPhoto?.(k); return; }
+      if (fo && !(ff.flat && sel)) { opts.onTapFurniture?.(fo); return; }
+      if (!ray.ray.intersectPlane(floor, hit)) return; const i = Math.floor(hit.x / V), j = Math.floor(hit.z / V);
+      if (i >= 0 && j >= 0 && i < 10 && j < 10) opts.onTapTile?.(i, j); return;
+    }
     if (onChara()) { if (!me.jump) me.jump = 1; popHearts(me.x * V, CH * 1.05, me.z * V); return; }
-    const h = ray.intersectObject(room)[0];
-    if (h && h.point.y > 2) { const o = objAtTile(Math.floor(h.point.x / V), Math.floor(h.point.z / V)); const f = o && opts.furn(o.id);
-      if (f?.light) { light = !light; opts.onLight?.(light); return; }
-      if (f?.art === 'bear') { popHearts(h.point.x, h.point.y + 10, h.point.z); return; } }
+    if (ff?.light) { light = !light; opts.onLight?.(light); return; }
+    if (ff?.art === 'bear') { popHearts(fh.point.x, fh.point.y + 10, fh.point.z); return; }
     if (!ray.ray.intersectPlane(floor, hit)) return; const i = Math.floor(hit.x / V), j = Math.floor(hit.z / V);
     if (i < 0 || j < 0 || i >= 10 || j >= 10 || opts.blocked(i, j)) return;
     me.tx = i + .5; me.tz = j + .5; opts.onMove(i, j);
@@ -377,7 +419,9 @@ export function mountVoxelRoom(opts) {
     const n = opts.night(), day = 1 - n, L = light ? 1 : 0;
     hemi.intensity = .28 + .42 * day + .3 * L * n; sun.intensity = .48 * day;
     hemi.color.setHex(n > .7 ? (L ? 0xffe6dc : 0x9aa0e8) : n > .2 ? 0xffd8d0 : 0xfff3f8); hemi.groundColor.setHex(n > .7 && !L ? 0x504878 : 0xffd9c4);
-    roomLight.intensity = .35 * L * n; lamps.forEach(({ p, gl }) => { p.intensity = L * (.25 + .6 * n); gl.visible = fx.glow && !!L; gl.material.opacity = .22 + .18 * n; });
+    roomLight.intensity = .35 * L * n; for (const e of furn.values()) if (e.p) { e.p.intensity = L * (.25 + .6 * n); e.gl.visible = fx.glow && !!L; e.gl.material.opacity = .22 + .18 * n; }
+    // 選んだ家具は、ふわふわ上下に動かす
+    for (const [o, e] of furn) e.mesh.position.y = o === sel ? 3 + Math.sin(t / 160) * 2 : 0;
     bulbs.forEach(({ b, gl }, k) => { const on = .55 + .45 * Math.sin(t / 500 + k * 1.7); b.material.color.setHex(bulbCols[k % 5]).multiplyScalar(L ? .75 + .25 * on : .8); gl.visible = fx.glow && !!L; gl.material.opacity = (.25 + .35 * n) * on; });
     beam.visible = fx.beam && day > .3; beamMat.opacity = .045 * day;   // 光の帯はごくうすく（床の明るい場所は別に）
     patch.visible = beam.visible; patchMat.opacity = .16 * day;
@@ -396,6 +440,9 @@ export function mountVoxelRoom(opts) {
     canvas: cv, setPhotos,
     setFx(v) { fx = { ...v }; applyFx(); },
     setLight(v) { light = !!v; },
+    setEdit(v) { edit = !!v; if (!edit) sel = null; showEdit(); },
+    setSelected(o) { sel = o || null; showEdit(); },
+    sync() { sync(); showEdit(); },
     screenX: () => { const v = new THREE.Vector3(me.x * V, 25, me.z * V).project(cam); return (v.x + 1) / 2; },
     stop() { cancelAnimationFrame(raf); removeEventListener('resize', onResize); renderer.dispose(); geo.dispose(); matL.dispose(); matT.dispose(); cv.remove(); },
   };
