@@ -33,6 +33,7 @@ const GULL = `void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; vec2 
   vec4 t=texture2D(tIdx,(vec2(s.x+uOff.x*uSize.x,s.y)+.5)/vec2(uSize.x*2.,uSize.y)*vec2(1.,-1.)+vec2(0.,1.)); if(t.a<.5) discard; gl_FragColor=vec4(pal(t.r),1.); }`;
 
 // cfg：{ base, ground（キャラの地面：look.js の charaPlace）, gulls（カモメの高さの列。なければ出さない）, boat（船が通るなら true）,
+//        boatDir（舟の向きを決める：1＝右へ、-1＝左へ）, boatDay（true なら夜・雨・雪の日は舟を出さない）,
 //        steam（湯気を出す場所 [[x,y],...]）, par（層ごとのずれの大きさ [空,景色,キャラ]） }
 export async function buildDot(cfg) {
   const base = cfg.base;
@@ -97,6 +98,7 @@ export async function buildDot(cfg) {
       }
       if (boat) setPal(boat, palTex(D.pal.boat, c => { const i = D.pal.boat.indexOf(c); return night && boatWin[i] ? mix(c, [255, 222, 150], night > .75 ? .85 : .45) : tint(c, tw); }));
       for (const gl of gulls) setPal(gl, palTex(D.pal.gull, c => tint(c, tw)));
+      self.noBoat = st.time === 'night' || ['rain', 'snow'].includes(st.weather);
       self.gullN = st.time === 'night' || ['rain', 'snow'].includes(st.weather) ? 0 : st.weather === 'cloudy' || st.season === 'winter' ? 1 : st.season === 'summer' ? 3 : 2;
       self.leaves = st.season === 'autumn' && st.weather !== 'snow' && cfg.leaves;
       self.steam = cfg.steam && st.weather !== 'rain' ? cfg.steam : null;
@@ -110,8 +112,8 @@ export async function buildDot(cfg) {
       front.material.uniforms.uReveal.value = scn.material.uniforms.uReveal.value;
       // 船：30秒に1回、ゆっくり横切る（向きは1回ごとに入れかわる）
       if (boat) {
-        const cyc = Math.floor(f / 360), ph = f % 360, run = 240, dir = cyc % 2 ? -1 : 1;
-        if (!rm && ph < run) {
+        const cyc = Math.floor(f / 360), ph = f % 360, run = 240, dir = cfg.boatDir || (cyc % 2 ? -1 : 1);   // boatDir：いつも同じ向きに進む舟（川下り）
+        if (!rm && ph < run && !(cfg.boatDay && self.noBoat)) {   // boatDay：夜・雨・雪の日は出ない舟
           const p = ph / run, x = dir > 0 ? -BW / 2 + p * (W + BW) : W + BW / 2 - p * (W + BW);
           boat.visible = true; boat.position.set(Math.round(x) - off(P[1]), H - (D.boatY - BH / 2) + ((f >> 3) & 1), 2); boat.material.uniforms.uWet.value = dir > 0 ? 0 : 1;
         } else boat.visible = false;

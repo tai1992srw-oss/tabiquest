@@ -57,6 +57,50 @@ const DOT = [
     item: { id: 'saitama-014-omiyage', name: 'オオカミの置物（仮）' },
     alt: '三峯神社の三ツ鳥居の前に分身キャラが立つ、動くドット絵カード',
   },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。実物の写真を形の見本にした権現造の社殿。夕暮れ・夜は中から灯る
+    id: 'saitama-013', kind: 'dot', no: '011-13', name: '秩父神社', pref: '埼玉県', city: '秩父市',
+    lat: 35.997876, lng: 139.083999, radius: 250, categories: ['神社・寺'],
+    scene: 'chichibu', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '秩父の総社。12月の秩父夜祭',
+    welcome: 'ようこそ、秩父神社へ！',
+    title: { lines: ['秩父神社'], top: 6.6 },
+    item: { id: 'saitama-013-omiyage', name: '子育ての虎の置物（仮）' },
+    alt: '秩父神社の社殿の前に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。実物の写真を形の見本にした、竜の彫刻と白い柱の社殿。夕暮れ・夜は灯籠が灯る
+    id: 'saitama-012', kind: 'dot', no: '011-12', name: '宝登山神社', pref: '埼玉県', city: '長瀞町',
+    lat: 36.093222, lng: 139.103097, radius: 300, categories: ['神社・寺'],
+    scene: 'hodosan', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '長瀞の宝登山のふもとの神社。色あざやかな彫刻',
+    welcome: 'ようこそ、宝登山神社へ！',
+    title: { lines: ['宝登山神社'], top: 6.6 },
+    item: { id: 'saitama-012-omiyage', name: '宝登山のお守り（仮）' },
+    alt: '宝登山神社の石段の下に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚と、ライン下りの舟）。実物の写真を形の見本にした岩畳と対岸の崖
+    id: 'saitama-011', kind: 'dot', no: '011-11', name: '長瀞の岩畳', pref: '埼玉県', city: '長瀞町',
+    lat: 36.091783, lng: 139.116997, radius: 400, categories: ['自然・絶景'],
+    scene: 'nagatoro', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '荒川ぞいに広がる岩の河原。ライン下りの舟',
+    welcome: 'ようこそ、長瀞の岩畳へ！',
+    title: { lines: ['長瀞の岩畳'], top: 6.6 },
+    item: { id: 'saitama-011-omiyage', name: 'ライン下りの舟の模型（仮）' },
+    alt: '長瀞の岩畳の上に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。実物の写真を形の見本にした芝桜の丘と武甲山。芝桜は春だけ咲く
+    id: 'saitama-015', kind: 'dot', no: '011-15', name: '羊山公園', pref: '埼玉県', city: '秩父市',
+    lat: 35.985556, lng: 139.08875, radius: 400, categories: ['自然・絶景'],
+    scene: 'hitsujiyama', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '秩父の丘の公園。春は芝桜の丘',
+    welcome: 'ようこそ、羊山公園へ！',
+    title: { lines: ['羊山公園'], top: 6.6 },
+    item: { id: 'saitama-015-omiyage', name: '芝桜のしおり（仮）' },
+    alt: '羊山公園の芝桜の丘の道に分身キャラが立つ、動くドット絵カード',
+  },
 ];
 
 // 写真の名所は、時間帯の色づけをコードで行う（形は変えない）ので4つの時間帯すべてを持つ

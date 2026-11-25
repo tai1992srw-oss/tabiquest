@@ -37,8 +37,8 @@ export function kindOf([r, g, b]) {
 }
 // 季節の色の差し替え（夏が元の絵）
 export function season(c, kind, s) {
-  if (kind === 'bloom') {   // 春だけ咲く花（芝桜・花の木）：春は元の絵のまま。夏は葉の緑、秋・冬は枯れ色（明るさは元の絵のまま）
-    if (s === 'spring') return c; const l = (c[0] * .3 + c[1] * .59 + c[2] * .11) / 255, g = s === 'summer' ? [70, 150, 58] : s === 'autumn' ? [150, 120, 60] : [120, 104, 84];
+  if (kind === 'bloom') {   // 春だけ咲く花（芝桜・花の木）：春は元の絵のまま。夏は葉の緑、秋はくすんだ緑、冬は茶色がかった緑（芝桜は冬も葉が残る。明るさは元の絵のまま）
+    if (s === 'spring') return c; const l = (c[0] * .3 + c[1] * .59 + c[2] * .11) / 255, g = s === 'summer' ? [70, 150, 58] : s === 'autumn' ? [100, 132, 60] : [112, 114, 72];
     return g.map(v => Math.min(255, v * (.45 + l * 1.1)));
   }
   if (!kind || s === 'summer') return c;

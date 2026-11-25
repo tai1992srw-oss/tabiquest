@@ -18,14 +18,22 @@ import * as minatomirai from './scenes/minatomirai.js';
 import * as chukagai from './scenes/chukagai.js';
 import * as tokyotower from './scenes/tokyotower.js';
 import * as mitsumine from './scenes/mitsumine.js';
+import * as chichibu from './scenes/chichibu.js';
+import * as hodosan from './scenes/hodosan.js';
+import * as nagatoro from './scenes/nagatoro.js';
+import * as hitsujiyama from './scenes/hitsujiyama.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.45';
+export const VERSION = '0.10.46';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);
 engine.register('mitsumine', mitsumine.build);
+engine.register('chichibu', chichibu.build);
+engine.register('hodosan', hodosan.build);
+engine.register('nagatoro', nagatoro.build);
+engine.register('hitsujiyama', hitsujiyama.build);
 engine.register('kamakura', kamakura.build);
 for (const p of PLACES) if (p.kind === 'photo') engine.register(p.scene, () => photo.build(p));
 // 絵のない名所は、写真の名所のしくみに空の絵を渡して使う
