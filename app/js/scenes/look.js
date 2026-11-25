@@ -1,3 +1,4 @@
+import { RS } from '../card.js';
 // ドット絵の名所で共通の色づけ（時間帯・天気・季節）。鎌倉高校前で決めたものを切り出した（2026-11-25）
 // 時間帯と天気の色づけ：c' = mix(c, 灰色, desat) * mul + add（写真の名所と同じ考え方）
 export const TIME = {
@@ -69,9 +70,11 @@ export function charaPlace(st, W, H, ground) {
   return { dx: Math.round((st.photo?.x || 0) * W), feet: Math.round(H * f), s, r: st.photo?.r || 0 };
 }
 // キャラを置く（大きさ s のときは足もとをそろえる。角度 r はキャラのまん中を軸に回す）。回したときは影を消す
+//   左はしと足もとを画面のマス（背景の 1/RS）にそろえて、ドットがにじまないようにする
 export function placeChara(ch, cx, feet, s, H, drop, r = 0) {
-  const hh = ch.CH * s / 2; ch.pickLod?.(s);
+  const w = ch.CW * s, h = ch.CH * s; ch.pickLod?.(s);
+  const left = Math.round((cx - w / 2) * RS) / RS, bottom = Math.round((H - feet + drop) * RS) / RS;
   ch.chara.scale.set(s, s, 1); ch.chara.rotation.z = r;
-  ch.chara.position.set(Math.round(cx), H - feet + drop + hh, 4);
+  ch.chara.position.set(left + w / 2, bottom + h / 2, 4);
   ch.shadow.scale.set(30 * s, 5 * s, 1); ch.shadow.position.set(Math.round(cx), H - feet + 1, 3); ch.shadow.visible = Math.abs(r) < .2 && feet < H;
 }

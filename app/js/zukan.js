@@ -1,7 +1,7 @@
 // 図鑑：名所ごとのアルバム。カードは到着ごとの1枚で、時間帯や天気をあとから変えることはできない
 import { PLACES, placeById, LABEL, TIMES, WEATHERS } from './places.js';
 import { book, cardsOf, cardById, setPhoto } from './store.js';
-import { engine, snapshot } from './card.js';
+import { engine, snapshot, RS } from './card.js';
 import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast } from './ui.js';
 
 function locked(p) {
@@ -131,7 +131,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     engine.setState({ ...card, photo: { ...ph } }); }, { passive: false });
 
   async function saveImage() {
-    const src = engine.canvas, k = 4, c = document.createElement('canvas'); c.width = src.width * k; c.height = src.height * k;
+    const src = engine.canvas, k = Math.max(1, Math.round(4 / RS)), c = document.createElement('canvas'); c.width = src.width * k; c.height = src.height * k;
     const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, c.width, c.height);
     const blob = await new Promise(r => c.toBlob(r, 'image/png')); const name = `tabiquest-${p.id}-${fmtDate(card.at, '')}.png`;
     const file = new File([blob], name, { type: 'image/png' });

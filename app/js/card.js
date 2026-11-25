@@ -2,6 +2,8 @@
 // 絵は Canva の見本を写し取った層だけを使う。ここでは背景を描き足さない。
 import { seasonOf } from './places.js';
 const THREE = window.THREE;
+// RS：カードを描く細かさ（背景の1ドット＝RS×RS の画面のマス）。キャラは背景の RS 倍の細かさのドット絵（2026-11-25）
+export const RS = 2;
 export const W = 360, H = 640;   // 写真の名所の大きさ。ドット絵の名所は data.json の W・H（scene.userData に入れる）
 const dims = scene => [scene.userData.W || W, scene.userData.H || H];
 export const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -67,7 +69,7 @@ export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1) {
 // キャラの細かさの段階を読む（data.json の charaLods）。ふだん用（chara.png）も入れて返す
 export async function charaLods(base, D, baseTex) {
   const ls = D.charaLods || [], tex = ls.length ? await loadTextures(base, ls.map(l => l.file)) : {};
-  return [{ s: 1, tex: baseTex, size: D.chara }, ...ls.map(l => ({ s: l.s, tex: tex[l.file], size: l.size }))];
+  return [{ s: 1, tex: baseTex, size: D.charaTex || D.chara }, ...ls.map(l => ({ s: l.s, tex: tex[l.file], size: l.size }))];
 }
 
 // 雨・雪の粒（コードで動かすもの）。splash は雨のはね返りを出す高さの範囲
@@ -106,9 +108,9 @@ const drawState = st => ({ ...st, weather: ['rain', 'snow', 'cloudy'].includes(s
 // ---- 描画エンジン（WebGL は1つだけ使い、表示する場所へキャンバスを移す） ----
 class Engine {
   constructor() {
-    this.canvas = document.createElement('canvas'); this.canvas.width = W; this.canvas.height = H; this.canvas.className = 'gl';
+    this.canvas = document.createElement('canvas'); this.canvas.width = W * RS; this.canvas.height = H * RS; this.canvas.className = 'gl';
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: false, preserveDrawingBuffer: true });
-    this.renderer.setPixelRatio(1); this.renderer.setSize(W, H, false);
+    this.renderer.setPixelRatio(1); this.renderer.setSize(W * RS, H * RS, false);
     this.cam = new THREE.OrthographicCamera(0, W, H, 0, -10, 10);
     this.builders = {}; this.built = {}; this.cur = null; this.state = null; this.target = null; this.par = 0; this.lastF = -1; this.running = false;
     this.onPointer = e => { const r = this.canvas.getBoundingClientRect(); this.target = (e.clientX - r.left) / r.width * 2 - 1; };
@@ -120,8 +122,8 @@ class Engine {
   // 組み上がりの途中の状態を元に戻す
   // 名所ごとの絵の大きさにキャンバスとカメラを合わせる
   fit(s) {
-    const [w, h] = dims(s.scene); if (this.canvas.width === w && this.canvas.height === h) return;
-    this.renderer.setSize(w, h, false); this.cam.right = w; this.cam.top = h; this.cam.updateProjectionMatrix();
+    const [w, h] = dims(s.scene); if (this.canvas.width === w * RS && this.canvas.height === h * RS) return;
+    this.renderer.setSize(w * RS, h * RS, false); this.cam.right = w; this.cam.top = h; this.cam.updateProjectionMatrix();
   }
   reset(s) { for (const m of [...s.layers, s.ch.chara]) m.material.uniforms.uReveal.value = 1; s.drop = 0; s.ch.shadow.material.opacity = s.ch.shadowOpacity; s.forcePose = null; }
   get(id) { return this.built[id] || (this.built[id] = this.builders[id]()); }
