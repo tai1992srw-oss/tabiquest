@@ -1,6 +1,6 @@
 // 画面の切り替えと、一覧・設定の画面
 import { PLACES, placeById, CATEGORIES, PLAIN_BG } from './places.js';
-import { settings, saveSettings, book, mode, arrive, cardsOf, visited, exportBook, importBook, persist } from './store.js';
+import { settings, saveSettings, book, mode, arrive, cardsOf, visited, exportBook, importBook, persist, DEBUG } from './store.js';
 import { engine, snapshot, clearSnaps } from './card.js';
 import { renderCharaColors } from './characolor.js';
 import { locate, here, statusOf, fmtDist, current } from './geo.js';
@@ -25,7 +25,7 @@ import * as hitsujiyama from './scenes/hitsujiyama.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.46';
+export const VERSION = '0.10.47';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);
@@ -213,11 +213,7 @@ async function renderSettings() {
   sample();
   view.querySelectorAll('[data-persona]').forEach(bt => bt.onclick = () => { setCharaPersona(bt.dataset.persona); view.querySelectorAll('[data-persona]').forEach(x => x.setAttribute('aria-pressed', String(x === bt))); sample(); });
   const dbgBox = view.querySelector('#dbg');
-  if (settings.debugUnlocked) renderDebug(dbgBox, () => { header(); renderSettings(); });
-  view.querySelector('#ver').addEventListener('click', () => {
-    const now = Date.now(); taps = now - tapT < 1500 ? taps + 1 : 1; tapT = now;
-    if (taps >= 7 && !settings.debugUnlocked) { settings.debugUnlocked = true; saveSettings(); taps = 0; toast('デバッグモードを表示しました'); renderSettings(); }
-  });
+  if (DEBUG) renderDebug(dbgBox, () => { header(); renderSettings(); });   // デバッグ版（?debug を付けて開いたとき）だけ
   const file = view.querySelector('#importFile');
   view.querySelector('[data-a=export]').onclick = () => {
     const blob = new Blob([exportBook()], { type: 'application/json' }), a = document.createElement('a');

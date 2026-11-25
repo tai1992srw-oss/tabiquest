@@ -15,8 +15,8 @@ export function renderDebug(box, refresh) {
   const pp = PLACES.find(p => p.id === pv.place); if (!pp.times.includes(pv.time)) pv.time = pp.times[0];
   box.className = 'group dbg';
   box.innerHTML = `<h2>デバッグモード</h2>
-    <div class="row"><button data-a="toggle" aria-pressed="${on}">${on ? 'オン（デバッグ用の記録を使用中）' : 'オフ（本番の記録を使用中）'}</button></div>
-    <p class="note">オンのあいだは、手に入れたものがデバッグ用の記録に入ります。本番の旅の記録には入りません。</p>
+    <p class="note">デバッグ版です（アドレスの最後に ?debug）。ここで手に入れたものやお着替えは、デバッグ用の記録に入ります。通常版の旅の記録には入りません。</p>
+    <div class="row"><button data-a="normal">通常版をひらく</button></div>
     ${on ? `
     <span class="lab">いる場所（位置の上書き）</span>
     <select class="sel" data-sel="loc"><option value="none">上書きしない</option>${PLACES.map(p => `<option value="${p.id}" ${settings.loc === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}<option value="nowhere" ${settings.loc === 'nowhere' ? 'selected' : ''}>どこでもない</option></select>
@@ -39,7 +39,7 @@ export function renderDebug(box, refresh) {
     ${PLACES.filter(p => b.items[p.item.id]).map(p => `<div class="line"><span class="nm">${esc(p.item.name)} ×${b.items[p.item.id]}</span><button data-item="${p.item.id}" data-n="1">+1</button><button data-item="${p.item.id}" data-n="-1">−1</button></div>`).join('') || '<p class="note">まだありません（カードを付与するともらえます）</p>'}
     <span class="lab">ポイント（${b.points}pt）</span>
     <div class="row"><button data-pt="100">+100</button><button data-pt="1000">+1000</button><button data-pt="-100">−100</button><button class="danger" data-pt="zero">0にする</button></div>
-    <div class="line"><button class="danger" data-a="reset">デバッグの記録を全部消す</button><button data-a="hide">デバッグを隠す</button></div>` : `<div class="row"><button data-a="hide">デバッグを隠す</button></div>`}`;
+    <div class="line"><button class="danger" data-a="reset">デバッグの記録を全部消す</button></div>` : ''}`;
 
   box.onchange = e => {
     const s = e.target;
@@ -50,8 +50,7 @@ export function renderDebug(box, refresh) {
     const btn = e.target.closest('button'); if (!btn) return;
     const row = btn.closest('.row[data-k]'), d = btn.dataset, P = id => PLACES.find(p => p.id === id);
     if (row) { settings[row.dataset.k] = d.v; saveSettings(); return refresh(); }
-    if (d.a === 'toggle') { settings.debugOn = !on; saveSettings(); toast(settings.debugOn ? 'デバッグ用の記録に切り替えました' : '本番の記録に戻しました'); return refresh(); }
-    if (d.a === 'hide') { settings.debugUnlocked = false; settings.debugOn = false; saveSettings(); toast('デバッグを隠しました'); return refresh(); }
+    if (d.a === 'normal') { location.href = location.pathname; return; }
     if (d.a === 'reset') { if (confirm('デバッグ用の記録（カード・アイテム・ポイント）を全部消します。本番の記録は消えません。よろしいですか？')) { dbg.reset(); toast('デバッグの記録を消しました'); refresh(); } return; }
     if (d.a === 'preview') { location.hash = `#/preview/${pv.place}/${pv.time}/${pv.weather}/${pv.season}`; return; }
     if (d.play) {

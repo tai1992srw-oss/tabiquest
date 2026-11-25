@@ -1,6 +1,9 @@
 // 記録の保存（端末の中）。本番とデバッグは別の場所に保存し、本当の旅の記録を汚さない
 // v2：カードは「到着ごとに撮る1枚」。そのときの時間帯・天気・季節・日時・位置を固定して持つ
-const KEY = { real: 'tabiquest:real:v1', debug: 'tabiquest:debug:v1', settings: 'tabiquest:settings:v1' };
+// デバッグ版：アドレスの最後に ?debug を付けて開いたときだけ（例：…/tabiquest/?debug）。ふつうに開いた通常版には、デバッグの物は何も出ない
+//   記録（カード・ポイント）も設定（お着替え・時間帯の上書きなど）も、通常版とは別の場所に保存する。おたがいに影響しない
+export const DEBUG = new URLSearchParams(location.search).has('debug');
+const KEY = { real: 'tabiquest:real:v1', debug: 'tabiquest:debug:v1', settings: DEBUG ? 'tabiquest:settings:debug:v1' : 'tabiquest:settings:v1' };
 const POINTS = { first: 300, revisit: 10 };
 export const VERSION_DATA = 2;
 
@@ -23,7 +26,9 @@ export function migrate(b) {
   return out;
 }
 
-export const settings = Object.assign({ debugUnlocked: false, debugOn: false, loc: 'none', time: 'auto', weather: 'auto', season: 'auto' }, read(KEY.settings) || {});
+// デバッグ版をはじめて開いたときは、通常版の設定を写してはじめる
+export const settings = Object.assign({ loc: 'none', time: 'auto', weather: 'auto', season: 'auto' }, read(KEY.settings) || (DEBUG ? read('tabiquest:settings:v1') : null) || {});
+if (!DEBUG) Object.assign(settings, { loc: 'none', time: 'auto', weather: 'auto', season: 'auto' });   // 通常版では、場所・時間帯・天気・季節の上書きは使わない
 export const saveSettings = () => write(KEY.settings, settings);
 
 const books = { real: migrate(read(KEY.real)), debug: migrate(read(KEY.debug)) };
@@ -33,7 +38,7 @@ const books = { real: migrate(read(KEY.real)), debug: migrate(read(KEY.debug)) }
 export const defaultLook = () => ({ colors: { ...(settings.charaColors || {}) }, hair: settings.charaHair || '', outfit: settings.charaOutfit || '' });
 for (const b of Object.values(books)) for (const c of b.cards) if (!c.look) c.look = defaultLook();
 write(KEY.real, books.real); write(KEY.debug, books.debug);
-export const mode = () => (settings.debugUnlocked && settings.debugOn ? 'debug' : 'real');
+export const mode = () => (DEBUG ? 'debug' : 'real');
 export const book = (m = mode()) => books[m];
 const save = m => write(KEY[m], books[m]);
 // ほかのファイルで記録を書きかえたあとに呼ぶ（ログインボーナスなど）
