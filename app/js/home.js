@@ -4,72 +4,58 @@
 //   右のかべの窓：いまの時間帯・天気・季節のドット絵の名所が動いて見える（名所の絵をそのまま使う）
 //   左のかべ：手に入れたカードを写真として貼る。床：家具（見本・ご当地アイテム・ショップの品）を置く
 //   ボタンや文字は、ストーリーズのように部屋の上に重ねる
-//   部屋と家具の絵はまだない（絵はコードで描き足さない）。かべ・床は無地の仮の面、家具は大きさだけの仮の箱
-//   絵ができたら、drawRoom の面と drawObj の箱を絵に差し替える
+//   部屋と家具の絵は room_art.js でコードで描く（女の子らしい部屋。2026-11-25、マイルームはコードで描いてよいと決まった）
 import { PLACES, placeById, LABEL, seasonOf } from './places.js';
 import { book, mode, settings, saveBook } from './store.js';
 import { engine, snapshot, reduceMotion } from './card.js';
 import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, img, cardEl, fmtDate, toast } from './ui.js';
+import { S, N, TW, TH, OX, OY, RW, RH, P, LEFT, RIGHT, PHOTO_SLOTS, WINDOW, onWall as wallAt, buildRoom, drawGarland, furnSprite } from './room_art.js';
 
 const DOTS = PLACES.filter(p => p.kind === 'dot');
 const dayNo = d => Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 86400000);
 
-// ---- 部屋の形（論理の大きさ。画面では K 倍の細かさで描く） ----
-const N = 10, TW = 112, TH = 56, WALL = 300, K = 2;          // 床のマス数、マスの幅・高さ、かべの高さ
-const CS = .8;                                                 // キャラの大きさ（部屋に対して小さめに）
-const OX = 20 + N * TW / 2, OY = 40 + WALL;                   // 床のいちばん奥の角
-const RW = OX * 2, RH = OY + N * TH + 40;                      // 部屋の絵の幅・高さ
-// 床の上の点（x：右のかべにそう向き、y：左のかべにそう向き、z：高さ）→ 画面
-const P = (x, y, z = 0) => [OX + (x - y) * TW / 2, OY + (x + y) * TH / 2 - z];
-// かべ：左は左の角から右上へ、右は奥の角から右下へ。u：横の位置、v：床からの高さ
-const LEFT = { x0: OX - N * TW / 2, y0: OY + N * TH / 2, k: -.5 }, RIGHT = { x0: OX, y0: OY, k: .5 };
-const PHOTO_SLOTS = [{ u: 150, v: 150, w: 74, h: 96 }, { u: 260, v: 168, w: 74, h: 96 }, { u: 370, v: 150, w: 74, h: 96 }];
-const WINDOW = { u: 150, v: 110, w: 250, h: 170 };
+const K = 2;      // 画面では論理の大きさの K 倍の細かさで描く
+const CS = .8;   // キャラの大きさ（部屋に対して小さめに）
 
 // 家具：w・d は床で使うマス（右向き・左向き）、h は高さ、flat は上に乗れる敷きもの
 //   見本（demo-）は、絵ができるまでの部屋の感じを見るための仮の家具。いつでも置ける
 const DEMO = [
-  { id: 'demo-bed', name: 'ベッド', w: 2, d: 3, h: 42, c: 0 },
-  { id: 'demo-sofa', name: 'ソファ', w: 3, d: 1, h: 48, c: 1 },
-  { id: 'demo-table', name: 'ローテーブル', w: 1, d: 1, h: 26, c: 3 },
-  { id: 'demo-shelf', name: '本だな', w: 1, d: 2, h: 160, c: 2 },
-  { id: 'demo-desk', name: 'つくえ', w: 2, d: 1, h: 72, c: 3 },
-  { id: 'demo-rug', name: 'ラグ', w: 3, d: 3, h: 3, c: 4, flat: true },
-  { id: 'demo-plant', name: '観葉植物', w: 1, d: 1, h: 96, c: 5, thin: true },
-  { id: 'demo-lamp', name: 'スタンドライト', w: 1, d: 1, h: 120, c: 3, thin: true },
-  { id: 'demo-tv', name: 'テレビ台', w: 1, d: 2, h: 40, c: 6 },
+  { id: 'demo-bed', name: 'ベッド', w: 3, d: 2, h: 92, art: 'bed' },
+  { id: 'demo-sofa', name: 'ソファ', w: 3, d: 1, h: 62, art: 'sofa' },
+  { id: 'demo-table', name: 'まるいテーブル', w: 1, d: 1, h: 34, art: 'table' },
+  { id: 'demo-shelf', name: '本だな', w: 1, d: 2, h: 160, art: 'shelf' },
+  { id: 'demo-vanity', name: 'ドレッサー', w: 2, d: 1, h: 176, art: 'vanity' },
+  { id: 'demo-rug', name: 'まるいラグ', w: 3, d: 3, h: 3, art: 'rug', flat: true },
+  { id: 'demo-plant', name: '観葉植物', w: 1, d: 1, h: 96, art: 'plant' },
+  { id: 'demo-lamp', name: 'スタンドライト', w: 1, d: 1, h: 132, art: 'lamp', light: 132 },
+  { id: 'demo-bear', name: 'くまのぬいぐるみ', w: 1, d: 1, h: 74, art: 'bear' },
 ];
-// ショップの品（仮）。絵ができたら絵を足す
+// ショップの品（仮の値段）
 export const SHOP = [
-  { id: 'shop-frame', name: '写真立て', price: 150, w: 1, d: 1, h: 30 },
-  { id: 'shop-plant', name: '大きな観葉植物', price: 200, w: 1, d: 1, h: 110, thin: true },
-  { id: 'shop-poster', name: '旅のポスター', price: 250, w: 1, d: 1, h: 60 },
-  { id: 'shop-lamp', name: 'ランプ', price: 300, w: 1, d: 1, h: 40 },
-  { id: 'shop-rug', name: 'まるいラグ', price: 400, w: 2, d: 2, h: 3, flat: true },
-  { id: 'shop-globe', name: '地球儀', price: 500, w: 1, d: 1, h: 56 },
-  { id: 'shop-trunk', name: '旅のトランク', price: 800, w: 2, d: 1, h: 36 },
+  { id: 'shop-frame', name: '写真立て', price: 150, w: 1, d: 1, h: 44, art: 'frame' },
+  { id: 'shop-plant', name: '大きな観葉植物', price: 200, w: 1, d: 1, h: 120, art: 'plant', big: true },
+  { id: 'shop-poster', name: '旅のポスター', price: 250, w: 1, d: 1, h: 74, art: 'poster' },
+  { id: 'shop-lamp', name: 'ランプ', price: 300, w: 1, d: 1, h: 42, art: 'tlamp', light: 40 },
+  { id: 'shop-rug', name: 'ちいさなラグ', price: 400, w: 2, d: 2, h: 3, art: 'rug', flat: true },
+  { id: 'shop-globe', name: '地球儀', price: 500, w: 1, d: 1, h: 62, art: 'globe' },
+  { id: 'shop-trunk', name: '旅のトランク', price: 800, w: 2, d: 1, h: 44, art: 'trunk' },
 ];
-const DEMO_LAYOUT = [['demo-rug', 3, 3], ['demo-bed', 0, 1], ['demo-shelf', 0, 8], ['demo-desk', 3, 0], ['demo-lamp', 6, 0], ['demo-plant', 9, 0],
-  ['demo-table', 4, 4], ['demo-sofa', 3, 6], ['demo-tv', 7, 3]];
-const furn = id => DEMO.find(x => x.id === id) || SHOP.find(x => x.id === id) || { id, w: 1, d: 1, h: 30 };   // ご当地アイテムは1マスの小さな箱
+const DEMO_LAYOUT = [['demo-rug', 4, 4], ['demo-bed', 0, 1], ['demo-shelf', 0, 7], ['demo-vanity', 3, 0], ['demo-lamp', 6, 0], ['demo-plant', 9, 0],
+  ['demo-table', 5, 5], ['demo-sofa', 4, 3], ['demo-bear', 7, 6]];
+const furn = id => DEMO.find(x => x.id === id) || SHOP.find(x => x.id === id) || { id, w: 1, d: 1, h: 30, art: 'gift' };   // ご当地アイテムはリボンの箱
 const itemName = id => (DEMO.find(x => x.id === id) || SHOP.find(x => x.id === id))?.name || PLACES.find(p => p.item.id === id)?.item.name.replace(/（仮）$/, '') || id;
-const itemFrom = id => { if (id.startsWith('demo-')) return '見本'; const p = PLACES.find(x => x.item.id === id); return p ? p.name : SHOP.some(x => x.id === id) ? 'ショップ' : ''; };
-const owns = (b, id) => id.startsWith('demo-') || (b.items[id] || 0) > 0;
+const itemFrom = id => { if (id.startsWith('demo-')) return 'はじめからある家具'; const p = PLACES.find(x => x.item.id === id); return p ? p.name : SHOP.some(x => x.id === id) ? 'ショップ' : ''; };
+const owns = (b, id) => DEMO.some(x => x.id === id) || (b.items[id] || 0) > 0;
 
-// 仮の家具の色（上・左・右の面）
-const BOX = [['#C98A5A', '#9C6A44', '#B47A50'], ['#6FA8A0', '#4F837C', '#5E968E'], ['#B07AB8', '#875C8E', '#9A6AA3'], ['#C9B25A', '#9C8944', '#B39E50'],
-  ['#C96A6A', '#A85252', '#B85D5D'], ['#7CB26A', '#5C8A4E', '#6C9E5C'], ['#7A8FC9', '#5C6FA0', '#6B7FB4']];
-const colorOf = o => { const f = furn(o.id); return BOX[f.c ?? [...o.id].reduce((s, ch) => s + ch.charCodeAt(0), 0) % BOX.length]; };
-
-// 部屋の記録（記録の中の room）：{ v:3, photos:[カードid×3], objects:[{ id, i, j }], me:{ i, j } }
+// 部屋の記録（記録の中の room）：{ v:5, photos:[カードid×3], objects:[{ id, i, j }], me:{ i, j } }
 function room(b) {
-  if (!b.room || b.room.v !== 3) b.room = { v: 3, photos: (b.room?.photos || []).slice(0, 3), objects: DEMO_LAYOUT.map(([id, i, j]) => ({ id, i, j })), me: { i: 6, j: 6 } };
+  if (!b.room || b.room.v !== 5) b.room = { v: 5, photos: (b.room?.photos || []).slice(0, 3), objects: DEMO_LAYOUT.map(([id, i, j]) => ({ id, i, j })), me: { i: 3, j: 7 } };
   const r = b.room;
   r.photos = PHOTO_SLOTS.map((_, k) => (r.photos[k] && b.cards.some(c => c.id === r.photos[k]) ? r.photos[k] : null));
   r.objects = r.objects.filter(o => owns(b, o.id) && fits(o, o.i, o.j, []));
-  r.me ||= { i: 6, j: 6 };
+  r.me ||= { i: 3, j: 7 };
   return r;
 }
 // 家具が床に収まるか、ほかの家具と重ならないか（敷きものの上には置ける）
@@ -142,7 +128,7 @@ export function renderHome(view, { header } = {}) {
         <a href="#/zukan"><i aria-hidden="true">▦</i><span>図鑑</span></a>
         <a href="#/list"><i aria-hidden="true">◆</i><span>名所</span></a>
       </div>
-      <div class="hm-ov bot"><span class="hm-kari">部屋と家具の絵はまだ（仮の箱）</span><p class="hm-tip"></p>
+      <div class="hm-ov bot"><p class="hm-tip"></p>
         <div class="hm-selbar" hidden><button data-a="remove">外す</button><button data-a="cancel">やめる</button></div></div>
       <div class="hm-engine" aria-hidden="true"></div>
     </div>`;
@@ -177,48 +163,52 @@ export function renderHome(view, { header } = {}) {
   requestAnimationFrame(() => { const [sx] = P(me.x, me.y); scroller.scrollLeft = sx / RW * cv.clientWidth - scroller.clientWidth / 2; });
 
   // ---- 描く ----
+  const { bg, front } = buildRoom();
+  const night = () => (st.time === 'night' ? 1 : st.time === 'evening' ? .55 : 0);
   const poly = (pts, fill, stroke) => { ctx.beginPath(); pts.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.strokeStyle = stroke; ctx.stroke(); } };
-  const onWall = (W, u, v, w, h, draw) => { ctx.save(); ctx.transform(1, W.k, 0, 1, W.x0 + u, W.y0 + u * W.k - v - h); draw(w, h); ctx.restore(); };
-  const night = () => (st.time === 'night' ? 1 : st.time === 'evening' ? .5 : 0);
 
   function drawRoom() {
-    const L = P(0, N), R = P(N, 0), B = P(N, N), T = P(0, 0);
-    poly([L, T, [T[0], T[1] - WALL], [L[0], L[1] - WALL]], '#3A3F78');   // 左のかべ（仮の面）
-    poly([T, R, [R[0], R[1] - WALL], [T[0], T[1] - WALL]], '#454B8A');   // 右のかべ
-    poly([L, T, [T[0], T[1] - 12], [L[0], L[1] - 12]], '#2C305E'); poly([T, R, [R[0], R[1] - 12], [T[0], T[1] - 12]], '#353A70');   // はばき
-    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], (i + j) % 2 ? '#5A4E86' : '#615592', edit ? 'rgba(255,200,87,.3)' : null);
-    poly([L, B, [B[0], B[1] + 14], [L[0], L[1] + 14]], '#2A2450'); poly([B, R, [R[0], R[1] + 14], [B[0], B[1] + 14]], '#221D42');   // 床の厚み
-    // 窓（右のかべ）：名所の景色の上のほう
-    const Wn = WINDOW;
-    onWall(RIGHT, Wn.u - 8, Wn.v - 8, Wn.w + 16, Wn.h + 16, (w, h) => { ctx.fillStyle = '#C9B78F'; ctx.fillRect(0, 0, w, h); });
-    onWall(RIGHT, Wn.u, Wn.v, Wn.w, Wn.h, (w, h) => {
+    ctx.drawImage(bg, 0, 0, RW, RH);
+    if (edit) { ctx.lineWidth = 1; for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], null, 'rgba(200,90,130,.35)'); }
+    // 窓（右のかべ）：名所の景色の上のほう。そのあとで窓わくとカーテンを重ねる
+    wallAt(ctx, RIGHT, WINDOW.u, WINDOW.v, WINDOW.w, WINDOW.h, (w, h) => {
       const src = engine.canvas, sw = src.width, sh = src.height * .45, sy = src.height * .04;
       const k = Math.max(w / sw, h / sh), dw = sw * k, dh = sh * k;
       ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
       if (src.width) ctx.drawImage(src, 0, sy, sw, sh, (w - dw) / 2, 0, dw, dh);
-      ctx.restore(); ctx.fillStyle = '#C9B78F'; ctx.fillRect(w / 2 - 3, 0, 6, h); ctx.fillRect(0, h / 2 - 3, w, 6);
+      ctx.restore();
     });
-    // 写真（左のかべ）
-    PHOTO_SLOTS.forEach((s, k) => onWall(LEFT, s.u, s.v, s.w, s.h, (w, h) => {
+    ctx.drawImage(front, 0, 0, RW, RH);
+    // 写真（左のかべ）：白いふちとマスキングテープ
+    PHOTO_SLOTS.forEach((s, k) => wallAt(ctx, LEFT, s.u, s.v, s.w, s.h, (w, h) => {
       const im = photos[k];
-      if (im) { ctx.fillStyle = '#F4EBD8'; ctx.fillRect(0, 0, w, h); const iw = w - 10, ih = h - 22, sw = im.width, sh = sw * ih / iw; ctx.drawImage(im, 0, im.height * .55 - sh / 2, sw, sh, 5, 5, iw, ih); }
-      else if (edit) { ctx.setLineDash([5, 4]); ctx.strokeStyle = '#8E88C8'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, w - 2, h - 2); ctx.setLineDash([]); ctx.fillStyle = '#8E88C8'; ctx.font = '400 26px DotGothic16'; ctx.textAlign = 'center'; ctx.fillText('＋', w / 2, h / 2 + 9); }
+      if (im) {
+        ctx.fillStyle = 'rgba(120,60,80,.18)'; ctx.fillRect(3, 4, w, h);
+        ctx.fillStyle = '#FFFDF8'; ctx.fillRect(0, 0, w, h); const iw = w - 10, ih = h - 22, sw = im.width, sh = sw * ih / iw; ctx.drawImage(im, 0, im.height * .55 - sh / 2, sw, sh, 5, 5, iw, ih);
+        ctx.fillStyle = ['rgba(249,180,200,.85)', 'rgba(195,235,220,.85)', 'rgba(220,200,242,.85)'][k]; ctx.fillRect(w / 2 - 14, -6, 28, 12);
+      } else if (edit) { ctx.setLineDash([5, 4]); ctx.strokeStyle = '#C46A8C'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, w - 2, h - 2); ctx.setLineDash([]); ctx.fillStyle = '#C46A8C'; ctx.font = '400 26px DotGothic16'; ctx.textAlign = 'center'; ctx.fillText('＋', w / 2, h / 2 + 9); }
     }));
   }
-  // 仮の家具：大きさだけの箱（細いものは、まん中に細い箱）
+  // 家具：room_art.js で描いた絵を置く
   function drawObj(o) {
-    const f = furn(o.id), [top, left, right] = colorOf(o), pad = f.thin ? .3 : .06;
-    const x0 = o.i + pad, y0 = o.j + pad, x1 = o.i + f.w - pad, y1 = o.j + f.d - pad, h = f.h;
-    if (!f.flat) { ctx.fillStyle = 'rgba(0,0,0,.22)'; poly([P(x0 - .04, y0 - .04), P(x1 + .08, y0 - .04), P(x1 + .08, y1 + .08), P(x0 - .04, y1 + .08)], 'rgba(0,0,0,.22)'); }
-    poly([P(x0, y1), P(x1, y1), P(x1, y1, h), P(x0, y1, h)], left);    // 手前・左の面
-    poly([P(x1, y0), P(x1, y1), P(x1, y1, h), P(x1, y0, h)], right);   // 手前・右の面
-    poly([P(x0, y0, h), P(x1, y0, h), P(x1, y1, h), P(x0, y1, h)], top, o === sel ? '#FFC857' : null);
-    if (o === sel) { ctx.lineWidth = 3; poly([P(x0, y0, h), P(x1, y0, h), P(x1, y1, h), P(x0, y1, h)], null, '#FFC857'); ctx.lineWidth = 1; }
+    const f = furn(o.id), sp = furnSprite(f), [x, y] = P(o.i, o.j);
+    if (!f.flat) { const [sx, sy] = P(o.i + f.w / 2 + .04, o.j + f.d / 2 + .04); ctx.fillStyle = 'rgba(150,80,90,.16)'; ctx.beginPath(); ctx.ellipse(sx, sy, (f.w + f.d) * TW / 4 * .9, (f.w + f.d) * TH / 4 * .9, 0, 0, Math.PI * 2); ctx.fill(); }   // 足もとのかげ
+    ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.W, sp.H);
+    if (o === sel) { ctx.lineWidth = 3; poly([P(o.i, o.j), P(o.i + f.w, o.j), P(o.i + f.w, o.j + f.d), P(o.i, o.j + f.d)], 'rgba(255,200,87,.25)', '#FFC857'); ctx.lineWidth = 1; }
     if (edit) {   // 名前（模様がえ中だけ）
-      const [cx, cy] = P((x0 + x1) / 2, (y0 + y1) / 2, h); ctx.font = '400 13px DotGothic16'; ctx.textAlign = 'center';
+      const [cx, cy] = P(o.i + f.w / 2, o.j + f.d / 2, f.h); ctx.font = '400 13px DotGothic16'; ctx.textAlign = 'center';
       const nm = itemName(o.id), tw = Math.min(ctx.measureText(nm).width, 120);
-      ctx.fillStyle = 'rgba(10,12,30,.75)'; ctx.fillRect(cx - tw / 2 - 5, cy - 26, tw + 10, 18); ctx.fillStyle = '#FFF4E0'; ctx.fillText(nm, cx, cy - 12, 120);
+      ctx.fillStyle = 'rgba(90,40,60,.78)'; ctx.fillRect(cx - tw / 2 - 5, cy - 26, tw + 10, 18); ctx.fillStyle = '#FFF4F6'; ctx.fillText(nm, cx, cy - 12, 120);
     }
+  }
+  // 夜と夕方：部屋を少し暗くして、スタンドライトやランプの明かりをつける（演出）
+  function drawLight(t) {
+    const n = night(); if (!n) return;
+    ctx.fillStyle = `rgba(40,20,70,${.28 * n})`; ctx.fillRect(0, 0, RW, RH);
+    ctx.globalCompositeOperation = 'lighter';
+    for (const o of r.objects) { const f = furn(o.id); if (!f.light) continue; const [x, y] = P(o.i + .5, o.j + .5, f.light - 14), rr = 150;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, rr); g.addColorStop(0, `rgba(255,190,150,${.32 * n})`); g.addColorStop(1, 'rgba(255,190,150,0)'); ctx.fillStyle = g; ctx.fillRect(x - rr, y - rr, rr * 2, rr * 2); }
+    ctx.globalCompositeOperation = 'source-over';
   }
   function drawMe(t) {
     if (!chara) return;
@@ -241,12 +231,14 @@ export function renderHome(view, { header } = {}) {
     if (me.jump > 0) me.jump = Math.max(0, me.jump - dt / 520);
     ctx.setTransform(K, 0, 0, K, 0, 0); ctx.imageSmoothingEnabled = false; ctx.clearRect(0, 0, RW, RH); ctx.lineWidth = 1;
     drawRoom();
+    drawGarland(ctx, reduceMotion() ? 0 : t, 0);
     // 敷きものを先に、そのあと奥のものから順に（家具とキャラ）
     const flats = r.objects.filter(o => furn(o.id).flat), rest = r.objects.filter(o => !furn(o.id).flat);
     flats.forEach(drawObj);
     rest.map(o => { const f = furn(o.id); return { z: o.i + f.w + o.j + f.d - 1, f: () => drawObj(o) }; }).concat([{ z: me.x + me.y, f: () => drawMe(t) }])
       .sort((a, z) => a.z - z.z).forEach(x => x.f());
-    if (night()) { ctx.fillStyle = `rgba(10,8,40,${.14 * night()})`; ctx.fillRect(0, 0, RW, RH); }
+    drawLight(t);
+    if (night()) drawGarland(ctx, reduceMotion() ? 0 : t, night());   // 夜はガーランドの電球が光る
   }
   raf = requestAnimationFrame(frame);
 
