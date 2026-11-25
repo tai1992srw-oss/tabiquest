@@ -96,7 +96,7 @@ export function placeChara(ch, cx, feet, s, H, drop, r = 0, st) {
     const lx = -(Math.sign(L.k[0]) || 1) * Math.max(.6, Math.abs(L.k[0]) * 1.2), ly = .7, n = Math.hypot(lx, ly), c = Math.cos(r), sn = Math.sin(r);
     cu.uRimDir.value.set((c * lx + sn * ly) / n, -(-sn * lx + c * ly) / n);
     const gray = ['cloudy', 'rain', 'snow'].includes(st.weather);
-    const col = gray ? [236, 240, 250] : { morning: [255, 240, 206], evening: [255, 196, 128], night: [196, 214, 255] }[st.time] || [255, 250, 232];
+    const col = gray ? [214, 224, 244] : { morning: [255, 224, 168], evening: [255, 168, 92], night: [150, 180, 255] }[st.time] || [255, 234, 186];
     cu.uRimCol.value.set(col[0] / 255, col[1] / 255, col[2] / 255); cu.uRim.value = gray ? .7 : 1;
     if (mode === 2) u.uK.value.set(L.k[0] * .3, -Math.max(.16, L.k[1]));   // 逆光：光がうしろから来るので、影は手前へ落ちる
   }

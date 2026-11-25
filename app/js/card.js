@@ -60,9 +60,14 @@ export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1, b
     if(uMode>.5){ float w=ceil(uSize.y/120.), e=0., soft=0.;
       if(uMode<1.5||uMode>2.5){ for(int i=1;i<=4;i++){ float d=float(i); if(d<=w) e=max(e,1.-al(s+uRimDir*d)); } soft=1.-al(s+uRimDir*(w*2.5)); }
       else { for(int i=0;i<8;i++){ float a=float(i)*.7854; vec2 d=vec2(cos(a),sin(a)); e=max(e,1.-al(s+d*w)); soft=max(soft,1.-al(s+d*(w*2.5))); } }
-      if(uMode<1.5){ c=mix(c*mix(vec3(1.),vec3(.84,.85,.93),uRim),c+(uRimCol-c)*.3,soft*.5*uRim); c=mix(c,uRimCol,e*.85*uRim); L=uRimCol*(e*.9+soft*.25)*uRim; }
-      else if(uMode<2.5){ c=mix(c*mix(vec3(1.),vec3(.64,.66,.8),uRim),c+(uRimCol-c)*.35,soft*.45*uRim); c=mix(c,uRimCol,e*.92*uRim); L=uRimCol*(e*.5+soft*.16)*uRim; }
-      else { float far=1.-al(s-uRimDir*(w*2.)); c=c*(1.+.05*uRim)+uRimCol*.03*uRim; c=mix(c,c+(uRimCol-c)*.5,soft*.45*uRim)*(1.-.14*far*(1.-soft)*uRim); L=uRimCol*soft*.35*uRim; } }
+      // 光は「塗る」のではなく、元の色に当てる：明るさは元の色に光の色を掛けて足し（色みと模様が残る）、ごく弱くスクリーンで重ねる
+      float k=0., sc=0., shade=1.;
+      if(uMode<1.5){ k=e*.95+soft*.26; sc=e*.16; shade=.86; }
+      else if(uMode<2.5){ k=e*.8+soft*.28; sc=e*.16; shade=.68; }
+      else { float far=1.-al(s-uRimDir*(w*2.)); k=.07+soft*.3; sc=soft*.06; shade=1.-.12*far*(1.-soft); }
+      k*=uRim; sc*=uRim; vec3 base=c*mix(vec3(1.),mix(vec3(shade),vec3(shade,shade*1.01,shade*1.1),step(shade,.99)),uRim);
+      vec3 lit=base+c*uRimCol*k; c=1.-(1.-lit)*(1.-uRimCol*sc); c=min(c,vec3(1.));
+      L=(c-base)*.8+uRimCol*sc*.6; }
     gl_FragColor=vec4(uLightOnly>.5?L:c,1.); }`, CW, CH);
   Object.assign(chara.material.uniforms, { uPose: { value: 0 }, uFrames: { value: frames }, uRim: { value: 0 }, uMode: { value: 0 }, uLightOnly: { value: 0 }, uRimDir: { value: new THREE.Vector2(-.8, -.6) }, uRimCol: { value: new THREE.Vector3(1, .98, .92) } }); chara.material.needsUpdate = true;
   const poses = blink ? blink : frames;
@@ -208,7 +213,7 @@ class Engine {
     s.ch.chara.layers.enable(1); this.cam.layers.set(1); cu.uLightOnly.value = 1; R.setRenderTarget(F.rt[1]); R.render(s.scene, this.cam); cu.uLightOnly.value = 0; this.cam.layers.set(0);
     F.blur.uniforms.uPx.value.set(2.6 / W, 0); pass(F.blur, F.rt[1].texture, null, F.rt[2]);
     F.blur.uniforms.uPx.value.set(0, 2.6 / H); pass(F.blur, F.rt[2].texture, null, F.rt[3]);
-    F.mix.uniforms.uStr.value = g > 1 ? 3.2 : 1.8; pass(F.mix, F.rt[0].texture, F.rt[3].texture, null);
+    F.mix.uniforms.uStr.value = g > 1 ? 1.9 : 1.1; pass(F.mix, F.rt[0].texture, F.rt[3].texture, null);
   }
   // 一覧・図鑑の小さな絵（止まった1コマ）を作る
   async snapshot(id, state) {
