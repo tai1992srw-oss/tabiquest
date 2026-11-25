@@ -59,15 +59,15 @@ export function makeChara(scene, size, shadowColor, shadowOpacity, frames = 1, b
     vec4 t=texture2D(tIdx,(vec2(s.x+uPose*uSize.x,s.y)+.5)/vec2(uSize.x*uFrames,uSize.y)*vec2(1.,-1.)+vec2(0.,1.)); if(t.a<.5||s.y<0.||hidden(px)) discard; vec3 c=pal(t.r), L=vec3(0.);
     if(uMode>.5){ float w=ceil(uSize.y/120.), e=0., soft=0.;
       if(uMode<1.5||uMode>2.5){ for(int i=1;i<=4;i++){ float d=float(i); if(d<=w) e=max(e,1.-al(s+uRimDir*d)); } soft=1.-al(s+uRimDir*(w*2.5)); }
-      else { for(int i=0;i<8;i++){ float a=float(i)*.7854; vec2 d=vec2(cos(a),sin(a)); e=max(e,1.-al(s+d*w)); soft=max(soft,1.-al(s+d*(w*2.5))); } }
+      else { for(int i=0;i<5;i++){ float a=3.1416+float(i)*.7854; vec2 d=vec2(cos(a),sin(a)); float wt=i==0||i==4?.75:1.; e=max(e,(1.-al(s+d*w))*wt); soft=max(soft,(1.-al(s+d*(w*2.)))*wt); } }   // 逆光：上と横のふちだけ（下向きのふち＝あごの下・わきの下は光らせない）
       // 光は「塗る」のではなく、元の色に当てる：明るさは元の色に光の色を掛けて足し（色みと模様が残る）、ごく弱くスクリーンで重ねる
       float k=0., sc=0., shade=1.;
       if(uMode<1.5){ k=e*.95+soft*.26; sc=e*.16; shade=.86; }
-      else if(uMode<2.5){ k=e*.8+soft*.28; sc=e*.16; shade=.68; }
+      else if(uMode<2.5){ k=e*.6+soft*.1; sc=e*.1; shade=.7; }
       else { float far=1.-al(s-uRimDir*(w*2.)); k=.07+soft*.3; sc=soft*.06; shade=1.-.12*far*(1.-soft); }
       k*=uRim; sc*=uRim; vec3 base=c*mix(vec3(1.),mix(vec3(shade),vec3(shade,shade*1.01,shade*1.1),step(shade,.99)),uRim);
       vec3 lit=base+c*uRimCol*k; c=1.-(1.-lit)*(1.-uRimCol*sc); c=min(c,vec3(1.));
-      L=(c-base)*.8+uRimCol*sc*.6; }
+      L=((c-base)*.8+uRimCol*sc*.6)*(uMode>1.5&&uMode<2.5?.6:1.); }
     gl_FragColor=vec4(uLightOnly>.5?L:c,1.); }`, CW, CH);
   Object.assign(chara.material.uniforms, { uPose: { value: 0 }, uFrames: { value: frames }, uRim: { value: 0 }, uMode: { value: 0 }, uLightOnly: { value: 0 }, uRimDir: { value: new THREE.Vector2(-.8, -.6) }, uRimCol: { value: new THREE.Vector3(1, .98, .92) } }); chara.material.needsUpdate = true;
   const poses = blink ? blink : frames;
