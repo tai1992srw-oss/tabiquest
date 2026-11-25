@@ -380,7 +380,7 @@ export function mountVoxelRoom(opts) {
   const charaTint = (n, L) => { const day = [1, .98, .96], dark = [.66, .66, .86], lamp = [1, .9, .84], k = n * (L ? .5 : 1), t = L ? lamp : dark; return day.map((d, i) => d + (t[i] - d) * k); };
 
   // 大きさ：ステージの高さに合わせ、横は少し広く（横にスクロール）。描く1ドット＝画面の1.5px
-  //   zoom：部屋を大きく見せる倍率（1＝ステージにぴったり）。大きくすると、たて・よこにスクロールして見わたす
+  //   zoom：部屋を大きく見せる倍率（1＝ステージの高さにぴったり、0.6〜2.4）。大きくすると、たて・よこにスクロールして見わたす
   const SCALE = 1.5; let zoom = opts.zoom || 1;
   function resize() {
     const H0 = stage.clientHeight, H = Math.round(H0 * zoom), W = Math.round(H0 * 1.35 * zoom);
@@ -416,6 +416,7 @@ export function mountVoxelRoom(opts) {
   // さわる：床を押すとそこへ歩く。キャラ・くまを押すとハート、ライトを押すとでんきのオン・オフ
   const ray = new THREE.Raycaster(), floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit = new THREE.Vector3(), nd = new THREE.Vector2();
   cv.addEventListener('click', e => {
+    if (performance.now() - pinchedAt < 350) return;   // ピンチの指をはなしたときは押したことにしない
     const r = cv.getBoundingClientRect(); nd.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(nd, cam);
     // キャラを押したか：画面の上で、足もとから頭までの四角に入っているか
     const onChara = () => { if (!chara) return false; const p0 = new THREE.Vector3(chara.position.x, chara.position.y, chara.position.z).project(cam), p1 = new THREE.Vector3(0, CH, 0).applyQuaternion(camQ).add(chara.position).project(cam);
@@ -435,6 +436,29 @@ export function mountVoxelRoom(opts) {
     if (i < 0 || j < 0 || i >= 10 || j >= 10 || opts.blocked(i, j)) return;
     me.tx = i + .5; me.tz = j + .5; me.joy = null; opts.onMove(i, j);
   });
+
+  // ズーム：倍率を変えても、指の下（ないときは画面のまん中）に見えているところがずれないようにする
+  const ZMIN = .6, ZMAX = 2.4;
+  function zoomAt(z, px = stage.clientWidth / 2, py = stage.clientHeight / 2) {
+    z = Math.min(ZMAX, Math.max(ZMIN, z)); if (Math.abs(z - zoom) < .001) return;
+    const r0 = cv.getBoundingClientRect(), s0 = stage.getBoundingClientRect();
+    const u = (s0.left + px - r0.left) / r0.width, v = (s0.top + py - r0.top) / r0.height;   // 指の下の、部屋の絵の中の位置（0〜1）
+    zoom = z; resize();
+    const r1 = cv.getBoundingClientRect();
+    stage.scrollLeft += (r1.left + u * r1.width) - (s0.left + px); stage.scrollTop += (r1.top + v * r1.height) - (s0.top + py);
+  }
+  // ピンチ（2本指）で拡大・縮小。パソコンでは ctrl＋ホイール（トラックパッドのピンチ）
+  let pinch = null, pinchedAt = 0;
+  const mid = ts => { const s0 = stage.getBoundingClientRect(); return [(ts[0].clientX + ts[1].clientX) / 2 - s0.left, (ts[0].clientY + ts[1].clientY) / 2 - s0.top]; };
+  const gap = ts => Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY);
+  const onTS = e => { if (e.touches.length === 2) { pinch = { d: gap(e.touches), z: zoom, m: mid(e.touches) }; e.preventDefault(); } };
+  const onTM = e => { if (!pinch || e.touches.length !== 2) return; e.preventDefault(); const m = mid(e.touches);
+    stage.scrollLeft -= m[0] - pinch.m[0]; stage.scrollTop -= m[1] - pinch.m[1]; pinch.m = m;   // 2本指でずらす
+    zoomAt(pinch.z * gap(e.touches) / pinch.d, m[0], m[1]); };
+  const onTE = e => { if (pinch && e.touches.length < 2) { pinch = null; pinchedAt = performance.now(); opts.onZoom?.(zoom); } };
+  const onWheel = e => { if (!e.ctrlKey) return; e.preventDefault(); const s0 = stage.getBoundingClientRect(); zoomAt(zoom * Math.exp(-e.deltaY * .01), e.clientX - s0.left, e.clientY - s0.top); clearTimeout(onWheel.t); onWheel.t = setTimeout(() => opts.onZoom?.(zoom), 300); };
+  stage.addEventListener('touchstart', onTS, { passive: false }); stage.addEventListener('touchmove', onTM, { passive: false });
+  stage.addEventListener('touchend', onTE); stage.addEventListener('touchcancel', onTE); stage.addEventListener('wheel', onWheel, { passive: false });
 
   let raf = 0, last = performance.now();
   function frame(t) {
@@ -479,8 +503,7 @@ export function mountVoxelRoom(opts) {
     screenX: () => { const v = new THREE.Vector3(me.x * V, 25, me.z * V).project(cam); return (v.x + 1) / 2; },
     screenY: () => { const v = new THREE.Vector3(me.x * V, 25, me.z * V).project(cam); return (1 - v.y) / 2; },
     // 倍率を変える。見ているまん中がずれないように、スクロールの位置も合わせる
-    setZoom(z) { const cx = (stage.scrollLeft + stage.clientWidth / 2) / cv.clientWidth, cy = (stage.scrollTop + stage.clientHeight / 2) / cv.clientHeight;
-      zoom = z; resize(); stage.scrollLeft = cx * cv.clientWidth - stage.clientWidth / 2; stage.scrollTop = cy * cv.clientHeight - stage.clientHeight / 2; },
-    stop() { cancelAnimationFrame(raf); removeEventListener('resize', onResize); renderer.dispose(); geo.dispose(); matL.dispose(); matT.dispose(); cv.remove(); },
+    setZoom: z => zoomAt(z),
+    stop() { cancelAnimationFrame(raf); removeEventListener('resize', onResize); stage.removeEventListener('touchstart', onTS); stage.removeEventListener('touchmove', onTM); stage.removeEventListener('touchend', onTE); stage.removeEventListener('touchcancel', onTE); stage.removeEventListener('wheel', onWheel); renderer.dispose(); geo.dispose(); matL.dispose(); matT.dispose(); cv.remove(); },
   };
 }

@@ -121,9 +121,10 @@ export function renderHome(view, { header } = {}) {
   // かわいく見せる工夫のオン・オフ（この端末に覚えておく）と、でんき（夕方と夜は、はじめからつける）
   const vfx = (() => { try { return Object.assign(Object.fromEntries(FX.map(([k]) => [k, true])), JSON.parse(localStorage.getItem('tabiquest:voxfx') || '{}')); } catch (e) { return Object.fromEntries(FX.map(([k]) => [k, true])); } })();
   let vlight = timeReal === 'night' || timeReal === 'evening';
-  // 部屋の倍率（この端末に覚えておく）。ボタンで 1 → 1.4 → 1.8 → 1 と切りかえる
+  // 部屋の倍率（この端末に覚えておく）。ピンチで自由に、ボタンで 1 → 1.4 → 1.8 → 1 と切りかえる
   const ZOOMS = [1, 1.4, 1.8];
-  let zoom = (() => { try { const z = +localStorage.getItem('tabiquest:roomzoom'); return ZOOMS.includes(z) ? z : 1.4; } catch (e) { return 1.4; } })();
+  let zoom = (() => { try { const z = +localStorage.getItem('tabiquest:roomzoom'); return z >= .6 && z <= 2.4 ? z : 1.4; } catch (e) { return 1.4; } })();
+  const saveZoom = z => { zoom = z; try { localStorage.setItem('tabiquest:roomzoom', String(Math.round(z * 100) / 100)); } catch (err) {} };
 
   view.classList.add('homemode');
   view.innerHTML = `
@@ -151,7 +152,7 @@ export function renderHome(view, { header } = {}) {
   const scroller = view.querySelector('.hm-scroll');
   const tip = view.querySelector('.hm-tip'), selbar = view.querySelector('.hm-selbar');
   const setTip = () => {
-    tip.textContent = !edit ? '床を押すと歩きます。ライトを押すとでんき、キャラやくまを押すとハート。横にスクロールすると部屋を見わたせます。'
+    tip.textContent = !edit ? '床を押すと歩きます。ライトを押すとでんき、キャラやくまを押すとハート。2本指でピンチすると拡大・縮小できます。'
       : sel ? `「${itemName(sel.id)}」を置きたいマスを押してください。` : 'マスを押すと家具を置けます。家具を押すと動かしたり回したり外したりできます。左のかべの枠には写真を貼れます。';
     selbar.hidden = !(edit && sel);
   };
@@ -181,7 +182,7 @@ export function renderHome(view, { header } = {}) {
     },
     onTapPhoto: k => pickPhoto(b, r, k, () => { saveBook(); loadPhotos(); vox.setPhotos(photos); }),
     fx: vfx, light: vlight, onLight: v => { vlight = v; view.querySelector('[data-a=light]')?.setAttribute('aria-pressed', String(v)); },
-    photoSlots: PHOTO_SLOTS, zoom });
+    photoSlots: PHOTO_SLOTS, zoom, onZoom: saveZoom });
   loadPhotos(); vox.setPhotos(photos);
   // はじめはキャラが画面のまん中に来るようにスクロール
   requestAnimationFrame(() => { scroller.scrollLeft = vox.screenX() * vox.canvas.clientWidth - scroller.clientWidth / 2; scroller.scrollTop = vox.screenY() * vox.canvas.clientHeight - scroller.clientHeight * .6; });
@@ -198,7 +199,7 @@ export function renderHome(view, { header } = {}) {
       else { saveBook(); vox.sync(); vox.setSelected(sel); }
     }
     else if (a === 'cancel') { sel = null; vox.setSelected(null); setTip(); }
-    else if (a === 'zoom') { zoom = ZOOMS[(ZOOMS.indexOf(zoom) + 1) % ZOOMS.length]; try { localStorage.setItem('tabiquest:roomzoom', String(zoom)); } catch (err) {} vox.setZoom(zoom); toast(`ズーム ${zoom}倍`); }
+    else if (a === 'zoom') { const z = ZOOMS.find(x => x > zoom + .01) ?? ZOOMS[0]; saveZoom(z); vox.setZoom(z); toast(`ズーム ${z}倍`); }
     else if (a === 'light') { vlight = !vlight; vox.setLight(vlight); t.setAttribute('aria-pressed', String(vlight)); }
     else if (a === 'fx') {   // かわいく見せる工夫を、1つずつオン・オフして見比べる
       const box = document.createElement('div'); box.className = 'hm-fx';
