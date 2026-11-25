@@ -204,12 +204,18 @@ function buildRoom(G) {
 }
 
 // ---- まとめて形にする：見える向き（+x・+y・+z）の、となりが空いている面だけ。AO（すき間の影）つきと、なしの色を両方つくる ----
-function mesh(G) {
+// all：6つの向きぜんぶ（回せる家具。部屋は見える3つの向きだけ）
+function mesh(G, all = false) {
   const { g, SXS, SYS } = G, { X0, Y0, Z0, SX, SY, SZ } = G.B, C = new THREE.Color(), AO = [.62, .78, .9, 1];
   const DIRS = [
     { s: SXS, u: SYS, v: 1, n: [1, 0, 0], du: [0, 1, 0], dv: [0, 0, 1] },
     { s: SYS, u: 1, v: SXS, n: [0, 1, 0], du: [0, 0, 1], dv: [1, 0, 0] },
     { s: 1, u: SXS, v: SYS, n: [0, 0, 1], du: [1, 0, 0], dv: [0, 1, 0] },
+    ...(all ? [
+      { s: -SXS, u: 1, v: SYS, n: [-1, 0, 0], du: [0, 0, 1], dv: [0, 1, 0] },
+      { s: -SYS, u: SXS, v: 1, n: [0, -1, 0], du: [1, 0, 0], dv: [0, 0, 1] },
+      { s: -1, u: SYS, v: SXS, n: [0, 0, -1], du: [0, 1, 0], dv: [1, 0, 0] },
+    ] : []),
   ];
   let faces = 0; for (let i = 0; i < g.length; i++) if (g[i]) for (const d of DIRS) if (!g[i + d.s]) faces++;
   const pos = new Float32Array(faces * 12), nor = new Float32Array(faces * 12), colA = new Float32Array(faces * 12), colF = new Float32Array(faces * 12), idx = new Uint32Array(faces * 6);
@@ -223,7 +229,7 @@ function mesh(G) {
       for (let q = 0; q < 4; q++) {
         const su = q === 1 || q === 2 ? 1 : 0, sv = q >= 2 ? 1 : 0, du = su ? d.u : -d.u, dv = sv ? d.v : -d.v;
         const s1 = g[o + du] ? 1 : 0, s2 = g[o + dv] ? 1 : 0, cr = g[o + du + dv] ? 1 : 0, a = s1 && s2 ? 0 : 3 - (s1 + s2 + cr); ao.push(a);
-        const b = f * 12 + q * 3, wx = x + X0 + d.n[0] + d.du[0] * su + d.dv[0] * sv, wy = y + Y0 + d.n[1] + d.du[1] * su + d.dv[1] * sv, wz = z + Z0 + d.n[2] + d.du[2] * su + d.dv[2] * sv;
+        const b = f * 12 + q * 3, wx = x + X0 + (d.n[0] > 0 ? 1 : 0) + d.du[0] * su + d.dv[0] * sv, wy = y + Y0 + (d.n[1] > 0 ? 1 : 0) + d.du[1] * su + d.dv[1] * sv, wz = z + Z0 + (d.n[2] > 0 ? 1 : 0) + d.du[2] * su + d.dv[2] * sv;
         pos[b] = wx; pos[b + 1] = wy; pos[b + 2] = wz; nor[b] = d.n[0]; nor[b + 1] = d.n[1]; nor[b + 2] = d.n[2];
         const k = AO[a]; colA[b] = rgb[0] * k; colA[b + 1] = rgb[1] * k; colA[b + 2] = rgb[2] * k; colF[b] = rgb[0]; colF[b + 1] = rgb[1]; colF[b + 2] = rgb[2];
       }
@@ -252,7 +258,7 @@ export const FX = [['toon', 'アニメ塗り'], ['ao', 'すき間の影'], ['bea
 const FURN_BOX = f => ({ X0: -4, Y0: -2, Z0: -4, SX: f.w * V + 8, SY: Math.round(200 * CM), SZ: f.d * V + 8 });
 const geoCache = new Map();
 function furnGeo(f) {
-  if (!geoCache.has(f.id)) { const G = grid(FURN_BOX(f)); (M[f.art] || M.gift)(G.pen(CM, 0, 0), f); geoCache.set(f.id, mesh(G)); }
+  if (!geoCache.has(f.id)) { const G = grid(FURN_BOX(f)); (M[f.art] || M.gift)(G.pen(CM, 0, 0), f); geoCache.set(f.id, mesh(G, true)); }
   return geoCache.get(f.id);
 }
 export function mountVoxelRoom(opts) {
@@ -316,13 +322,14 @@ export function mountVoxelRoom(opts) {
   const furn = new Map();   // o → { mesh, p, gl }
   function sync() {
     const list = opts.objects();
-    for (const [o, e] of furn) if (!list.includes(o)) { scene.remove(e.mesh); if (e.p) scene.remove(e.p, e.gl); furn.delete(o); }
+    for (const [o, e] of furn) if (!list.includes(o)) { scene.remove(e.pivot); if (e.p) scene.remove(e.p, e.gl); furn.delete(o); }
     for (const o of list) {
       const f = opts.furn(o.id); let e = furn.get(o);
-      if (!e) { const g = furnGeo(f); e = { mesh: new THREE.Mesh(g.geo, fx.toon ? matT : matL), g }; e.mesh.castShadow = e.mesh.receiveShadow = true; e.mesh.userData.o = o; scene.add(e.mesh);
+      if (!e) { const g = furnGeo(f); e = { mesh: new THREE.Mesh(g.geo, fx.toon ? matT : matL), g, pivot: new THREE.Group() }; e.mesh.castShadow = e.mesh.receiveShadow = true; e.mesh.userData.o = o;
+        e.mesh.position.set(-f.w * V / 2, 0, -f.d * V / 2); e.pivot.add(e.mesh); scene.add(e.pivot);   // 家具のまん中を軸に回す
         if (f.light) { e.p = new THREE.PointLight(0xffb48a, 0, 150, 2); e.gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: GT, color: 0xffc8a0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); e.gl.scale.set(50, 50, 1); scene.add(e.p, e.gl); }
         furn.set(o, e); }
-      e.mesh.position.set(o.i * V, 0, o.j * V);
+      const dd = opts.dims ? opts.dims(o) : f; e.pivot.position.set((o.i + dd.w / 2) * V, 0, (o.j + dd.d / 2) * V); e.pivot.rotation.y = -(o.r || 0) * Math.PI / 2;
       if (e.p) { e.p.position.set(o.i * V + 10, 140 * CM, o.j * V + 10); e.gl.position.copy(e.p.position); }
     }
   }
@@ -382,7 +389,7 @@ export function mountVoxelRoom(opts) {
   function showEdit() {
     gridLines.visible = edit; slotMarks.forEach((m2, k) => { m2.visible = edit && !photoMeshes[k].visible; });
     const e = sel && furn.get(sel); selMark.visible = !!e;
-    if (e) { const f = opts.furn(sel.id); selMark.scale.set(f.w * V, 1, f.d * V); selMark.position.set(sel.i * V + f.w * V / 2, .6, sel.j * V + f.d * V / 2); }
+    if (e) { const f = opts.dims ? opts.dims(sel) : opts.furn(sel.id); selMark.scale.set(f.w * V, 1, f.d * V); selMark.position.set(sel.i * V + f.w * V / 2, .6, sel.j * V + f.d * V / 2); }
   }
 
   // さわる：床を押すとそこへ歩く。キャラ・くまを押すとハート、ライトを押すとでんきのオン・オフ
@@ -421,7 +428,7 @@ export function mountVoxelRoom(opts) {
     hemi.color.setHex(n > .7 ? (L ? 0xffe6dc : 0x9aa0e8) : n > .2 ? 0xffd8d0 : 0xfff3f8); hemi.groundColor.setHex(n > .7 && !L ? 0x504878 : 0xffd9c4);
     roomLight.intensity = .35 * L * n; for (const e of furn.values()) if (e.p) { e.p.intensity = L * (.25 + .6 * n); e.gl.visible = fx.glow && !!L; e.gl.material.opacity = .22 + .18 * n; }
     // 選んだ家具は、ふわふわ上下に動かす
-    for (const [o, e] of furn) e.mesh.position.y = o === sel ? 3 + Math.sin(t / 160) * 2 : 0;
+    for (const [o, e] of furn) e.pivot.position.y = o === sel ? 3 + Math.sin(t / 160) * 2 : 0;
     bulbs.forEach(({ b, gl }, k) => { const on = .55 + .45 * Math.sin(t / 500 + k * 1.7); b.material.color.setHex(bulbCols[k % 5]).multiplyScalar(L ? .75 + .25 * on : .8); gl.visible = fx.glow && !!L; gl.material.opacity = (.25 + .35 * n) * on; });
     beam.visible = fx.beam && day > .3; beamMat.opacity = .045 * day;   // 光の帯はごくうすく（床の明るい場所は別に）
     patch.visible = beam.visible; patchMat.opacity = .16 * day;

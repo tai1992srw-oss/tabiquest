@@ -49,6 +49,8 @@ const DEMO_LAYOUT = [['demo-rug', 4, 4], ['demo-bed', 0, 1], ['demo-shelf', 0, 7
 const furn = id => DEMO.find(x => x.id === id) || SHOP.find(x => x.id === id) || { id, w: 1, d: 1, h: 30, art: 'gift' };   // ご当地アイテムはリボンの箱
 const itemName = id => (DEMO.find(x => x.id === id) || SHOP.find(x => x.id === id))?.name || PLACES.find(p => p.item.id === id)?.item.name.replace(/（仮）$/, '') || id;
 const itemFrom = id => { if (id.startsWith('demo-')) return 'はじめからある家具'; const p = PLACES.find(x => x.item.id === id); return p ? p.name : SHOP.some(x => x.id === id) ? 'ショップ' : ''; };
+// 置いた向き（o.r：0〜3、90度ずつ）。横むき（1・3）のときは、使うマスのたて・よこが入れかわる
+const dims = o => { const f = furn(o.id); return (o.r || 0) % 2 ? { ...f, w: f.d, d: f.w } : f; };
 const owns = (b, id) => DEMO.some(x => x.id === id) || (b.items[id] || 0) > 0;
 
 // 部屋の記録（記録の中の room）：{ v:5, photos:[カードid×3], objects:[{ id, i, j }], me:{ i, j } }
@@ -62,10 +64,10 @@ function room(b) {
 }
 // 家具が床に収まるか、ほかの家具と重ならないか（敷きものの上には置ける）
 function fits(o, i, j, others) {
-  const f = furn(o.id); if (i < 0 || j < 0 || i + f.w > N || j + f.d > N) return false;
-  return !others.some(x => { const g = furn(x.id); if (x === o || !!g.flat !== !!f.flat) return false; return i < x.i + g.w && x.i < i + f.w && j < x.j + g.d && x.j < j + f.d; });
+  const f = dims(o); if (i < 0 || j < 0 || i + f.w > N || j + f.d > N) return false;
+  return !others.some(x => { const g = dims(x); if (x === o || !!g.flat !== !!f.flat) return false; return i < x.i + g.w && x.i < i + f.w && j < x.j + g.d && x.j < j + f.d; });
 }
-const blocked = (r, i, j) => r.objects.some(o => { const f = furn(o.id); return !f.flat && i >= o.i && i < o.i + f.w && j >= o.j && j < o.j + f.d; });
+const blocked = (r, i, j) => r.objects.some(o => { const f = dims(o); return !f.flat && i >= o.i && i < o.i + f.w && j >= o.j && j < o.j + f.d; });
 
 // ---- ログインボーナス ----
 const dayKey = d => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
@@ -135,7 +137,7 @@ export function renderHome(view, { header } = {}) {
         <a href="#/list"><i aria-hidden="true">◆</i><span>名所</span></a>
       </div>
       <div class="hm-ov bot"><p class="hm-tip"></p>
-        <div class="hm-selbar" hidden><button data-a="remove">外す</button><button data-a="cancel">やめる</button></div></div>
+        <div class="hm-selbar" hidden><button data-a="rotate">回す</button><button data-a="remove">外す</button><button data-a="cancel">やめる</button></div></div>
       <div class="hm-engine" aria-hidden="true"></div>
     </div>`;
 
@@ -171,7 +173,7 @@ export function renderHome(view, { header } = {}) {
   if (voxel) {   // ボクセル版：2D の絵のかわりに Three.js の部屋を出す
     cv.remove(); view.querySelector('.hm-stage').classList.add('vox'); view.querySelector('.hm-stage').classList.toggle('night', st.time === 'night');
     const NV = 10 * VOX, k = NV / (N * TW / 2), vy = VWH / 300;
-    vox = mountVoxelRoom({ stage: scroller, objects: () => r.objects, furn, me: r.me, blocked: (i, j) => blocked(r, i, j), onMove: (i, j) => { r.me = { i, j }; saveBook(); },
+    vox = mountVoxelRoom({ stage: scroller, objects: () => r.objects, furn, dims, me: r.me, blocked: (i, j) => blocked(r, i, j), onMove: (i, j) => { r.me = { i, j }; saveBook(); },
       chara: loadChara(), engineCanvas: engine.canvas, night: () => (st.time === 'night' ? 1 : st.time === 'evening' ? .55 : 0),
       // 模様がえ（ドット版と同じ決まり：家具を押して選ぶ → マスを押して動かす。空いたマスで家具を置く。左のかべの枠で写真）
       onTapFurniture: o => { sel = sel === o ? null : o; vox.setSelected(sel); setTip(); },
@@ -215,9 +217,13 @@ export function renderHome(view, { header } = {}) {
   }
   // 家具：room_art.js で描いた絵を置く
   function drawObj(o) {
-    const f = furn(o.id), sp = furnSprite(f), [x, y] = P(o.i, o.j);
+    const f = dims(o), sp = furnSprite(furn(o.id)), [x, y] = P(o.i, o.j), flip = (o.r || 0) % 2 === 1;
     if (!f.flat) { const [sx, sy] = P(o.i + f.w / 2 + .04, o.j + f.d / 2 + .04); ctx.fillStyle = 'rgba(150,80,90,.16)'; ctx.beginPath(); ctx.ellipse(sx, sy, (f.w + f.d) * TW / 4 * .9, (f.w + f.d) * TH / 4 * .9, 0, 0, Math.PI * 2); ctx.fill(); }   // 足もとのかげ
-    ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.W, sp.H);
+    if (!flip) ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.W, sp.H);
+    else {   // ドット版の家具の絵は1方向だけなので、横むきは左右反転で見せる
+      const f0 = furn(o.id), [cx] = P(o.i + f.w / 2, o.j + f.d / 2), sc = sp.ox + (f0.w - f0.d) * TW / 4;
+      ctx.save(); ctx.translate(cx, 0); ctx.scale(-1, 1); ctx.drawImage(sp.c, -sc, y - sp.oy, sp.W, sp.H); ctx.restore();
+    }
     if (o === sel) { ctx.lineWidth = 3; poly([P(o.i, o.j), P(o.i + f.w, o.j), P(o.i + f.w, o.j + f.d), P(o.i, o.j + f.d)], 'rgba(255,200,87,.25)', '#FFC857'); ctx.lineWidth = 1; }
     if (edit) {   // 名前（模様がえ中だけ）
       const [cx, cy] = P(o.i + f.w / 2, o.j + f.d / 2, f.h); ctx.font = '400 13px DotGothic16'; ctx.textAlign = 'center';
@@ -259,7 +265,7 @@ export function renderHome(view, { header } = {}) {
     // 敷きものを先に、そのあと奥のものから順に（家具とキャラ）
     const flats = r.objects.filter(o => furn(o.id).flat), rest = r.objects.filter(o => !furn(o.id).flat);
     flats.forEach(drawObj);
-    rest.map(o => { const f = furn(o.id); return { z: o.i + f.w + o.j + f.d - 1, f: () => drawObj(o) }; }).concat([{ z: me.x + me.y, f: () => drawMe(t) }])
+    rest.map(o => { const f = dims(o); return { z: o.i + f.w + o.j + f.d - 1, f: () => drawObj(o) }; }).concat([{ z: me.x + me.y, f: () => drawMe(t) }])
       .sort((a, z) => a.z - z.z).forEach(x => x.f());
     drawLight(t);
     if (night()) drawGarland(ctx, reduceMotion() ? 0 : t, night());   // 夜はガーランドの電球が光る
@@ -272,7 +278,7 @@ export function renderHome(view, { header } = {}) {
   const inWall = (W, s, x, y) => { const u = x - W.x0, v = W.y0 + u * W.k - y; return u >= s.u && u <= s.u + s.w && v >= s.v && v <= s.v + s.h; };
   // 押した場所にある家具（手前のものから）。箱の上の面・横の面のどこを押してもよい
   const objAt = (x, y) => [...r.objects].sort((a, z) => (z.i + z.j) - (a.i + a.j)).find(o => {
-    const f = furn(o.id); for (let z = 0; z <= f.h; z += 8) { const a = (x - OX) / (TW / 2), c = (y + z - OY) / (TH / 2), i = (c + a) / 2, j = (c - a) / 2; if (i >= o.i && i < o.i + f.w && j >= o.j && j < o.j + f.d) return true; } return false; });
+    const f = dims(o); for (let z = 0; z <= f.h; z += 8) { const a = (x - OX) / (TW / 2), c = (y + z - OY) / (TH / 2), i = (c + a) / 2, j = (c - a) / 2; if (i >= o.i && i < o.i + f.w && j >= o.j && j < o.j + f.d) return true; } return false; });
   cv.addEventListener('click', e => {
     const [x, y] = at(e);
     if (!edit) {
@@ -298,6 +304,11 @@ export function renderHome(view, { header } = {}) {
     if (a === 'login') { const pts = claimLogin(b, new Date()); if (pts) { toast(`ログインボーナス +${pts}pt`); header?.(); } t.remove(); }
     else if (a === 'edit') { edit = !edit; sel = null; t.setAttribute('aria-pressed', String(edit)); t.querySelector('span').textContent = edit ? 'できた' : '模様がえ'; vox?.setEdit(edit); setTip(); }
     else if (a === 'remove' && sel) { r.objects = r.objects.filter(o => o !== sel); toast(`「${itemName(sel.id)}」を外しました`); sel = null; saveBook(); vox?.sync(); vox?.setSelected(null); setTip(); }
+    else if (a === 'rotate' && sel) {   // 90度ずつ回す。回したら入らないときは、もとにもどす
+      const old = sel.r || 0; sel.r = (old + 1) % 4;
+      if (!fits(sel, sel.i, sel.j, r.objects)) { sel.r = old; toast('ここでは回せません（まわりに場所がありません）'); }
+      else { saveBook(); vox?.sync(); vox?.setSelected(sel); }
+    }
     else if (a === 'cancel') { sel = null; vox?.setSelected(null); setTip(); }
     else if (a === 'light') { vlight = !vlight; vox?.setLight(vlight); t.setAttribute('aria-pressed', String(vlight)); }
     else if (a === 'fx') {   // かわいく見せる工夫を、1つずつオン・オフして見比べる
@@ -347,7 +358,7 @@ function pickObject(b, r, [i, j], done) {
   for (const id of ids) {
     const used = r.objects.find(o => o.id === id), f = furn(id);
     const a = document.createElement('button'); a.className = 'opt obj' + (used ? ' used' : '');
-    a.innerHTML = `<b>${esc(itemName(id))}</b><small>${esc(itemFrom(id))} ・ ${f.w}×${f.d}マス${used ? '<br>置いてあるものを動かす' : ''}</small><span class="kari-s">絵はまだ</span>`;
+    a.innerHTML = `<b>${esc(itemName(id))}</b><small>${esc(itemFrom(id))} ・ ${f.w}×${f.d}マス${used ? '<br>置いてあるものを動かす' : ''}</small>`;
     a.onclick = () => {
       const o = used || { id, i, j }, others = r.objects.filter(x => x !== o);
       if (!fits(o, i, j, others)) { toast('そこには置けません（大きさが合いません）'); return; }
@@ -362,9 +373,9 @@ function pickObject(b, r, [i, j], done) {
 export function renderShop(view, { header } = {}) {
   const b = book();
   view.innerHTML = `<div class="phead"><a class="backbtn" href="#/home" aria-label="ホームにもどる">‹</a><h1>ショップ</h1><span class="prog">いま ${b.points}pt</span></div>
-    <p class="nowline">ポイントで家具を買って、マイルームに置けます。品物の絵はまだです。</p>
+    <p class="nowline">ポイントで家具を買って、マイルームに置けます。</p>
     <ul class="hm-goods">${SHOP.map(g => { const have = (b.items[g.id] || 0) > 0;
-      return `<li><div class="t"><b>${esc(g.name)}</b><small>${g.price}pt ・ ${g.w}×${g.d}マス</small></div><span class="kari-s static">絵はまだ</span>
+      return `<li><div class="t"><b>${esc(g.name)}</b><small>${g.price}pt ・ ${g.w}×${g.d}マス</small></div>
         ${have ? '<span class="own">持っています</span>' : `<button class="hm-btn go" data-buy="${g.id}" ${b.points < g.price ? 'disabled' : ''}>買う</button>`}</li>`; }).join('')}</ul>`;
   view.querySelector('.hm-goods').onclick = e => {
     const t = e.target.closest('[data-buy]'); if (!t) return; const g = SHOP.find(x => x.id === t.dataset.buy);
