@@ -15,7 +15,7 @@ import * as chukagai from './scenes/chukagai.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.4.2';
+export const VERSION = '0.5.0';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('kamakura', kamakura.build);
@@ -49,7 +49,7 @@ function route() {
     closeViewer = openViewer({ cardId: args[0], onClose: () => { closeViewer = null; history.length > 1 ? history.back() : (location.hash = '#/zukan'); } });
   } else if (name === 'preview') {
     renderZukan(view);
-    closeViewer = openViewer({ preview: { placeId: args[0], time: args[1], weather: args[2] }, onClose: () => { closeViewer = null; location.hash = '#/settings'; } });
+    closeViewer = openViewer({ preview: { placeId: args[0], time: args[1], weather: args[2], season: args[3] }, onClose: () => { closeViewer = null; location.hash = '#/settings'; } });
   } else renderZukan(view);
   if (!['card', 'preview'].includes(name)) window.scrollTo(0, 0);
 }

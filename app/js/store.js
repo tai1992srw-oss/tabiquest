@@ -23,7 +23,7 @@ export function migrate(b) {
   return out;
 }
 
-export const settings = Object.assign({ debugUnlocked: false, debugOn: false, loc: 'none', time: 'auto', weather: 'auto' }, read(KEY.settings) || {});
+export const settings = Object.assign({ debugUnlocked: false, debugOn: false, loc: 'none', time: 'auto', weather: 'auto', season: 'auto' }, read(KEY.settings) || {});
 export const saveSettings = () => write(KEY.settings, settings);
 
 const books = { real: migrate(read(KEY.real)), debug: migrate(read(KEY.debug)) };

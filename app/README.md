@@ -1,4 +1,4 @@
-# タビクエ Webアプリ（v0.4.2）
+# タビクエ Webアプリ（v0.5.0）
 
 ## PCで動かす
 `M:\Claude\旅アプリ` で次を実行し、ブラウザで http://localhost:5180 を開く。
@@ -30,7 +30,7 @@ main に送ると GitHub Actions が `app/` を GitHub Pages に公開する（h
 - `assets/` Canva から写し取った層の絵とパレット、仮の写真
 
 ## 名所を増やすとき
-鎌倉高校前の踏切は `tools/make_kamakura.py`（Codex で作った元の絵 → ドットを見つけて 231×412 マス → 32色（26色＋差し色6）→ 空・景色・手前の層）。電車とカモメの絵も Codex で作り、同じスクリプトで切り抜いてそろえる。
+鎌倉高校前の踏切は `tools/make_kamakura.py`（Codex で作った元の絵 → ドットを見つけて 231×412 マス → 32色（26色＋差し色6）→ 空・景色・手前の層）。電車とカモメの絵も Codex で作り、同じスクリプトで切り抜いてそろえる。空の差分（朝・夕暮れ・夜・曇り・冬の富士山）と雪の日の景色は `tools/make_kamakura_skies.py`。季節の色（葉・あじさい）、夜の明かり、雨・雪・落ち葉はコード（`js/scenes/kamakura.js`）。
 みなとみらい・中華街の層は `tools/relayer.py`（公開しないフォルダ）で作る。Canva の元の絵から Pixel Refiner でドットの並びを見つけて縮め、キャラの外側にふちをつける。
 - ドット絵：`assets/<id>/` に層のPNGと data.json（W・H を入れる。いまは 285×507）を置き、`js/scenes/<id>.js` を作り、`places.js` に足して `main.js` で `engine.register` する
 - 仮の写真：`photo_places.js` に1件足し、写真（360×640）を `assets/photos/` に置く。写真は使ってよいライセンスのものだけにし、作者・ライセンス・元のページを書く
