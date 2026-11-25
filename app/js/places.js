@@ -32,10 +32,20 @@ const DOT = [
     item: { id: 'kk-signal', name: '踏切のキーホルダー（仮）' },
     alt: '海の見える鎌倉高校前の踏切の坂に分身キャラが立つ、動くドット絵カード',
   },
+  {
+    // 絵は Fable の下絵（立体で置いて見上げる）を SD が塗りなおし、Fable のタワーを重ねたもの。夜はライトアップ
+    id: 'tokyotower', kind: 'dot', no: '013-01', name: '東京タワー', pref: '東京都', city: '港区',
+    lat: 35.658611, lng: 139.745556, radius: 250, categories: ['夜景', '街並み・港'],
+    scene: 'tokyotower', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '1958年にできた高さ333mの電波塔。夜のライトアップが見どころ',
+    welcome: 'ようこそ、東京タワーへ！',
+    item: { id: 'tokyotower-omiyage', name: '東京タワーのおみやげ（仮）' },
+    alt: '芝生から見上げる東京タワーの前に分身キャラが立つ、動くドット絵カード',
+  },
 ];
 
 // 写真の名所は、時間帯の色づけをコードで行う（形は変えない）ので4つの時間帯すべてを持つ
-const PHOTO = PHOTO_PLACES.map(p => ({
+const PHOTO = PHOTO_PLACES.filter(p => !DOT.some(d => d.id === p.id)).map(p => ({   // ドット絵ができた名所は、写真のほうを外す
   ...p, kind: 'photo', scene: 'photo:' + p.id, times: ['morning', 'day', 'evening', 'night'],
   welcome: `ようこそ、${p.name}へ！`,
   item: { id: `${p.id}-omiyage`, name: `${p.name}のおみやげ（仮）` },

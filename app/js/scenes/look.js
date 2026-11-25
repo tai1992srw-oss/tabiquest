@@ -38,6 +38,7 @@ export function kindOf([r, g, b]) {
 // 季節の色の差し替え（夏が元の絵）
 export function season(c, kind, s) {
   if (!kind || s === 'summer') return c;
+  if (kind === 'grass') return s === 'autumn' ? mix(c, [186, 178, 84], .38) : s === 'winter' ? mix(c, [150, 148, 96], .5) : mix(c, [150, 206, 86], .2);   // 芝生：秋は少し黄色く、冬は枯れ色（赤くはしない）
   const l = (c[0] * .3 + c[1] * .59 + c[2] * .11) / 255;
   if (s === 'spring') return kind === 'flower' ? mix(c, [112, 172, 84], .85) : mix(c, kind === 'leaf' ? [150, 206, 86] : [196, 206, 96], .3);
   if (s === 'autumn') return kind === 'flower' ? mix(c, [140, 104, 78], .8) : kind === 'leafy' ? mix(c, [214, 158, 52], .65) : mix(c, l < .32 ? [122, 50, 36] : [224, 118, 44], .72);

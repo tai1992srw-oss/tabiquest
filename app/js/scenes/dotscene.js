@@ -44,7 +44,7 @@ export async function buildDot(cfg) {
   const tex = await loadTextures(base, names);
   const W = D.W, H = D.H, k = W / 360, P = cfg.par || [3, 9, 14];
   const scene = new THREE.Scene(); scene.userData = { W, H };
-  const kinds = D.pal.main.map(kindOf);
+  const kinds = D.kinds || D.pal.main.map(kindOf);   // kinds：色番号ごとの種類を名所の側で決めたいとき（芝生など）
 
   const sky = makeLayer(scene, 0, `void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; if(hidden(px)) discard; vec2 s=px-uOff; vec4 t=smp(s); gl_FragColor=vec4(pal(t.r),1.); }`);
   const scn = makeLayer(scene, 1, FRAG);
