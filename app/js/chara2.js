@@ -2,7 +2,7 @@
 //   部品：輪郭（頭）・目・まゆ・口（鼻つき）・ほお・前髪・後ろ髪・服。体は共通。絵とアンカーは assets/chara2/（元は dot/chara_parts/。キャラのセッションが書き出す）
 //   絵は描き足さない。部品を、アンカーが決まった位置に来るように置いて重ねるだけ
 //   見た目（look）：{ rin, eye, brow, mouth, cheek, hairF, hairB, wear：部品の出どころの id（'c1' など。cheek・wear は '' ＝ なし）,
-//                    v：{ eyeGap 目のはば, eyeY 目の高さ, browDy 目からまゆまで, mouthY 口の高さ, cheekGap・cheekDy ほお, hairDy 髪の高さ } }
+//                    v：{ eyeGap 目のはば, eyeY 目の高さ, browDy 目からまゆまで, mouthY 口の高さ, cheekGap・cheekDy ほお, hairS・hairDy・hairDx 髪の大きさ（％）・高さ・横の位置 } }
 //   v のはじめの値は、輪郭ごとのプリセット（parts.json の chars.<id>.preset）。単位はドット
 //   前のキャラ（ななめ向き・6ポーズ・色変え）は archive/chara-v1/ と、git のタグ chara-v1
 import { settings } from './store.js';
@@ -14,8 +14,14 @@ export const NONE = { cheek: 'なし', wear: 'インナー' };   // 「なし」
 export const VALS = [
   ['eyeGap', '目のはば', 14, 44, '左右の目のまん中どうしの間'], ['eyeY', '目の高さ', 72, 98, '小さいほど上'], ['browDy', 'まゆの高さ', -26, -8, '目からまゆまで。小さいほど目からはなれる'],
   ['mouthY', '口の高さ', 92, 112, '小さいほど上'], ['cheekGap', 'ほおのはば', 14, 56, '左右のほおの赤みの間'], ['cheekDy', 'ほおの高さ', 2, 20, '目からほおまで。大きいほど下'],
-  ['hairDy', '髪の高さ', -12, 12, '輪郭の頭のてっぺんに合わせた位置から。小さいほど上'],
 ];
+// 髪の調整（お着替えの「髪」のタブに出す）。輪郭に合わせた大きさ・位置から、どれだけ変えるか。0 ＝ 合わせたまま
+export const HAIR_VALS = [
+  ['hairS', '髪の大きさ', -12, 12, '％。輪郭に合わせた大きさから'], ['hairDy', '髪の高さ', -12, 12, 'ドット。小さいほど上'], ['hairDx', '髪の横の位置', -8, 8, 'ドット。小さいほど左'],
+];
+const HAIR0 = { hairS: 0, hairDy: 0, hairDx: 0 };
+// 輪郭のプリセット（顔のバランス）に替える。髪の調整は、そのまま残す
+export const presetOf = (P, rin, v = {}) => ({ ...P.J.chars[rin].preset, ...Object.fromEntries(Object.keys(HAIR0).map(k => [k, v[k] ?? 0])) });
 // カードの中のコマ：前のキャラと同じ 272×376（足もとが下から1行め）。新しい絵（256×384・足もと 371 行）を、足もとをそろえて入れる
 export const FRAME = [272, 376], OFF = [8, 4];
 
@@ -29,11 +35,11 @@ export function loadParts() {
   })().catch(e => { parts = null; throw e; }));
 }
 // はじめの見た目：最初の子（1つめの id）の部品とバランス
-export const firstLook = P => ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, P.ids[0]])), v: { ...P.J.chars[P.ids[0]].preset } });
+export const firstLook = P => ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, P.ids[0]])), v: presetOf(P, P.ids[0]) });
 // 見た目をととのえる（前のキャラの見た目や、欠けた項目は、はじめの見た目で埋める）
 export function fixLook(P, L) {
   const d = firstLook(P); if (!L || !P.J.chars[L.rin]) return d;
-  const o = { v: { ...P.J.chars[L.rin].preset, ...(L.v || {}) } };
+  const o = { v: { ...HAIR0, ...P.J.chars[L.rin].preset, ...(L.v || {}) } };
   for (const [k] of SLOTS) o[k] = P.J.chars[L[k]] ? L[k] : (NONE[k] && L[k] === '' ? '' : d[k]);
   if (o.cheek && !P.J.chars[o.cheek].pieces.cheekL) o.cheek = '';
   return o;
@@ -47,11 +53,11 @@ export const itemName = (P, k, c) => (c === '' ? NONE[k] : k === 'wear' ? P.J.ch
 // 髪を、輪郭の大きさに合わせる：その髪が描かれたときの頭（横はば headW・てっぺん〜あご）と、えらんだ輪郭の頭をくらべて、
 //   頭のてっぺんのまん中（アンカー）を軸に、横とたてを伸び縮みさせる。ドット絵なので、1マスを 3×3 に見て、多い色を取る（こい線は 4つ以上あれば優先）
 //   同じ大きさ（同じ輪郭用の髪）のときは、元の絵のまま。返り値：256×384 のキャンバス（アンカーの位置は元のまま）
-function fitHair(P, id, name, rin) {
+function fitHair(P, id, name, rin, adj = 0) {
   const C = P.J.chars[id], R = P.J.chars[rin], a = C.hair?.[name] || { ax: C.cx, ay: C.headTop, headW: C.headW }, im = P.IM[id][name];
-  const sx = R.headW / (a.headW || C.headW), sy = (R.chin - R.headTop) / (C.chin - C.headTop);
+  const k = 1 + adj / 100, sx = R.headW / (a.headW || C.headW) * k, sy = (R.chin - R.headTop) / (C.chin - C.headTop) * k;   // adj：髪の大きさの調整（％）
   if (Math.abs(sx - 1) < .02 && Math.abs(sy - 1) < .02) return im;
-  const key = `${id}/${name}/${rin}`; if (P.hair.has(key)) return P.hair.get(key);
+  const key = `${id}/${name}/${rin}/${adj}`; if (P.hair.has(key)) return P.hair.get(key);
   const [W, H] = P.J.size, t = document.createElement('canvas'); t.width = W; t.height = H; const tx = t.getContext('2d', { willReadFrequently: true }); tx.drawImage(im, 0, 0);
   const src = new Uint32Array(tx.getImageData(0, 0, W, H).data.buffer), out = new ImageData(W, H), dst = new Uint32Array(out.data.buffer), OF = [1 / 6, .5, 5 / 6], cnt = new Map();
   const dark = v => (v & 255) + ((v >> 8) & 255) + ((v >> 16) & 255) < 300;
@@ -63,7 +69,7 @@ function fitHair(P, id, name, rin) {
     let best = 0, bn = 0, bd = 0, dn = 0; for (const [v, n] of cnt) { if (n > bn) { bn = n; best = v; } if (n >= 4 && dark(v) && n > dn) { dn = n; bd = v; } }
     dst[y * W + x] = dn ? bd : best;
   }
-  tx.putImageData(out, 0, 0); P.hair.set(key, t); return t;
+  tx.putImageData(out, 0, 0); if (P.hair.size > 24) P.hair.delete(P.hair.keys().next().value); P.hair.set(key, t); return t;
 }
 
 // 見た目 L の立ち絵（256×384 のキャンバス）。同じ見た目は使い回す
@@ -74,13 +80,14 @@ export function compose(P, L) {
   const put = (im, p, tx, ty) => x.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay));   // 部品を、アンカーが (tx, ty) に来るように置く
   const mean = (Q, k) => (Q[k + 'L'].ay + Q[k + 'R'].ay) / 2;
   // 髪：輪郭の大きさに合わせて伸び縮みさせ（fitHair）、その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
-  const hy = (k, n) => R.headTop - (J.chars[L[k]].hair?.[n]?.ay ?? J.chars[L[k]].headTop) + v.hairDy;
+  const hy = (k, n) => R.headTop - (J.chars[L[k]].hair?.[n]?.ay ?? J.chars[L[k]].headTop) + (v.hairDy | 0);
+  const hx = (k, n) => Math.round(R.cx - (J.chars[L[k]].hair?.[n]?.ax ?? J.chars[L[k]].cx)) + (v.hairDx | 0);   // 横は、頭のまん中を合わせる
   // 重ねる順：後ろ髪 → 体・輪郭（服でかくす所をのぞく）→ 服 → 前髪 → ほお → 目 → まゆ → 鼻・口
-  x.drawImage(fitHair(P, L.hairB, 'hair_back', L.rin), 0, hy('hairB', 'hair_back'));
+  x.drawImage(fitHair(P, L.hairB, 'hair_back', L.rin, v.hairS | 0), hx('hairB', 'hair_back'), hy('hairB', 'hair_back'));
   const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(IM.body, 0, 0); bx.drawImage(IM[L.rin].rinkaku, 0, 0);
   if (L.wear) { bx.globalCompositeOperation = 'destination-out'; bx.drawImage(IM[L.wear].wear_hide, 0, 0); }
   x.drawImage(b, 0, 0); if (L.wear) x.drawImage(IM[L.wear].wear, 0, 0);
-  x.drawImage(fitHair(P, L.hairF, 'hair_front', L.rin), 0, hy('hairF', 'hair_front'));
+  x.drawImage(fitHair(P, L.hairF, 'hair_front', L.rin, v.hairS | 0), hx('hairF', 'hair_front'), hy('hairF', 'hair_front'));
   // 顔の部品は、輪郭のまん中から左右に同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す
   const cx = Math.round(R.cx), half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
   if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek'))); }

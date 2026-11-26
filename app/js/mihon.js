@@ -5,7 +5,7 @@
 //   絵は、アプリの本物の描き方（card.js の engine.snapshot、chara2.js の compose）で、その場で作る。描き足しはしない
 import { PLACES, LABEL, TIMES, WEATHERS, seasonOf } from './places.js';
 import { engine } from './card.js';
-import { loadParts, SLOTS, NONE, has, itemName, homeLook, drawLook } from './chara2.js';
+import { loadParts, SLOTS, NONE, has, itemName, homeLook, drawLook, presetOf } from './chara2.js';
 import { esc, toast } from './ui.js';
 
 const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
@@ -88,7 +88,7 @@ function renderChara(box) {
     if (my !== token) return; const base = homeLook(P), key = (k, c) => `${k}/${c || 'none'}`;
     const groups = SLOTS.filter(([k]) => k !== 'hairB').map(([k, name]) => { if (k === 'hairF') name = '髪'; const all = P.ids.filter(c => has(P, k, c)).concat(NONE[k] ? [''] : []); return { k, name, total: all.length, items: all.filter(c => ui.only === 'all' || isNew('wear', key(k, c))) }; });
     const look = (k, c) => { const t = JSON.parse(JSON.stringify(base)); t[k] = c; if (k === 'hairF') t.hairB = c;   // 髪は、前髪と後ろ髪のセット
-      if (k === 'rin') t.v = { ...P.J.chars[c].preset }; return t; };
+      if (k === 'rin') t.v = presetOf(P, c, t.v); return t; };
     box.innerHTML = '<p class="note pad">ほかの部品は、いまのホームのお着替えのままです。絵を押すと、全身を大きく見られます。</p>' + groups.map(g => `<h3 class="gh">${g.name}（${g.items.length}${ui.only === 'all' ? '' : ` / ${g.total}`}）</h3>
       ${g.items.length ? `<div class="mh-grid">${g.items.map(c => `<div class="mh-c"><button class="mh-cv" data-open="${g.k}:${c}" aria-label="${esc(itemName(P, g.k, c))}を大きく見る"><canvas></canvas></button><b>${esc(itemName(P, g.k, c))}</b><button data-seen="wear:${key(g.k, c)}" aria-pressed="${!isNew('wear', key(g.k, c))}">${isNew('wear', key(g.k, c)) ? '見た' : '見た ✓'}</button></div>`).join('')}</div>` : '<p class="note pad">まだ見ていない物はありません。</p>'}`).join('');
     box._open = id => { const i = id.indexOf(':'), k = id.slice(0, i), c = id.slice(i + 1); openBig(P, `${k === 'hairF' ? '髪' : SLOTS.find(q => q[0] === k)[1]}：${itemName(P, k, c)}`, look(k, c)); };
