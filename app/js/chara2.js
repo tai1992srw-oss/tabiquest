@@ -217,7 +217,10 @@ function blow(src, f, top, span) {
 export const TURN_KEYS = [['head', '頭ぜんたい', 0, 4], ['cheekNear', '手前のほお（外へ）', 0, 5], ['cheekFar', '奥のほお（内へ）', 0, 5], ['move', '顔の部品', 0, 5], ['near', '手前の目', -3, 3], ['far', '奥の目', -3, 4], ['eyeCut', '奥の目を細く（列）', 0, 6], ['browCut', '奥のまゆを細く（列）', 0, 5], ['mouth', '口・鼻', -3, 3], ['hair', '前髪', 0, 5], ['jaw', 'あご', 0, 5]];
 // 初めの値は、Codex の「少しだけ横向き」の見本（research/style/turn/）と正面をくらべて測った動きから（頭ぜんたいからの差で：目・まゆ +2、口 +1、前髪のまん中 +2・横 0、
 //   手前のほおは外へ、奥のほおは内へ、あご +1〜4）
-export const TURN_DEF = { head: 0, cheekNear: 0, cheekFar: 0, move: 2, near: 2, far: 0, eyeCut: 3, browCut: 2, mouth: 0, hair: 2, jaw: 2 };   // 頭ぜんたい・ほおは 0（2026-11-26 くりた「さっきより悪い。輪郭と髪の動きが下手」で、前の形にもどした）
+// 2026-11-26 くりたと見くらべで決めた値（キャラ1の右向き → 3キャラとも同じでよい）：口 +3・奥の目 −1（細く3列）・手前の目 +2・前髪 1・あご 3。頭ぜんたい・ほおは使わない
+export const TURN_DEF = { head: 0, cheekNear: 0, cheekFar: 0, move: 2, near: 2, far: -1, eyeCut: 3, browCut: 2, mouth: 3, hair: 1, jaw: 3 };
+// いちばん横を向いたとき（turn＝±1）は、上の値の 6/8 で止める（くりた「6/8で実装しよう」）
+export const TURN_MAX = .75;
 export const turnTune = () => { try { return JSON.parse(localStorage.getItem('tabiquest:turnTune') || '{}') || {}; } catch (e) { return {}; } };
 export function turnOf(P, rin, dir) { return { ...TURN_DEF, ...(P.J.chars[rin]?.turn?.[dir] || {}), ...(turnTune()[rin]?.[dir] || {}) }; }
 // 行ごとに、まるごと横へずらす（線の太さは変わらない）。f(y)：その行のずらし量（ドット）
@@ -274,7 +277,7 @@ export function compose(P, L) {
   const v = { ...L.v }; for (const k of FACE_KEYS) v[k] = P.base[k] + (L.v[k] | 0);   // キャラ1の数字を足して、絵の中の行・はばにもどす
   // 首をかしげるときは、頭の部品を別のキャンバス（hd）に描いて、あとでまわして重ねる
   // 顔の向き（turn：−1・0・1。＋で見て右を向く）とかしげのときは、頭の部品（輪郭・前髪・顔）を別のキャンバスに描いて、ずらし・まわしてから重ねる
-  const tilt = Math.max(-12, Math.min(12, +L.tilt || 0)), tv = Math.round(Math.max(-1, Math.min(1, +L.turn || 0)) * 8) / 8, turn = Math.sign(tv), ta = Math.abs(tv), sep = !!(tilt || turn);
+  const tilt = Math.max(-12, Math.min(12, +L.tilt || 0)), tv = Math.round(Math.max(-1, Math.min(1, +L.turn || 0)) * TURN_MAX * 8) / 8, turn = Math.sign(tv), ta = Math.abs(tv), sep = !!(tilt || turn);
   //   顔の向きは1段まで（くりた「横向きは1段階でいい」）。−1〜1 の間の小数もとれて、ぬるっと動かすときは 1/8 ずつ（tv）。前の ±2 は ±1 として出す
   const mk = () => { const q = document.createElement('canvas'); q.width = W; q.height = H; return q; };
   const back = sep ? mk() : c, rinC = sep ? mk() : null, hfC = sep ? mk() : c, head = sep ? mk() : c, bk = back.getContext('2d'), hd = head.getContext('2d');
