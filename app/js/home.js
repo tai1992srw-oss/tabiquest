@@ -8,7 +8,7 @@ import { PLACES, LABEL, seasonOf } from './places.js';
 import { book, mode, settings, saveBook, saveSettings, defaultLook } from './store.js';
 import { openDress } from './dress.js';
 import { engine, clearSnaps, reduceMotion } from './card.js';
-import { loadParts, homeLook, frameCanvas } from './chara2.js';
+import { loadParts, homeLook, frameCanvas, FACES } from './chara2.js';
 import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, toast, icon } from './ui.js';
@@ -52,7 +52,10 @@ function loadChara() {
     // 足もと：立ちのコマで、いちばん下のドットの行
     let bot = 0; for (let y = 0; y < im.fh; y++) for (let i = 0; i < im.fw; i++) if (d.data[(y * c.width + i) * 4 + 3]) { bot = y; break; }
     let top = im.fh; for (let y = 0; y < im.fh && top === im.fh; y++) for (let i = 0; i < im.fw; i++) if (d.data[(y * c.width + i) * 4 + 3]) { top = y; break; }
-    return Object.assign(c, { poses: ['立ち'], top, bot: bot + 1 });   // ポーズは立ち1つ（ほかの名前は、立ちで出る）
+    // 表情ごとの絵は、はじめて使うときに作る（get('grin') など。'blink' ＝ まばたき）
+    const L = homeLook(P), cache = new Map([['', c]]);
+    const get = f => { if (!cache.has(f)) cache.set(f, frameCanvas(P, f === 'blink' ? { ...L, blink: 1 } : { ...L, face: f })); return cache.get(f); };
+    return Object.assign(c, { poses: ['立ち'], top, bot: bot + 1, get });
   })().catch(e => { charaImg = null; throw e; }));
 }
 
@@ -114,21 +117,23 @@ export function renderHome(view, { header } = {}) {
   loadSerifu().then(d => { S = d; talk(); }).catch(() => { say.hidden = true; });
 
   // キャラ：2倍（1ドット＝2マス）。入らない画面だけ小さく。足もとをナビの上にそろえる
-  let C = null, pose = '立ち', joyUntil = 0, waveUntil = 0, nextWave = performance.now() + 4000, raf = 0, alive = true;
+  // 表情：押すとよろこぶ（にっこり・ウインク）、話すと笑顔、ときどき別の表情、数秒に1回まばたき（動きを減らす設定のときは、まばたきだけしない）
+  let C = null, face = '', joyUntil = 0, moodUntil = 0, mood = '', nextMood = performance.now() + 6000, nextBlink = performance.now() + 2500, blinkUntil = 0, raf = 0, alive = true;
+  const MOODS = ['smile', 'smile', 'close', 'smug', 'wow'];
   const fit = () => {
     if (!C) return;
     const room = root.clientHeight - 96 - 110, s = Math.min(2, room / (C.bot - C.top));   // 上の札と、下のナビのぶんを空ける
     Object.assign(cv.style, { width: C.fw * s + 'px', height: C.fh * s + 'px', marginBottom: -(C.fh - C.bot) * s + 'px' });
   };
-  const draw = name => {
-    const i = Math.max(0, C.poses.indexOf(name)), x = cv.getContext('2d');
-    x.clearRect(0, 0, cv.width, cv.height); x.drawImage(C, i * C.fw, 0, C.fw, C.fh, 0, 0, C.fw, C.fh);
-  };
+  const draw = f => { const im = C.get(f), x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(im, 0, 0); };
   const tick = t => {
     if (!alive) return; raf = requestAnimationFrame(tick);
-    if (!reduceMotion() && t > nextWave && t > joyUntil) { waveUntil = t + 1800; nextWave = t + 9000 + Math.random() * 8000; }
-    const p = t < joyUntil ? pose : t < waveUntil ? '手をふる' : '立ち';
-    if (p !== cv.dataset.p) { cv.dataset.p = p; draw(p); }
+    const rm = reduceMotion();
+    if (t > nextMood && t > joyUntil) { mood = MOODS[Math.floor(Math.random() * MOODS.length)]; moodUntil = t + 2200; nextMood = t + 8000 + Math.random() * 9000; }
+    if (!rm && t > nextBlink) { blinkUntil = t + 140; nextBlink = t + 2600 + Math.random() * 3200; if (Math.random() < .2) nextBlink = t + 320; }   // ときどき2回つづけて
+    const base = t < joyUntil ? face : t < moodUntil ? mood : '';
+    const f = t < blinkUntil && !['close', 'grin', 'shy'].includes(base) ? 'blink' : base;
+    if (f !== cv.dataset.p) { cv.dataset.p = f; draw(f); }
   };
   const showChara = () => loadChara().then(c => {
     if (!alive) return; C = c; cv.width = c.fw; cv.height = c.fh; fit(); cv.dataset.p = ''; meEl.classList.add('on');
@@ -138,9 +143,9 @@ export function renderHome(view, { header } = {}) {
   const ro = new ResizeObserver(fit); ro.observe(root);
 
   // キャラを押すと喜ぶ（ばんざい・ピース、ぴょんと跳ねる）。ふきだしも次の話に
-  const JOYS = ['ばんざい', 'ピース'];
+  const JOYS = ['grin', 'wink', 'shy'];
   meEl.addEventListener('click', () => {
-    if (!C) return; pose = JOYS[Math.floor(Math.random() * JOYS.length)]; joyUntil = performance.now() + 1500;
+    if (!C) return; face = JOYS[Math.floor(Math.random() * JOYS.length)]; joyUntil = performance.now() + 1800;
     if (!reduceMotion()) { meEl.classList.remove('hop'); void meEl.offsetWidth; meEl.classList.add('hop'); }
     talk();
   });

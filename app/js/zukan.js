@@ -3,12 +3,13 @@ import { PLACES, placeById, LABEL, TIMES, WEATHERS, PLAIN_BG } from './places.js
 // キャラのポーズ（コマの順。assets の data.json の charaPoses と同じ）
 //   体は1つで、腕を差し替える（2026-11-26）。番号は前の13ポーズのまま。なくなったポーズ（ジャンプ・撮る・ながめる・歩く・ハート・地図・自撮り）のカードは、立ちで出る
 const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さし'], [4, '手をふる'], [7, '持つ']];
+import { loadParts as loadChara2, FACES, fixLook as fixLook2, drawLook } from './chara2.js';
 import { book, cardsOf, cardById, setPhoto, defaultLook, shown, setFav, settings } from './store.js';
 import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS } from './card.js';
 // 撮影でえらぶもの（下の列に出す。着替えは、お着替えの画面をひらく）
-const MODES = [['turn', '向き'], ['tilt', 'かしげ'], ['wind', '風'], ['light', '光']];   // 腰（photo.lean）は、えらべなくした（前に残したカードは、そのまま出る）   // かしげ：首をかしげる（photo.tilt）。ポーズと表情は、新しいキャラではまだない
-const TURNS = [[-2, '左を向く', 'u-2'], [-1, '少し左', 'u-1'], [0, '正面', 'u0'], [1, '少し右', 'u1'], [2, '右を向く', 'u2']];
+const MODES = [['face', '表情'], ['turn', '向き'], ['tilt', 'かしげ'], ['wind', '風'], ['light', '光']];   // 腰（photo.lean）は、えらべなくした（前に残したカードは、そのまま出る）   // かしげ：首をかしげる（photo.tilt）。ポーズと表情は、新しいキャラではまだない
+const TURNS = [[-1, '左を向く', 'u-2'], [0, '正面', 'u0'], [1, '右を向く', 'u2']];   // 1段だけ
 const LEANS = [[-8, '左に大きく', 't-2'], [-4, '左に', 't-1'], [0, 'まっすぐ', 't0'], [4, '右に', 't1'], [8, '右に大きく', 't2']];
 const WINDS = [[-2, '←強い', 'w-2'], [-1, '←弱い', 'w-1'], [0, 'なし', 'w0'], [1, '弱い→', 'w1'], [2, '強い→', 'w2']];
 const TILTS = [[-10, '左に大きく', 't-2'], [-5, '左に', 't-1'], [0, 'まっすぐ', 't0'], [5, '右に', 't1'], [10, '右に大きく', 't2']];   // 新しいキャラは立ち1つ・表情1つなので、ポーズと表情はまだない（前のキャラにはあった）
@@ -169,7 +170,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     <div class="cflash"></div>`;
   document.body.append(root);
   const stage = root.querySelector('.stage'), cam = root.querySelector('.cam'), camf = root.querySelector('.camf'), strip = cam.querySelector('.strip');
-  let mode = 'turn', snap0 = '', env = null, coachT = 0;
+  let mode = 'face', snap0 = '', env = null, coachT = 0;
   const look = () => (cur ? JSON.parse(JSON.stringify(cur)) : defaultLook());
   // 下の列：ポーズと表情は、いまの見た目のままの小さな絵。光は記号（光・グロー・明るさを1列に並べる）
   const opt = (attr, v, name, inner, cls = '') => `<button class="opt ${cls}" data-${attr}="${v}" aria-pressed="false"><i aria-hidden="true">${inner}</i>${name}</button>`;
@@ -178,14 +179,18 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     strip.setAttribute('aria-label', MODES.find(m => m[0] === mode)[1]);
     cam.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
     const row = (k, gl, list, cls) => `<span class="gl">${gl}</span>${list.map(([v, n, c]) => opt(k, v, n, `<b class="orb ${cls} ${c}"></b>`)).join('')}`;
-    strip.innerHTML = mode === 'turn' ? row('turn', '顔', TURNS, 'turn') : mode === 'lean' ? row('lean', '腰', LEANS, 'lean') : mode === 'wind' ? row('wind', '風', WINDS, 'wind') : mode === 'tilt' ? `<span class="gl">首</span>${TILTS.map(([v, n, c]) => opt('tilt', v, n, `<b class="orb tilt ${c}"></b>`)).join('')}` : `<span class="gl">光</span>${orbs('rim', [[0, '無光', 'r0'], [3, '順光', 'r3'], [1, '半逆光', 'r1'], [2, '逆光', 'r2']])}<span class="gl">グロー</span>${orbs('glow', [[0, 'なし', 'g0'], [1, '弱い', 'g1'], [2, '強い', 'g2']])}<span class="gl">明るさ</span>${orbs('light', [['bright', '明るいまま', 'lb'], ['blend', 'なじませる', 'ln']])}`;
+    strip.innerHTML = mode === 'face' ? FACES.map(([id, n]) => opt('face', id, n, '<canvas></canvas>', 'face')).join('') : mode === 'turn' ? row('turn', '顔', TURNS, 'turn') : mode === 'lean' ? row('lean', '腰', LEANS, 'lean') : mode === 'wind' ? row('wind', '風', WINDS, 'wind') : mode === 'tilt' ? `<span class="gl">首</span>${TILTS.map(([v, n, c]) => opt('tilt', v, n, `<b class="orb tilt ${c}"></b>`)).join('')}` : `<span class="gl">光</span>${orbs('rim', [[0, '無光', 'r0'], [3, '順光', 'r3'], [1, '半逆光', 'r1'], [2, '逆光', 'r2']])}<span class="gl">グロー</span>${orbs('glow', [[0, 'なし', 'g0'], [1, '弱い', 'g1'], [2, '強い', 'g2']])}<span class="gl">明るさ</span>${orbs('light', [['bright', '明るいまま', 'lb'], ['blend', 'なじませる', 'ln']])}`;
     strip.scrollLeft = 0; paint(); marks();
   }
-  function paint() {}   // 小さな絵の列は、いまはない（ポーズ・表情ができたら、ここで描く）
+  function paint() {   // 表情の列：いまの見た目・向き・かしげのまま、顔のあたりの小さな絵
+    if (mode !== 'face') return;
+    loadChara2().then(P => { const base = fixLook2(P, look()); strip.querySelectorAll('.opt.face').forEach(b => { const c = b.querySelector('canvas'); if (c) drawLook(c, P, { ...base, face: b.dataset.face || undefined, turn: +ph.turn || undefined, tilt: +ph.tilt || undefined }, 'face'); }); }).catch(() => {});
+  }
   const marks = () => {   // えらんでいるものに印
     const on = (sel, f) => strip.querySelectorAll(sel).forEach(b => b.setAttribute('aria-pressed', String(f(b.dataset))));
     on('[data-pose]', d => +d.pose === ph.pose); on('[data-face]', d => d.face === (ph.face || '')); on('[data-light]', d => d.light === ph.light);
-    on('[data-tilt]', d => +d.tilt === (+ph.tilt || 0)); on('[data-lean]', d => +d.lean === (+ph.lean || 0)); on('[data-turn]', d => +d.turn === (+ph.turn || 0)); on('[data-wind]', d => +d.wind === (+ph.wind || 0));
+    on('[data-face]', d => d.face === (ph.face || ''));
+    on('[data-tilt]', d => +d.tilt === (+ph.tilt || 0)); on('[data-lean]', d => +d.lean === (+ph.lean || 0)); on('[data-turn]', d => +d.turn === Math.sign(+ph.turn || 0)); on('[data-wind]', d => +d.wind === (+ph.wind || 0));
     on('[data-rim]', d => +d.rim === (ph.rim | 0)); on('[data-glow]', d => +d.glow === (ph.glow | 0));
   };
   const btn = a => root.querySelector(`.side [data-a="${a}"]`);
@@ -281,7 +286,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     }
     else if (a === 'save') saveImage();
     else if (a === 'dress') {   // この撮影だけのお着替え。カードの画面からひらいたときは、決定でこのカードに残す。撮影の中からひらいたときは、「残す」を押すまで残さない（試し見は残さない）
-      const inCam = root.classList.contains('posing'), before = look(), apply = L => { cur = L; sync(); };
+      const inCam = root.classList.contains('posing'), before = look(), apply = L => { cur = L; sync(); paint(); };
       openDress({ look: before, home: defaultLook(), title: 'お着替え', note: preview ? '試し見なので、残りません' : inCam ? '「残す」を押すと、このカードに残ります' : 'この撮影だけ。ホームのお着替えは変わりません',
         onChange: apply, onSave: L => { apply(L); if (!preview && !inCam) { const k = look(); setPhoto(card.id, card.photo ?? null, k); card.look = k; clearSnaps(); toast('このカードのお着替えを残しました'); } } });
     }
@@ -289,7 +294,8 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     else if (b.dataset.light) { ph.light = b.dataset.light; sync(); }
     else if (b.dataset.rim) { ph.rim = +b.dataset.rim; sync(); }
     else if (b.dataset.glow) { ph.glow = +b.dataset.glow; sync(); }
-    else if (['tilt', 'turn', 'lean', 'wind'].some(q => b.dataset[q] !== undefined)) { const k = ['tilt', 'turn', 'lean', 'wind'].find(q => b.dataset[q] !== undefined); ph[k] = +b.dataset[k]; if (!ph[k]) delete ph[k]; sync(); }
+    else if (b.dataset.face !== undefined) { if (b.dataset.face) ph.face = b.dataset.face; else delete ph.face; sync(); }
+    else if (['tilt', 'turn', 'lean', 'wind'].some(q => b.dataset[q] !== undefined)) { const k = ['tilt', 'turn', 'lean', 'wind'].find(q => b.dataset[q] !== undefined); ph[k] = +b.dataset[k]; if (!ph[k]) delete ph[k]; sync(); paint(); }
     else if (b.dataset.pose) { ph.pose = +b.dataset.pose; sync(); }
     else if (b.dataset.face !== undefined) { ph.face = b.dataset.face; sync(); }
     else if (a === 'center') { ph.x = 0; ph.y = 0; ph.s = 1; ph.r = 0; sync(); }
