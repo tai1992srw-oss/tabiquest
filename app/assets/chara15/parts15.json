@@ -183,6 +183,22 @@
     "head": "c1b/head.png",
     "hair_front": "c1b/hair_front.png"
    },
+   "wears": {
+    "uniform": {
+     "name": "制服",
+     "layers": [
+      "c1b/uniform_bottom.png",
+      "c1b/uniform_shoes.png",
+      "c1b/uniform_top.png"
+     ],
+     "parts": {
+      "top": "c1b/uniform_top.png",
+      "bottom": "c1b/uniform_bottom.png",
+      "shoes": "c1b/uniform_shoes.png"
+     },
+     "note": "メイン衣装（ステップ4、素体に合わせて作り直した）。素体＋Tシャツと同じ重ね方で、服の所に layers の順（スカート・ソックス→くつ→トップス）で重ねる。offset はかけない。トップス・ボトムス・くつはべつべつに着せられる"
+    }
+   },
    "design": {
     "body": "c1b/body_design.png",
     "wear": "c1b/wear_design.png",
