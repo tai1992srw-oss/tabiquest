@@ -47,10 +47,10 @@
 </main>
 <div id="grid"></div>
 <script type="module">
-const BASE = './parts/';
+const BASE = './parts/', BUST = Date.now().toString(36);   // 絵はひらくたびに読み直す（ブラウザの保存で古い絵が出ないように）
 const J = await (await fetch(BASE + 'parts15.json', { cache: 'no-cache' })).json();
 const [W, H] = J.size, IM = {};
-const img = src => IM[src] || (IM[src] = new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ng(new Error(src)); i.src = BASE + src; }));
+const img = src => IM[src] || (IM[src] = new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ng(new Error(src)); i.src = BASE + src + '?t=' + BUST; }));
 const S = { fp: {}, cheek: {}, split: false, c: Object.keys(J.chars).includes('c1b') ? 'c1b' : Object.keys(J.chars)[0], wear: 'tshirt', face: 'normal', hair: '', view: 'body', blink: true };
 const WEARS = [['tshirt', 'Tシャツ'], ['design', '制服（デザイン）'], ['sotai', '素体']];
 const VIEWS = [['body', '全身'], ['face', '顔の寄り'], ['all', '表情をぜんぶ並べる']];
