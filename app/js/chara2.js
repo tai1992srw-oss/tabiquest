@@ -271,10 +271,11 @@ export function compose(P, L) {
   else for (const k of J.wearOrder) if (L[k]) x.drawImage(tint(P, IM.w[L[k]][k], 'skinIn', col.skin, `w/${L[k]}/${k}`), 0, 0);   // 服（上下バラ）：ボトムス → 足もと → トップス
   hfC.getContext('2d').drawImage(hairOf('hairF', 'hair_front', 3.5), hx('hairF', 'hair_front'), hy('hairF', 'hair_front'));
   // 顔の部品は、輪郭のまん中から左右に同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す
-  // 向き：顔の部品を向いた側へ2ドット、左右の間を2ドットせまく。向いた側の目とまゆは、少し細く（奥へ回りこんで見える）
-  const cx = Math.round(R.cx) + turn * 2, half = g => { g -= Math.abs(turn) * 2; const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
+  // 向き：顔の部品を向いた側へ2ドット（左右の間はせまくしない＝目が寄って詰まらないように）。
+  //   向いた側の目とまゆは、内がわ（鼻の側）から細くする（外がわのはしは輪郭に寄せたまま＝奥へ回りこんで見える）
+  const cx = Math.round(R.cx) + turn * 2, half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
   const far = s => (turn > 0 && s === 'R') || (turn < 0 && s === 'L');
-  const putK = (im, p, tx, ty, n) => { if (!n) return put(im, p, tx, ty); hd.drawImage(narrow(im, n), p.x + Math.round(tx - p.ax) + Math.floor(n / 2), p.y + Math.round(ty - p.ay)); };   // n 列ぬいて、まん中をそろえて置く
+  const putK = (im, p, tx, ty, n) => { if (!n) return put(im, p, tx, ty); hd.drawImage(narrow(im, n), p.x + Math.round(tx - p.ax) + (turn > 0 ? n : 0), p.y + Math.round(ty - p.ay)); };   // n 列ぬいて、外がわのはしをそろえて置く
   if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek'))); }
   const E = J.chars[L.eye].pieces, EX = half(v.eyeGap), B = J.chars[L.brow].pieces;
   // 表情：目・まゆの差分（アンカーは、ふだんの目・まゆと同じ）。まばたき（L.blink）は「閉じる」の目
