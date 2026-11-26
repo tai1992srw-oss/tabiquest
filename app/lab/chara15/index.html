@@ -38,7 +38,7 @@
   <div class="stage" id="stage"><canvas id="cv" width="384" height="576"></canvas></div>
   <div class="panel">
     <div class="grp"><b>キャラ</b><div class="chips" id="chars"></div></div>
-    <div class="grp"><b>服</b><div class="chips" id="wears"></div></div>
+    <div class="grp"><b>服</b><div class="chips" id="wears"></div><div class="chips" id="wparts" style="margin-top:6px"></div></div>
     <div class="grp"><b>表情（ぜんぶの部品をそろえる）</b><div class="chips" id="faces"></div></div>
     <div id="fparts"></div>
     <div class="grp"><b>髪の色</b><div class="chips" id="hairs"></div></div>
@@ -51,8 +51,9 @@ const BASE = './parts/', BUST = Date.now().toString(36);   // 絵はひらくた
 const J = await (await fetch(BASE + 'parts15.json', { cache: 'no-cache' })).json();
 const [W, H] = J.size, IM = {};
 const img = src => IM[src] || (IM[src] = new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ng(new Error(src)); i.src = BASE + src + '?t=' + BUST; }));
-const S = { fp: {}, cheek: {}, split: false, c: Object.keys(J.chars).includes('c1b') ? 'c1b' : Object.keys(J.chars)[0], wear: 'tshirt', face: 'normal', hair: '', view: 'body', blink: true };
-const WEARS = [['tshirt', 'Tシャツ'], ['design', '制服（デザイン）'], ['sotai', '素体']];
+const S = { up: { top: true, bottom: true, shoes: true }, fp: {}, cheek: {}, split: false, c: Object.keys(J.chars).includes('c1b') ? 'c1b' : Object.keys(J.chars)[0], wear: 'tshirt', face: 'normal', hair: '', view: 'body', blink: true };
+const WEARS = [['tshirt', 'Tシャツ'], ['uniform', '制服（新）'], ['design', '制服（前）'], ['sotai', '素体']];
+const UP = [['top', 'トップス'], ['bottom', 'スカート・ソックス'], ['shoes', 'くつ']];   // 制服（新）は、べつべつに着せられる
 const VIEWS = [['body', '全身'], ['face', '顔の寄り'], ['all', '表情をぜんぶ並べる']];
 const faceName = (C, f) => f === 'normal' ? 'ふだん' : (C.faceNames?.[f] || f);
 const PART_NAMES = { cheek: 'ほお', eyeL: '目（絵の左）', eyeR: '目（絵の右）', browL: 'まゆ（絵の左）', browR: 'まゆ（絵の右）', nose: '鼻', mouth: '口' };
@@ -86,7 +87,7 @@ async function compose(cv, c, wear, face, cheek) {
     : [[img(C.faces[face] || C.faces.normal), ...fo]];
   const steps = design
     ? [[hairImg(L.hair_back, preset), 0, 0], [img(C.design.body), 0, 0], [img(C.design.wear), 0, 0], [hairImg(L.hair_front, preset), 0, 0], ...fs]
-    : [[hairImg(L.hair_back, preset), ...o], [img(J.sotaiBody), 0, 0], [img(L.head), ...o], ...(wear === 'tshirt' ? [[img(J.wear.tshirt), 0, 0]] : []), [hairImg(L.hair_front, preset), ...o], ...fs];
+    : [[hairImg(L.hair_back, preset), ...o], [img(J.sotaiBody), 0, 0], [img(L.head), ...o], ...(wear === 'tshirt' ? [[img(J.wear.tshirt), 0, 0]] : []), ...(wear === 'uniform' && C.wears?.uniform ? ['bottom', 'shoes', 'top'].filter(k => S.up[k]).map(k => [img(C.wears.uniform.parts[k]), 0, 0]) : []), [hairImg(L.hair_front, preset), ...o], ...fs];
   const ims = await Promise.all(steps.map(s => s[0]));
   const x = cv.getContext('2d'); cv.width = W; cv.height = H; x.imageSmoothingEnabled = false; x.clearRect(0, 0, W, H);
   ims.forEach((im, i) => x.drawImage(im, steps[i][1], steps[i][2]));
@@ -121,7 +122,10 @@ function ui() {
   const C = J.chars[S.c];
   if (!C.faces[S.face]) S.face = 'normal'; if (S.wear === 'design' && !C.design) S.wear = 'tshirt';
   chips('chars', Object.entries(J.chars).map(([k, c]) => [k, c.name]), 'c', () => { S.hair = ''; });
-  chips('wears', WEARS.map(([k, n]) => [k, n, k === 'design' && !C.design]), 'wear');
+  if (S.wear === 'uniform' && !C.wears?.uniform) S.wear = 'tshirt';
+  chips('wears', WEARS.map(([k, n]) => [k, n, (k === 'design' && !C.design) || (k === 'uniform' && !C.wears?.uniform)]), 'wear');
+  const wp = document.getElementById('wparts'); wp.innerHTML = '';
+  if (S.wear === 'uniform') for (const [k, n] of UP) { const b = document.createElement('button'); b.textContent = (S.up[k] ? '✓ ' : '') + n; if (S.up[k]) b.className = 'on'; b.onclick = () => { S.up[k] = !S.up[k]; ui(); }; wp.append(b); }
   chips('faces', Object.keys(C.faces).map(f => [f, faceName(C, f)]), 'face', () => { if (FP(S.c)) for (const k of FP(S.c).order) fpOf(S.c)[k] = S.face; if (J.shared?.cheek) S.cheek[S.c] = S.face === 'shy' ? 'shy' : 'normal'; });
   // 部品ごと：目・まゆは、ふだんは左右いっしょ（「左右べつ」で分ける）
   const fpb = document.getElementById('fparts'); fpb.innerHTML = '';
