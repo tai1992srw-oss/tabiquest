@@ -765,3 +765,6 @@ body.du-open{overflow:hidden}
 .viewer .cam .orb.turn::before,.viewer .cam .orb.turn::after{content:"";position:absolute;top:12px;width:3px;height:4px;border-radius:2px;background:#2B2A4C;left:calc(50% - 6px + var(--t,0px))}
 .viewer .cam .orb.turn::after{left:calc(50% + 3px + var(--t,0px))}
 .viewer .cam .orb.u-2{--t:-5px} .viewer .cam .orb.u-1{--t:-2px} .viewer .cam .orb.u1{--t:2px} .viewer .cam .orb.u2{--t:5px}
+.du-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.du-chips button{flex:none;min-height:34px;padding:3px 14px;border-radius:999px;font-size:12.5px;background:var(--paper2);color:var(--ink)}
+.du-chips button[aria-pressed=true]{background:var(--ink);color:var(--paper)}

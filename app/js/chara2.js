@@ -1,7 +1,7 @@
 // 新しいキャラ（2026-11-26 作り替え）：正面向きの立ち1つを、部品とアンカーで組み立てる
 //   部品：輪郭（頭）・目・まゆ・口（鼻つき）・ほお・前髪・後ろ髪・服。体は共通。絵とアンカーは assets/chara2/（元は dot/chara_parts/。キャラのセッションが書き出す）
 //   絵は描き足さない。部品を、アンカーが決まった位置に来るように置いて重ねるだけ
-//   見た目（look）：{ rin, eye, brow, mouth, cheek, hairF, hairB, wear：部品の出どころの id（'c1' など。cheek・wear は '' ＝ なし）,
+//   見た目（look）：{ top・bottom・feet：服（上下バラ）の番号, rin, eye, brow, mouth, cheek, hairF, hairB, wear：部品の出どころの id（'c1' など。cheek・wear は '' ＝ なし）,
 //                    v：{ eyeGap 目のはば, eyeY 目の高さ, browDy 目からまゆまで, mouthY 口の高さ, cheekGap・cheekDy ほお, hairS・hairDy・hairDx 髪の大きさ（％）・高さ・横の位置 } }
 //                    colors：{ hair, skin, eye }（色変え。'#rrggbb'。ないときは元の色） }
 //   v は、キャラ1を ±0 とした差（ドット）。はじめの値は、輪郭ごとのプリセット（parts.json の preset を、キャラ1との差に直した物）
@@ -10,6 +10,26 @@ import { settings } from './store.js';
 const THREE = window.THREE;
 const BASE = 'assets/chara2/';
 export const SLOTS = [['rin', '輪郭'], ['eye', '目'], ['brow', 'まゆ'], ['mouth', '口'], ['cheek', 'ほお'], ['hairF', '前髪'], ['hairB', '後ろ髪'], ['wear', '服']];
+// 服（上下バラ。parts.json の wears）：look の top・bottom・feet に、服の番号を入れる（'' ＝ なし）。どれか入っているときは、キャラの服（look.wear）は使わない
+//   kind：'separate'＝トップスとボトムスを別の服と組み合わせてよい／'onepiece'＝上下つながった服（top に服ぜんぶ。着るとボトムスをはずす）
+export const WEAR_PARTS = ['top', 'bottom', 'feet'];
+export const WEAR_NAMES = { set: 'セット', top: 'トップス', bottom: 'ボトムス', feet: '足もと' };
+const wearOf = (P, id) => P.J.wears.find(w => w.id === id);
+// 服をえらぶ。kind：'set'（ひとそろい。v：'' ＝ インナー、キャラの id ＝ そのキャラの服、服の番号）／'top'・'bottom'・'feet'（その部分だけ。v：服の番号、'' ＝ なし）
+export function pickWear(P, L, kind, v) {
+  if (kind === 'set') { const w = wearOf(P, v); L.wear = w || !v ? '' : v; for (const k of WEAR_PARTS) L[k] = w && w.layers[k] ? v : ''; return; }
+  if (L.wear) { L.wear = ''; for (const k of WEAR_PARTS) L[k] = ''; }   // キャラの服は分けられないので、ほかの部分はインナーから
+  L[kind] = v;
+  if (kind === 'top' && wearOf(P, v)?.kind === 'onepiece') L.bottom = '';
+  if (kind === 'bottom' && v && wearOf(P, L.top)?.kind === 'onepiece') L.top = '';
+}
+export function wearOn(P, L, kind, v) {   // えらんでいるか
+  if (kind !== 'set') return !L.wear && (L[kind] || '') === v;
+  const w = wearOf(P, v); if (!w) return (L.wear || '') === v && (v || !WEAR_PARTS.some(k => L[k]));
+  return !L.wear && WEAR_PARTS.every(k => (L[k] || '') === (w.layers[k] ? v : ''));
+}
+export const wearItems = (P, kind) => kind === 'set' ? ['', ...P.ids, ...P.J.wears.map(w => w.id)] : ['', ...P.J.wears.filter(w => w.layers[kind]).map(w => w.id)];
+export const wearName = (P, kind, v) => (v === '' ? (kind === 'set' ? 'インナー' : 'なし') : P.J.chars[v] ? P.J.chars[v].wear : wearOf(P, v)?.name || v);
 export const NONE = { cheek: 'なし', wear: 'インナー' };   // 「なし」をえらべる部品
 // 動かせる値：[名前, 画面の名前, 下限, 上限, 説明]
 // 値はどれも「キャラ1（1つめの輪郭）を ±0 とした差」で持つ（2026-11-26 くりた：キャラごとにすてきなバランスを作り、入れるときはキャラ1を ±0 の基準にする）
@@ -36,7 +56,9 @@ let parts = null;
 const image = src => new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ng(new Error(src)); i.src = src; });
 export function loadParts() {
   return parts || (parts = (async () => {
-    const J = await (await fetch(BASE + 'parts.json')).json(), IM = { body: await image(BASE + J.body) }, ids = Object.keys(J.chars);
+    const J = await (await fetch(BASE + 'parts.json')).json(), IM = { body: await image(BASE + J.body), w: {} }, ids = Object.keys(J.chars);
+    J.wears = J.wears || []; J.wearOrder = J.wearOrder || WEAR_PARTS;
+    await Promise.all(J.wears.flatMap(w => { IM.w[w.id] = {}; return Object.entries(w.layers).map(async ([k, f]) => { IM.w[w.id][k] = await image(BASE + f); }); }));   // 服（上下バラ）：wear/<番号>/{top,bottom,feet}.png
     await Promise.all(ids.flatMap(c => { IM[c] = {}; return ['rinkaku', 'hair_front', 'hair_back', 'wear', 'wear_hide', ...Object.keys(J.chars[c].pieces)].map(async n => { IM[c][n] = await image(`${BASE}${c}/${n}.png`); }); }));
     const base = J.chars[ids[0]].preset; for (const c of ids) J.chars[c].rel = Object.fromEntries(FACE_KEYS.map(k => [k, (J.chars[c].preset[k] ?? base[k]) - base[k]]));   // キャラ1との差
     return { J, IM, ids, base, cache: new Map(), tex: new Map(), hair: new Map(), tint: new Map() };
@@ -54,6 +76,8 @@ export function fixLook(P, L) {
   if (o.v.eyeY > 40) for (const k of FACE_KEYS) o.v[k] -= P.base[k];   // 前の形（絵の中の行・はばそのもの）で残した見た目は、キャラ1との差に直す
   for (const [k] of SLOTS) o[k] = P.J.chars[L[k]] ? L[k] : (NONE[k] && L[k] === '' ? '' : d[k]);
   if (o.cheek && !P.J.chars[o.cheek].pieces.cheekL) o.cheek = '';
+  for (const k of WEAR_PARTS) { const w = wearOf(P, L[k]); o[k] = w && w.layers[k] ? w.id : ''; }
+  if (WEAR_PARTS.some(k => o[k])) o.wear = '';
   const col = Object.fromEntries(['hair', 'skin', 'eye'].filter(k => /^#[0-9a-f]{6}$/i.test(L.colors?.[k] || '')).map(k => [k, L.colors[k]])); if (Object.keys(col).length) o.colors = col;
   return o;
 }
@@ -216,6 +240,7 @@ export function compose(P, L) {
   if (tilt) hd.drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);   // かしげるときは、輪郭は頭の側に描く（体といっしょにまわさない）
   if (L.wear) { bx.globalCompositeOperation = 'destination-out'; bx.drawImage(IM[L.wear].wear_hide, 0, 0); }
   x.drawImage(b, 0, 0); if (L.wear) x.drawImage(tint(P, IM[L.wear].wear, 'skinIn', col.skin, `${L.wear}/wear`), 0, 0);
+  else for (const k of J.wearOrder) if (L[k]) x.drawImage(tint(P, IM.w[L[k]][k], 'skinIn', col.skin, `w/${L[k]}/${k}`), 0, 0);   // 服（上下バラ）：ボトムス → 足もと → トップス
   hd.drawImage(hairOf('hairF', 'hair_front', 3.5), hx('hairF', 'hair_front') + Math.round(td * .5), hy('hairF', 'hair_front'));
   // 顔の部品は、輪郭のまん中から左右に同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す
   const cx = Math.round(R.cx) + td, half = g => { g -= Math.abs(turn) * 2; const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };   // td：顔の向きのずれ。横を向くほど、左右の間をせまく
