@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>キャラクリの試し</title>
+<style>
+  :root{--bg:#F3F0FA;--paper:#FFFDF8;--paper2:#EEEAF8;--ink:#2B2A4C;--sub:#77769A;--teal:#8A6CE0;--line:#E4DFF2}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 "Hiragino Sans","Noto Sans JP",system-ui,sans-serif}
+  main{max-width:520px;margin:0 auto;padding:12px 12px 40px}
+  h1{font-size:20px;margin:4px 0 2px} h2{font-size:14px;margin:18px 0 6px}
+  p.note{margin:0 0 8px;font-size:12px;color:var(--sub)}
+  .stage{position:sticky;top:0;z-index:2;display:flex;justify-content:center;align-items:flex-end;gap:8px;padding:8px 0;background:linear-gradient(var(--bg) 88%,transparent)}
+  canvas{image-rendering:pixelated;background:linear-gradient(#E9E4F8,#FBFAFF);border-radius:14px}
+  .tools{display:flex;flex-direction:column;gap:6px}
+  button{font:700 13px inherit;color:var(--ink);background:var(--paper);border:0;border-radius:999px;min-height:38px;padding:4px 14px;box-shadow:0 1px 3px rgba(40,30,90,.08)}
+  button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+  .row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:6px}
+  .row>span{flex:none;width:5.5em;font-weight:700;font-size:13px}
+  .sl{display:grid;grid-template-columns:5.5em 38px 1fr 38px 3.2em;align-items:center;gap:6px;margin-bottom:8px}
+  .sl b{font-size:13px} .sl output{font:700 13px ui-monospace,monospace;text-align:right}
+  .sl small{grid-column:1/-1;margin-top:-6px;font-size:11px;color:var(--sub)}
+  .sl button{min-height:38px;padding:0;border-radius:12px;font-size:18px}
+  input[type=range]{width:100%;accent-color:var(--teal);height:32px}
+  textarea{width:100%;height:64px;border:1px solid var(--line);border-radius:10px;padding:6px;font:12px ui-monospace,monospace;background:var(--paper)}
+</style>
+</head>
+<body>
+<main>
+  <h1>キャラクリの試し</h1>
+  <p class="note">新しいキャラの層（素体・顔・前髪・後ろ髪・服）を重ねて、顔のバランスを動かす試しです。アプリ本体には、まだ入っていません。</p>
+  <div class="stage"><canvas id="cv" width="160" height="384"></canvas>
+    <div class="tools"><button id="zoom" aria-pressed="false">顔に寄る</button><button id="guide" aria-pressed="false">アンカーを見る</button></div></div>
+
+  <h2>パーツ（どのキャラの絵を使うか）</h2>
+  <div id="parts"></div>
+
+  <h2>顔のバランス</h2>
+  <p class="note">はじめの値は、キャラごとのプリセットです。そこから1ドットずつ動かせます。</p>
+  <div class="row" id="presets"><span>プリセット</span></div>
+  <div id="sliders"></div>
+  <div class="row"><button id="copy">いまの値をコピー</button></div>
+  <textarea id="out" readonly aria-label="いまの値"></textarea>
+</main>
+<script>
+const KEY = 'tabiquest:lab:kyarakuri';
+const SLOTS = [['face', '顔'], ['hairF', '前髪'], ['hairB', '後ろ髪'], ['wear', '服']];
+// 動かせる値。単位はドット（360ドットの絵の中で）。ay ＝ 上からの行
+const VALS = [
+  ['eyeGap', '目のはば', 20, 46, '左右の目のまん中どうしの間'],
+  ['eyeY', '目の高さ', 72, 98, '小さいほど上'],
+  ['browDy', 'まゆの高さ', -24, -8, '目からまゆまで。小さいほど目からはなれる'],
+  ['mouthY', '口の高さ', 92, 112, '小さいほど上'],
+  ['hairY', '髪の高さ', 22, 46, '前髪と後ろ髪。小さいほど上'],
+];
+let J, IM = {}, S, zoom = false, guide = false;
+const img = src => new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ng; i.src = src; });
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+async function init() {
+  J = await (await fetch('parts/parts.json')).json();
+  const ids = Object.keys(J.chars); IM.base = await img('parts/' + J.base);
+  for (const c of ids) { IM[c] = {}; for (const n of ['hair_front', 'hair_back', 'wear', 'wear_hide', 'eyeL', 'eyeR', 'browL', 'browR', 'mouth']) IM[c][n] = await img(`parts/${c}/${n}.png`); }
+  const first = ids[ids.length - 1];
+  S = { face: first, hairF: first, hairB: first, wear: first, v: { ...J.chars[first].preset } };
+  try { const old = JSON.parse(localStorage.getItem(KEY)); if (old && J.chars[old.face]) S = { ...S, ...old, v: { ...S.v, ...old.v } }; } catch (e) {}
+  ui(); draw();
+}
+
+function ui() {
+  const ids = Object.keys(J.chars);
+  document.getElementById('parts').innerHTML = SLOTS.map(([k, nm]) => `<div class="row" data-slot="${k}"><span>${nm}</span>${ids.map(c => `<button data-c="${c}" aria-pressed="${S[k] === c}">${k === 'wear' ? J.chars[c].wear : J.chars[c].name}</button>`).join('')}${k === 'wear' ? `<button data-c="" aria-pressed="${!S.wear}">インナー</button>` : ''}</div>`).join('');
+  document.getElementById('presets').innerHTML = '<span>プリセット</span>' + ids.map(c => `<button data-preset="${c}">${J.chars[c].name}のバランス</button>`).join('');
+  document.getElementById('sliders').innerHTML = VALS.map(([k, nm, mn, mx, hint]) => `<div class="sl" data-k="${k}"><b>${nm}</b><button data-d="-1" aria-label="${nm}を1へらす">−</button><input type="range" min="${mn}" max="${mx}" step="1" value="${S.v[k]}" aria-label="${nm}"><button data-d="1" aria-label="${nm}を1ふやす">＋</button><output>${S.v[k]}</output><small>${hint}</small></div>`).join('');
+  document.getElementById('out').value = JSON.stringify(S);
+}
+
+// 部品 p（切り出した絵）を、アンカーが (tx, ty) に来るように置く
+function put(x, im, p, tx, ty) { x.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay)); return [Math.round(tx), Math.round(ty)]; }
+
+function draw() {
+  const [W, H] = J.size, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'), v = S.v, marks = [];
+  const hy = v.hairY - J.hairAnchorY;
+  // 重ねる順：後ろ髪 → 素体（服でかくす所をのぞく）→ 服 → 前髪 → 顔
+  x.drawImage(IM[S.hairB].hair_back, 0, hy);
+  const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(IM.base, 0, 0);
+  if (S.wear) { bx.globalCompositeOperation = 'destination-out'; bx.drawImage(IM[S.wear].wear_hide, 0, 0); }
+  x.drawImage(b, 0, 0); if (S.wear) x.drawImage(IM[S.wear].wear, 0, 0);
+  x.drawImage(IM[S.hairF].hair_front, 0, hy);
+  // 顔：左右の目は、顔のまん中から同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す。まゆは目について動く
+  const F = J.chars[S.face], P = F.pieces, cx = Math.round(F.cx), ey0 = (P.eyeL.ay + P.eyeR.ay) / 2, xl = cx - Math.floor(v.eyeGap / 2), xr = xl + v.eyeGap;
+  for (const [s, ex] of [['L', xl], ['R', xr]]) {
+    const e = P['eye' + s], br = P['brow' + s], ty = v.eyeY + (e.ay - ey0);
+    marks.push(put(x, IM[S.face]['eye' + s], e, ex, ty));
+    marks.push(put(x, IM[S.face]['brow' + s], br, ex + (br.ax - e.ax), ty + (br.ay - e.ay) + (v.browDy - F.preset.browDy)));
+  }
+  marks.push(put(x, IM[S.face].mouth, P.mouth, cx + (P.mouth.ax - F.cx), v.mouthY));
+  marks.push([cx, v.hairY]);
+  const cv = document.getElementById('cv'), box = zoom ? [78, 8, 100, 116, 3] : [48, 0, 160, 384, Math.min(2, Math.max(1, Math.floor((innerWidth - 150) / 160)))];
+  cv.width = box[2]; cv.height = box[3]; cv.style.width = box[2] * box[4] + 'px'; cv.style.height = box[3] * box[4] + 'px';
+  const g = cv.getContext('2d'); g.drawImage(c, -box[0], -box[1]);
+  if (guide) { g.fillStyle = '#ff2d6f'; for (const [mx, my] of marks) { g.fillRect(mx - box[0] - 1, my - box[1], 3, 1); g.fillRect(mx - box[0], my - box[1] - 1, 1, 3); } }
+  document.getElementById('out').value = JSON.stringify(S);
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.id === 'zoom') { zoom = !zoom; b.setAttribute('aria-pressed', zoom); return draw(); }
+  if (b.id === 'guide') { guide = !guide; b.setAttribute('aria-pressed', guide); return draw(); }
+  if (b.id === 'copy') { navigator.clipboard?.writeText(document.getElementById('out').value); b.textContent = 'コピーしました'; setTimeout(() => { b.textContent = 'いまの値をコピー'; }, 1200); return; }
+  if (b.dataset.preset) { S.v = { ...J.chars[b.dataset.preset].preset }; save(); ui(); return draw(); }
+  const slot = b.closest('[data-slot]'); if (slot) { S[slot.dataset.slot] = b.dataset.c; save(); ui(); return draw(); }
+  const sl = b.closest('.sl'); if (sl && b.dataset.d) { const r = sl.querySelector('input'); r.value = +r.value + +b.dataset.d; r.dispatchEvent(new Event('input', { bubbles: true })); }
+});
+document.addEventListener('input', e => { const sl = e.target.closest('.sl'); if (!sl) return; S.v[sl.dataset.k] = +e.target.value; sl.querySelector('output').textContent = e.target.value; save(); draw(); });
+addEventListener('resize', () => J && draw());
+init().catch(err => { document.querySelector('main').insertAdjacentHTML('beforeend', '<p class="note">絵を読みこめませんでした。</p>'); console.error(err); });
+</script>
+</body>
+</html>
