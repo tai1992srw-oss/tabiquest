@@ -85,6 +85,8 @@ export function loadParts() {
     await Promise.all(J.items.flatMap(it => { IM.items[it.id] = {}; return ['front', 'back'].filter(k => it[k]).map(async k => { IM.items[it.id][k] = await image(BASE + it[k].file); }); }));
     await Promise.all(J.wears.flatMap(w => { IM.w[w.id] = {}; return Object.entries(w.layers).map(async ([k, f]) => { IM.w[w.id][k] = await image(BASE + f); }); }));   // 服（上下バラ）：wear/<番号>/{top,bottom,feet}.png
     await Promise.all(ids.flatMap(c => { return ['rinkaku', 'hair_front', 'hair_back', 'wear', 'wear_hide', ...Object.keys(J.chars[c].pieces)].map(async n => { IM[c][n] = await image(`${BASE}${c}/${n}.png`); }); }));
+    // 顔の部品の2倍（pieces.<部品>.x2 がある物）：<c>/<部品>@2x.png（くりた決定「顔のパーツは2倍の細かさ」。体・髪・服は 256×384 のまま）
+    await Promise.all(ids.flatMap(c => Object.entries(J.chars[c].pieces).filter(([, q]) => q.x2).map(async ([n]) => { IM[c][n + '@2x'] = await image(`${BASE}${c}/${n}@2x.png`); })));
     const base = J.chars[ids[0]].preset; for (const c of ids) J.chars[c].rel = Object.fromEntries(FACE_KEYS.map(k => [k, (J.chars[c].preset[k] ?? base[k]) - base[k]]));   // キャラ1との差
     return { J, IM, ids, base, cache: new Map(), tex: new Map(), hair: new Map(), tint: new Map() };
   })().catch(e => { parts = null; throw e; }));
@@ -297,10 +299,10 @@ export function compose(P, L) {
   const items = (L.items || []).map(id => J.items.find(q => q.id === id)).filter(Boolean), c1 = J.chars[P.ids[0]];
   const drawItems = (g, side, head) => { for (const it of items) { if (!!it.head !== head || !it[side]) continue; const im = IM.items[it.id][side];
     const at = head ? (R.anchors?.[it.attach] || (it.attach === 'headTop' ? [R.cx, R.headTop] : [it.ax, it.ay])) : (J.anchors?.[it.attach] || [it.ax, it.ay]);
-    const k = head ? R.headW / c1.headW : 1, ox = at[0] + (head ? (v.hairDx | 0) : 0), oy = at[1] + (head ? (v.hairDy | 0) : 0);
+    const k = head ? R.headW / (it.refHeadW || c1.headW) : 1,   // refHeadW：その物を描いたときの頭のはば
+      ox = at[0] + (head ? (v.hairDx | 0) : 0), oy = at[1] + (head ? (v.hairDy | 0) : 0);
     const dx = Math.round(ox + (it[side].x - it.ax) * k), dy = Math.round(oy + (it[side].y - it.ay) * k);
     g.imageSmoothingEnabled = false; if (k === 1) g.drawImage(im, dx, dy); else g.drawImage(im, dx, dy, Math.max(1, Math.round(im.width * k)), Math.max(1, Math.round(im.height * k))); } };
-  const put = (im, p, tx, ty) => hd.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay));   // 部品を、アンカーが (tx, ty) に来るように置く
   const mean = (Q, k) => (Q[k + 'L'].ay + Q[k + 'R'].ay) / 2;
   // 髪：輪郭の大きさに合わせて伸び縮みさせ（fitHair）、その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
   const hy = (k, n) => R.headTop - (J.chars[L[k]].hair?.[n]?.ay ?? J.chars[L[k]].headTop) + (v.hairDy | 0);
@@ -324,23 +326,34 @@ export function compose(P, L) {
   const T = turn ? turnOf(P, L.rin, turn > 0 ? 'R' : 'L') : TURN_DEF;
   const cx = Math.round(R.cx) + Math.round(tv * T.move), half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
   const far = s => (turn > 0 && s === 'R') || (turn < 0 && s === 'L');
-  const putK = (im, p, tx, ty, n, dx = 0) => { if (!n) return put(im, p, tx + dx, ty); hd.drawImage(narrow(im, n), p.x + Math.round(tx + dx - p.ax) + (turn > 0 ? n : 0), p.y + Math.round(ty - p.ay)); };   // n 列ぬいて、外がわのはしをそろえて置く
-  if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek'))); }
+  // 顔の部品の細かさ：使う顔の部品に2倍の絵（x2）があれば、顔の部品だけ2倍のキャンバス（fd）に描き、さいごに 2倍に広げた体・髪の上に重ねる
+  const uses = [L.eye, L.brow, L.mouth, L.cheek].filter(Boolean), fk = uses.some(c => Object.values(J.chars[c].pieces).some(q => q.x2)) ? 2 : 1;
+  const featC = fk === 2 ? (() => { const q = document.createElement('canvas'); q.width = W * 2; q.height = H * 2; return q; })() : head, fd = featC.getContext('2d'); fd.imageSmoothingEnabled = false;
+  // 部品 p を、アンカーが (tx, ty)（256×384 での位置）に来るように置く。n：細くする列（1倍での数）、im2・p2：2倍の絵とその位置（あれば）
+  const putK = (im, p, tx, ty, n = 0, dx = 0, im2 = null, p2 = null) => {
+    if (fk === 1) { if (!n) return fd.drawImage(im, p.x + Math.round(tx + dx - p.ax), p.y + Math.round(ty - p.ay)); return fd.drawImage(narrow(im, n), p.x + Math.round(tx + dx - p.ax) + (turn > 0 ? n : 0), p.y + Math.round(ty - p.ay)); }
+    if (im2 && p2) { const g = n ? narrow(im2, n * 2) : im2; return fd.drawImage(g, p2.x + Math.round((tx + dx) * 2 - p2.ax) + (n && turn > 0 ? n * 2 : 0), p2.y + Math.round(ty * 2 - p2.ay)); }
+    const g = n ? narrow(im, n) : im; fd.drawImage(g, (p.x + Math.round(tx + dx - p.ax) + (n && turn > 0 ? n : 0)) * 2, (p.y + Math.round(ty - p.ay)) * 2, g.width * 2, g.height * 2);   // 2倍の絵がない部品（表情の差分など）は、1倍の絵を2倍に広げる
+  };
+  const put = (im, p, tx, ty, im2, p2) => putK(im, p, tx, ty, 0, 0, im2, p2);
+  const x2 = (c, k) => (J.chars[c].pieces[k]?.x2 ? [IM[c][k + '@2x'], J.chars[c].pieces[k].x2] : [null, null]);   // n 列ぬいて、外がわのはしをそろえて置く
+  if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek')), ...x2(L.cheek, 'cheek' + s)); }
   const E = J.chars[L.eye].pieces, EX = half(v.eyeGap), B = J.chars[L.brow].pieces;
   // 表情：目・まゆの差分（アンカーは、ふだんの目・まゆと同じ）。まばたき（L.blink）は「閉じる」の目
   const F = FACE[L.face] || {}, eid = L.blink && !['close', 'smile'].includes(F.eye) ? 'close' : F.eye, ev = eid && (J.chars[L.eye].eyes || []).find(q => q.id === eid), bv = F.brow && (J.chars[L.brow].brows || []).find(q => q.id === F.brow);
   for (const s of ['L', 'R']) {
     const ep = ev?.[s] ? ev[s] : E['eye' + s], ei = ev?.[s] ? IM[L.eye][`eye${s}_${eid}`] : IM[L.eye]['eye' + s];
-    putK(tint(P, ei, 'eye', col.eye, `${L.eye}/eye${s}/${ev?.[s] ? eid : ''}`), ep, EX[s], v.eyeY + (ep.ay - mean(E, 'eye')), far(s) ? Math.round(T.eyeCut * ta) : 0, Math.round(tv * (far(s) ? T.far : T.near)));
+    const [e2, ep2] = ev?.[s] ? [null, null] : x2(L.eye, 'eye' + s);
+    putK(tint(P, ei, 'eye', col.eye, `${L.eye}/eye${s}/${ev?.[s] ? eid : ''}`), ep, EX[s], v.eyeY + (ep.ay - mean(E, 'eye')), far(s) ? Math.round(T.eyeCut * ta) : 0, Math.round(tv * (far(s) ? T.far : T.near)), e2 && tint(P, e2, 'eye', col.eye, `${L.eye}/eye${s}@2x`), ep2);
     const bp = bv?.[s] ? bv[s] : B['brow' + s], bi = bv?.[s] ? IM[L.brow][`brow${s}_${F.brow}`] : IM[L.brow]['brow' + s];
-    putK(bi, bp, EX[s] + (B['brow' + s].ax - B['eye' + s].ax), v.eyeY + v.browDy + (bp.ay - mean(B, 'brow')), far(s) ? Math.round(T.browCut * ta) : 0, Math.round(tv * (far(s) ? T.far : T.near)));
+    putK(bi, bp, EX[s] + (B['brow' + s].ax - B['eye' + s].ax), v.eyeY + v.browDy + (bp.ay - mean(B, 'brow')), far(s) ? Math.round(T.browCut * ta) : 0, Math.round(tv * (far(s) ? T.far : T.near)), ...(bv?.[s] ? [null, null] : x2(L.brow, 'brow' + s)));
   }
   const M = J.chars[L.mouth], MP = M.pieces;
   const mx = cx + Math.round(tv * T.mouth);
-  if (MP.nose) put(IM[L.mouth].nose, MP.nose, mx + (MP.nose.ax - M.cx), MP.nose.ay + ((v.eyeY - M.preset.eyeY) + (v.mouthY - M.preset.mouthY)) / 2);   // 鼻は、目と口のあいだに付いて動く
+  if (MP.nose) put(IM[L.mouth].nose, MP.nose, mx + (MP.nose.ax - M.cx), MP.nose.ay + ((v.eyeY - M.preset.eyeY) + (v.mouthY - M.preset.mouthY)) / 2, ...x2(L.mouth, 'nose'));   // 鼻は、目と口のあいだに付いて動く
   const mv = F.mouth && (J.shared.mouths || []).find(q => q.id === F.mouth);   // 共有の口：キャラ1の絵での位置。キャラ1のふだんの口からのずれを保って置く
-  if (mv) put(IM.mouths[mv.id], mv, mx + (mv.ax - J.shared.cx), v.mouthY + (mv.ay - J.chars[P.ids[0]].pieces.mouth.ay));
-  else put(IM[L.mouth].mouth, MP.mouth, mx + (MP.mouth.ax - M.cx), v.mouthY);
+  if (mv) put(IM.mouths[mv.id], mv, mx + (mv.ax - J.shared.cx), v.mouthY + (mv.ay - (J.shared.refMouthAy ?? J.chars[P.ids[0]].pieces.mouth.ay)));   // refMouthAy：共有の口を描いたときのキャラ1の口の高さ
+  else put(IM[L.mouth].mouth, MP.mouth, mx + (MP.mouth.ax - M.cx), v.mouthY, ...x2(L.mouth, 'mouth'));
   if (sep) {   // 頭をまとめる：輪郭 → 前髪 → 顔の部品（向きのときは、それぞれを円柱として回す。前髪は顔より少し外にある）
     const all = mk(), ax = all.getContext('2d');
     // 向き：輪郭は、目の高さから下を、あごに向かって向いた側へ（あごで2ドット）。前髪は、てっぺんで2ドット、目の少し下で 0（横の毛は、あごのあたりで後ろ髪とずれないように）
@@ -350,27 +363,33 @@ export function compose(P, L) {
     ax.drawImage(turn ? rowShift(hfC, y => tv * T.hair * (1 - ramp(y, v.eyeY - 10, v.eyeY + 12))) : hfC, 0, 0); ax.drawImage(head, 0, 0);
     x.drawImage(tilt ? rotate(all, tilt, R.cx + .5, R.chin, R.chin + 40) : all, Math.round(tv * T.head), 0);   // 頭ぜんたい（輪郭・前髪・顔）を、向いた側へ
   }
+  let out = c;
+  if (fk === 2) {   // 顔の部品が2倍：体・髪・服（256×384）を2倍に広げ、その上に2倍の顔の部品を、頭と同じ動き（向き・かしげ）で重ねる
+    out = document.createElement('canvas'); out.width = W * 2; out.height = H * 2; const o = out.getContext('2d'); o.imageSmoothingEnabled = false; o.drawImage(c, 0, 0, W * 2, H * 2);
+    o.drawImage(tilt ? rotate(featC, tilt, (R.cx + .5) * 2, R.chin * 2, (R.chin + 40) * 2) : featC, Math.round(tv * T.head) * 2, 0);
+  }
   const lean = Math.max(-10, Math.min(10, +L.lean || 0));
-  if (lean) { const o = bend(c, lean, 128, 214, 40); x.clearRect(0, 0, W, H); x.drawImage(o, 0, 0); }   // 腰（214 行・体のまん中）から上を、かたむける
+  if (lean) { const k = out.width / W, o = bend(out, lean, 128 * k, 214 * k, 40 * k), g = out.getContext('2d'); g.clearRect(0, 0, out.width, out.height); g.drawImage(o, 0, 0); }   // 腰（214 行・体のまん中）から上を、かたむける
   if (P.cache.size > 60) P.cache.delete(P.cache.keys().next().value);
-  P.cache.set(key, c); return c;
+  P.cache.set(key, out); return out;   // 顔の部品が2倍のときは 512×768（それ以外は 256×384）。使う側は、幅÷256 を倍率として使う
 }
 // 切り出す場所：顔（輪郭のまわり）と全身。[x, y, w, h]（立ち絵の中で）
 export const cropOf = (P, L, kind) => { const R = P.J.chars[L.rin]; return kind === 'face' ? [R.cx - 48, Math.max(0, R.headTop - 26), 96, 108] : [56, 0, 144, 376]; };
 // 立ち絵を cv に描く（kind：'face'／'body'）
 export function drawLook(cv, P, L, kind = 'body') {
-  const [x, y, w, h] = cropOf(P, L, kind); cv.width = w; cv.height = h; cv.getContext('2d').drawImage(compose(P, L), -x, -y); return [x, y, w, h];
+  const [x, y, w, h] = cropOf(P, L, kind), im = compose(P, L), k = im.width / P.J.size[0]; cv.width = w * k; cv.height = h * k; cv.getContext('2d').drawImage(im, -x * k, -y * k); return [x, y, w, h];
 }
 // ホーム用：色のついたコマの絵（1コマ。fw・fh つき）
 export function frameCanvas(P, L) {
-  const c = document.createElement('canvas'); c.width = FRAME[0]; c.height = FRAME[1]; c.getContext('2d').drawImage(compose(P, L), OFF[0], OFF[1]);
-  return Object.assign(c, { fw: FRAME[0], fh: FRAME[1], frames: 1 });
+  const im = compose(P, L), k = im.width / P.J.size[0], c = document.createElement('canvas'); c.width = FRAME[0] * k; c.height = FRAME[1] * k; c.getContext('2d').drawImage(im, OFF[0] * k, OFF[1] * k);
+  return Object.assign(c, { fw: c.width, fh: c.height, frames: 1, k });   // 顔が2倍のときは 544×752
 }
 // カード用：色番号の絵（R＝番号、A＝ある・なし）と、その色の表。コマは frames 個ならべる（ポーズは1つなので、どのコマも同じ絵）
 function indexed(P, L, frames) {
   const key = JSON.stringify(L) + '|' + frames; if (P.tex.has(key)) return P.tex.get(key);
   // コマ：前半＝ふだん、後半＝まばたき（目を閉じた絵）。card.js の makeChara の blink（コマの半分）と同じならび
-  const [fw, fh] = FRAME, half = frames > 1 ? frames >> 1 : frames, srcs = [frameCanvas(P, L), frames > 1 ? frameCanvas(P, { ...L, blink: 1 }) : null].filter(Boolean).map(q => q.getContext('2d').getImageData(0, 0, fw, fh).data);
+  const half = frames > 1 ? frames >> 1 : frames, cvs = [frameCanvas(P, L), frames > 1 ? frameCanvas(P, { ...L, blink: 1 }) : null].filter(Boolean), fw = cvs[0].width, fh = cvs[0].height;
+  const srcs = cvs.map(q => { if (q.width === fw) return q.getContext('2d').getImageData(0, 0, fw, fh).data; const t = document.createElement('canvas'); t.width = fw; t.height = fh; const g = t.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(q, 0, 0, fw, fh); return g.getImageData(0, 0, fw, fh).data; });
   const d = new Uint8ClampedArray(fw * fh * 4 * srcs.length); srcs.forEach((q, i) => d.set(q, i * fw * fh * 4));
   // 色の表は 256 色まで。色が多いとき（髪の色を変えた・キャラ3のように色の多い絵）は、多く使われている色から 256 色をえらび、残りはいちばん近い色にまとめる
   //   （前は、上から見つかった順に 256 色を取っていたので、髪の色ばかりで表が埋まり、肌や服が髪の色に寄って青くなった）
@@ -386,11 +405,11 @@ function indexed(P, L, frames) {
   const c = document.createElement('canvas'); c.width = fw * frames; c.height = fh; c.getContext('2d').putImageData(out, 0, 0);
   const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
   if (P.tex.size > 12) { const k0 = P.tex.keys().next().value; P.tex.get(k0).tex.dispose(); P.tex.delete(k0); }
-  const r = { tex: t, pal }; P.tex.set(key, r); return r;
+  const r = { tex: t, pal, size: [fw, fh] }; P.tex.set(key, r); return r;
 }
 // カードのキャラに、その見た目の絵を入れる。返り値：その絵の色の表（名所ごとの色づけは、呼ぶ側でかける）。ch：card.js の makeChara の返り値
 export function applyParts(P, ch, st) {
   const L = lookOf(P, st), key = JSON.stringify(L);
-  if (ch.partsKey !== key) { ch.partsKey = key; const r = indexed(P, L, ch.frames || 1); ch.pal2 = r.pal; ch.ext = 0; ch.setLods([{ s: 2, tex: r.tex, size: FRAME }]); }
+  if (ch.partsKey !== key) { ch.partsKey = key; const r = indexed(P, L, ch.frames || 1); ch.pal2 = r.pal; ch.ext = 0; ch.setLods([{ s: 2, tex: r.tex, size: r.size }]); }
   return ch.pal2;
 }

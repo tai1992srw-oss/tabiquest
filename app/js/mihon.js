@@ -111,7 +111,7 @@ function renderTurn(box) {
       ${TURN_KEYS.map(([k, n, mn, mx]) => `<div class="du-sl" data-tk="${k}"><b>${n}</b><button data-d="-1">−</button><input type="range" min="${mn}" max="${mx}" step="1" value="${T[k]}" aria-label="${n}"><button data-d="1">＋</button><output>${T[k]}</output></div>`).join('')}
       <div class="mh-foot"><button data-tu="reset">この向きを初めの値にもどす</button><button data-tu="copy">値をコピー</button></div><textarea class="mh-out" readonly></textarea>`;
     const draw = () => { const base = { ...fixLook(P, charaLook(P, tu.c)), face: tu.face || undefined }, cvs = box.querySelectorAll('.mh-turn canvas'), R = P.J.chars[tu.c];
-      [-1, 0, 1].forEach((t, i) => { const c = compose(P, { ...base, turn: t || undefined }), cv = cvs[i]; cv.width = 100; cv.height = 110; cv.getContext('2d').drawImage(c, -(R.cx - 50), -(R.headTop - 12)); });
+      [-1, 0, 1].forEach((t, i) => { const c = compose(P, { ...base, turn: t || undefined }), k = c.width / 256, cv = cvs[i]; cv.width = 100 * k; cv.height = 110 * k; cv.getContext('2d').drawImage(c, -(R.cx - 50) * k, -(R.headTop - 12) * k); });
       box.querySelector('.mh-out').value = JSON.stringify(turnTune()); };
     draw();
     box.onclick = e => { const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
