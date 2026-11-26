@@ -10,12 +10,13 @@ import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara, 
 const THREE = window.THREE;
 
 // 海のマス（B＝128）：空の差分を使うとき、空を上下に反転して映す（uRefl＝水面の行。0なら映さない）
-const FRAG = `uniform sampler2D tSky,tSkyPal; uniform float uRefl; uniform vec2 uSkyOff;
+// 夕焼け（uReflE＝水面の行）：波の暗い所はすみれ色、明るい所は空の色（オレンジを暗くすると、にごった緑に見えるため）
+const FRAG = `uniform sampler2D tSky,tSkyPal; uniform float uRefl,uReflE; uniform vec2 uSkyOff;
   void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; if(hidden(px)) discard; vec2 s=px-uOff; vec4 t=smp(s); if(t.a<.5) discard;
   vec3 c=pal(t.r); float fl=floor(t.g*255.+.5), ph=hash(s);
-  if(uRefl>.5 && abs(t.b*255.-128.)<2.){ vec2 q=vec2(px.x-uSkyOff.x+floor(sin(px.y*1.7+uF*.3)*2.), 2.*uRefl-px.y);
+  if((uRefl>.5 || uReflE>.5) && abs(t.b*255.-128.)<2.){ vec2 q=vec2(px.x-uSkyOff.x+floor(sin(px.y*1.7+uF*.3)*2.), 2.*max(uRefl,uReflE)-px.y);
     vec4 k=texture2D(tSky,clamp((q+.5)/uSize,0.,1.)*vec2(1.,-1.)+vec2(0.,1.)); vec3 r=texture2D(tSkyPal,vec2((floor(k.r*255.+.5)+.5)/256.,.5)).rgb;
-    c=r*(.72+.9*(lum(c)-.45)); }
+    c=uReflE>.5 ? mix(vec3(.227,.173,.408), r*1.04, clamp((lum(c)-.2)*1.9,0.,1.)) : r*(.72+.9*(lum(c)-.45)); }
   if(fl>.5 && fl<1.5 && uStretch>.5){ float q=mod(ph*14.+uF,14.); if(q<2.) c=mix(c,uNight>.25&&uNight<.75?vec3(1.,.82,.5):vec3(1.),uNight>.75?.35:.7); else if(q<4.) c*=.9; }
   if(fl>1.5 && fl<2.5 && uNight>.25){ c=mix(c,vec3(1.,.86,.55),uNight>.75?.25:.6); c*=1.+.06*sin(uF*.9+ph*6.); }
   if(fl>2.5 && fl<3.5 && uNight>.75 && fract(ph*7.)<.12 && mod(ph*60.+uF,60.)<3.) c*=.45;
@@ -35,6 +36,8 @@ const GULL = `void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; vec2 
 // cfg：{ base, ground（キャラの地面：look.js の charaPlace）, gulls（カモメの高さの列。なければ出さない）, boat（船が通るなら true）,
 //        boatDir（舟の向きを決める：1＝右へ、-1＝左へ）, boatDay（true なら夜・雨・雪の日は舟を出さない）,
 //        steam（湯気を出す場所 [[x,y],...]）, par（層ごとのずれの大きさ [空,景色,キャラ]） }
+// 夕焼けの日の景色の色づけ：夕日の色（明るい所はオレンジ、かげは少し紫）。鎌倉高校前（kamakura.js）は look.js の TIME.evening のまま
+const EVENING = { mul: [1.1, .8, .6], add: [18, 6, 20], desat: .05 };
 export async function buildDot(cfg) {
   const base = cfg.base;
   const D = await (await fetch(base + 'data.json')).json();
@@ -52,7 +55,7 @@ export async function buildDot(cfg) {
   const sky = makeLayer(scene, 0, `void main(){ vec2 px=floor(vUv*uSize); px.y=uSize.y-1.-px.y; if(hidden(px)) discard; vec2 s=px-uOff; vec4 t=smp(s); gl_FragColor=vec4(pal(t.r),1.); }`);
   const scn = makeLayer(scene, 1, FRAG);
   const front = makeLayer(scene, 3, FRAG);
-  for (const m of [scn, front]) { Object.assign(m.material.uniforms, { tSky: { value: null }, tSkyPal: { value: null }, uRefl: { value: 0 }, uSkyOff: { value: new THREE.Vector2() } }); m.material.needsUpdate = true; }
+  for (const m of [scn, front]) { Object.assign(m.material.uniforms, { tSky: { value: null }, tSkyPal: { value: null }, uRefl: { value: 0 }, uReflE: { value: 0 }, uSkyOff: { value: new THREE.Vector2() } }); m.material.needsUpdate = true; }
   let boat = null, BW = 0, BH = 0, boatWin = [];
   if (D.sprites?.boat) { [BW, BH] = D.sprites.boat; boat = makeLayer(scene, 2, SPRITE, BW, BH); boat.material.uniforms.tIdx.value = tex.boat;
     boatWin = D.pal.boat.map(([r, g, b]) => b > r + 30 && r * .3 + g * .59 + b * .11 > 130); }
@@ -74,7 +77,7 @@ export async function buildDot(cfg) {
     scene, layers: [sky, scn], ch, drop: 0,
     apply(st) {
       const gray = ['cloudy', 'rain', 'snow'].includes(st.weather);
-      const t = (gray ? TIME_GRAY : TIME)[st.time] || TIME.day, w = WEATHER[st.weather] || WEATHER.clear, tw = both(t, w);
+      const t = (st.time === 'evening' && !gray ? EVENING : (gray ? TIME_GRAY : TIME)[st.time]) || TIME.day, w = WEATHER[st.weather] || WEATHER.clear, tw = both(t, w);
       // 景色：雪の日は雪の絵、夜は夜の絵、それ以外は昼の絵（季節の色を差し替える）
       const v = st.weather === 'snow' && D.snowScene ? 'snow' : st.time === 'night' && D.pal.main_night ? 'night' : 'day';
       const pkey = { day: 'main', night: 'main_night', snow: 'main_snow' }[v];
@@ -89,7 +92,8 @@ export async function buildDot(cfg) {
       const own = sname && sn !== 'overcast';
       setPal(sky, palTex(sname ? D.pal[sname] : D.pal.main, c => tint(c, own ? w : tw)));
       // 海に空を映すのは、昼の絵・雪の絵で空を差し替えたとき（夜の絵は海の明かりがもう描かれている）
-      for (const m of [scn, front]) { m.material.uniforms.tSky.value = sky.material.uniforms.tIdx.value; m.material.uniforms.tSkyPal.value = sky.material.uniforms.tPal.value; m.material.uniforms.uRefl.value = sname && v !== 'night' && D.WATER ? D.WATER : 0; }
+      for (const m of [scn, front]) { m.material.uniforms.tSky.value = sky.material.uniforms.tIdx.value; m.material.uniforms.tSkyPal.value = sky.material.uniforms.tPal.value; const eve = sn === 'evening' && v === 'day' ? D.WATER_EVE || D.WATER || 0 : 0;   // 夕焼けの日は、水に夕焼けを映す（WATER_EVE：夕焼けだけ映す名所）
+        m.material.uniforms.uReflE.value = eve; m.material.uniforms.uRefl.value = !eve && sname && v !== 'night' && D.WATER ? D.WATER : 0; }
       const night = st.time === 'night' ? 1 : st.time === 'evening' ? .5 : 0;
       for (const m of [scn, front]) {
         m.material.uniforms.uNight.value = night;
