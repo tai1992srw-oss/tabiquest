@@ -79,7 +79,7 @@ export function loadParts() {
     J.shared = J.shared || {}; IM.mouths = {}; for (const c of ids) IM[c] = {};
     await Promise.all([...ids.flatMap(c => [...(J.chars[c].eyes || []).flatMap(e => ['L', 'R'].filter(q => e[q]).map(async q => { IM[c][`eye${q}_${e.id}`] = await image(`${BASE}${c}/eye${q}_${e.id}.png`); if (e[q].x2) IM[c][`eye${q}_${e.id}@2x`] = await image(`${BASE}${c}/eye${q}_${e.id}@2x.png`); })),
       ...(J.chars[c].brows || []).flatMap(e => ['L', 'R'].filter(q => e[q]).map(async q => { IM[c][`brow${q}_${e.id}`] = await image(`${BASE}${c}/brow${q}_${e.id}.png`); if (e[q].x2) IM[c][`brow${q}_${e.id}@2x`] = await image(`${BASE}${c}/brow${q}_${e.id}@2x.png`); }))]),   // 差分の2倍（<部品>_<id>@2x.png・L.x2／R.x2）もあれば読む
-      ...(J.shared.mouths || []).map(async m => { IM.mouths[m.id] = await image(`${BASE}shared/mouth_${m.id}.png`); })]);
+      ...(J.shared.mouths || []).map(async m => { IM.mouths[m.id] = await image(`${BASE}shared/mouth_${m.id}.png`); if (m.x2) IM.mouths[m.id + '@2x'] = await image(`${BASE}shared/mouth_${m.id}@2x.png`); })]);
     // 持ち物・かざり（items）：<id>_front.png・<id>_back.png
     J.items = J.items || []; IM.items = {};
     await Promise.all(J.items.flatMap(it => { IM.items[it.id] = {}; return ['front', 'back'].filter(k => it[k]).map(async k => { IM.items[it.id][k] = await image(BASE + it[k].file); }); }));
@@ -352,7 +352,8 @@ export function compose(P, L) {
   const mx = cx + Math.round(tv * T.mouth);
   if (MP.nose) put(IM[L.mouth].nose, MP.nose, mx + (MP.nose.ax - M.cx), MP.nose.ay + ((v.eyeY - M.preset.eyeY) + (v.mouthY - M.preset.mouthY)) / 2, ...x2(L.mouth, 'nose'));   // 鼻は、目と口のあいだに付いて動く
   const mv = F.mouth && (J.shared.mouths || []).find(q => q.id === F.mouth);   // 共有の口：キャラ1の絵での位置。キャラ1のふだんの口からのずれを保って置く
-  if (mv) put(IM.mouths[mv.id], mv, mx + (mv.ax - J.shared.cx), v.mouthY + (mv.ay - (J.shared.refMouthAy ?? J.chars[P.ids[0]].pieces.mouth.ay)));   // refMouthAy：共有の口を描いたときのキャラ1の口の高さ
+  if (mv && fk === 2 && mv.x2) put(null, null, mx + (MP.mouth.ax - M.cx), v.mouthY, IM.mouths[mv.id + '@2x'], mv.x2);   // 2倍の口：mouths.x2 のアンカーを、その子のふだんの口（x2）のアンカーに重ねる（refMouthAy は使わない）
+  else if (mv) put(IM.mouths[mv.id], mv, mx + (mv.ax - J.shared.cx), v.mouthY + (mv.ay - (J.shared.refMouthAy ?? J.chars[P.ids[0]].pieces.mouth.ay)));   // refMouthAy：共有の口を描いたときのキャラ1の口の高さ
   else put(IM[L.mouth].mouth, MP.mouth, mx + (MP.mouth.ax - M.cx), v.mouthY, ...x2(L.mouth, 'mouth'));
   if (sep) {   // 頭をまとめる：輪郭 → 前髪 → 顔の部品（向きのときは、それぞれを円柱として回す。前髪は顔より少し外にある）
     const all = mk(), ax = all.getContext('2d');
