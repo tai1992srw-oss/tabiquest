@@ -8,7 +8,7 @@ export const loadThumbData = () => dataP || (dataP = Promise.all([loadParts(), f
 
 // 見た目 L（{ colors, hair, outfit }）・表情 face の、f コマ目の絵から crop＝[x, y, w, h] を cv に描く
 function draw(cv, { P, D }, L, face, lod, f, crop) {
-  const src = sheet(P, L.hair || '', lod, L.outfit || '', face || '').px, [fw] = P.J[lod], pal = D.pal.chara.map((c, i) => recolorChara(c, i, D, L.colors || {}));
+  const src = sheet(P, L.hair || '', lod, L.outfit || '', face || '', '', L.kao || '').px, [fw] = P.J[lod], pal = D.pal.chara.map((c, i) => recolorChara(c, i, D, L.colors || {}));
   const [cx, cy, cw, ch] = crop; cv.width = cw; cv.height = ch;
   const x = cv.getContext('2d'), out = x.createImageData(cw, ch), o = out.data, p = src.data;
   for (let y = 0; y < ch; y++) for (let xx = 0; xx < cw; xx++) {

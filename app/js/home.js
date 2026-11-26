@@ -49,7 +49,7 @@ let charaImg = null;
 function loadChara() {
   return charaImg || (charaImg = (async () => {
     const D = await (await fetch('assets/kamakura/data.json')).json();
-    const P = await loadParts(), im = partsSheet(P, charaHair(), 'close', charaOutfit(), '', settings.charaShape || '');
+    const P = await loadParts(), im = partsSheet(P, charaHair(), 'close', charaOutfit(), '', settings.charaShape || '', settings.charaKao || '');
     const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
     const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0);
     const d = x.getImageData(0, 0, c.width, c.height), pal = D.pal.chara.map((v, i) => recolorChara(v, i, D));   // ふだんのお着替えの色
@@ -163,7 +163,7 @@ export function renderHome(view, { header } = {}) {
     }
     else if (a === 'dress') {   // ホームのお着替え＝ふだんの見た目。これから作るカードと、ホームのキャラに使う（前に撮ったカードは変わらない）
       openDress({ look: defaultLook(), title: 'お着替え', note: 'ふだんの見た目。これからのカードにも使います',
-        onSave: L => { settings.charaColors = L.colors; if (L.hair) settings.charaHair = L.hair; else delete settings.charaHair; if (L.outfit) settings.charaOutfit = L.outfit; else delete settings.charaOutfit; if (L.shape) settings.charaShape = L.shape; else delete settings.charaShape;
+        onSave: L => { settings.charaColors = L.colors; if (L.hair) settings.charaHair = L.hair; else delete settings.charaHair; if (L.outfit) settings.charaOutfit = L.outfit; else delete settings.charaOutfit; if (L.shape) settings.charaShape = L.shape; else delete settings.charaShape; if (L.kao) settings.charaKao = L.kao; else delete settings.charaKao;
           saveSettings(); clearSnaps(); charaImg = null; showChara(); toast('お着替えを保存しました'); } });
     }
     else if (a === 'blur') {   // ぼかし具合を動かして見る（後ろが見えるシート）
