@@ -102,6 +102,174 @@
    "wearAnchor": {
     "ax": 127.5,
     "ay": 112
+   },
+   "eyes": [
+    {
+     "id": "close",
+     "name": "閉じる",
+     "L": {
+      "x": 105,
+      "y": 72,
+      "ax": 114.5,
+      "ay": 85.0
+     },
+     "R": {
+      "x": 134,
+      "y": 72,
+      "ax": 140.5,
+      "ay": 85.0
+     }
+    },
+    {
+     "id": "smile",
+     "name": "にっこり",
+     "L": {
+      "x": 106,
+      "y": 72,
+      "ax": 114.5,
+      "ay": 85.0
+     },
+     "R": {
+      "x": 134,
+      "y": 72,
+      "ax": 140.5,
+      "ay": 85.0
+     }
+    },
+    {
+     "id": "wink",
+     "name": "ウインク",
+     "L": null,
+     "R": {
+      "x": 134,
+      "y": 72,
+      "ax": 140.5,
+      "ay": 85.0
+     }
+    },
+    {
+     "id": "smug",
+     "name": "ニヤリ",
+     "L": {
+      "x": 105,
+      "y": 72,
+      "ax": 114.5,
+      "ay": 85.0
+     },
+     "R": {
+      "x": 134,
+      "y": 72,
+      "ax": 140.5,
+      "ay": 85.0
+     }
+    }
+   ],
+   "eyesOwn": true,
+   "brows": [
+    {
+     "id": "normal",
+     "name": "ふつう",
+     "L": {
+      "x": 107,
+      "y": 68,
+      "ax": 113.0,
+      "ay": 69.5,
+      "scale": 1.0
+     },
+     "R": {
+      "x": 136,
+      "y": 68,
+      "ax": 142.5,
+      "ay": 70.0,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "trouble",
+     "name": "困り",
+     "L": {
+      "x": 106,
+      "y": 66,
+      "ax": 113.0,
+      "ay": 69.5,
+      "scale": 1.0
+     },
+     "R": {
+      "x": 135,
+      "y": 66,
+      "ax": 142.5,
+      "ay": 70.0,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "angry",
+     "name": "怒り",
+     "L": {
+      "x": 109,
+      "y": 68,
+      "ax": 113.0,
+      "ay": 69.5,
+      "scale": 1.0
+     },
+     "R": {
+      "x": 138,
+      "y": 68,
+      "ax": 142.5,
+      "ay": 70.0,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "up",
+     "name": "おどろき",
+     "L": {
+      "x": 106,
+      "y": 66,
+      "ax": 113.0,
+      "ay": 69.5,
+      "scale": 1.0
+     },
+     "R": {
+      "x": 135,
+      "y": 66,
+      "ax": 142.5,
+      "ay": 70.0,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "gentle",
+     "name": "やさしい",
+     "L": {
+      "x": 106,
+      "y": 67,
+      "ax": 113.0,
+      "ay": 69.5,
+      "scale": 1.0
+     },
+     "R": {
+      "x": 135,
+      "y": 68,
+      "ax": 142.5,
+      "ay": 70.0,
+      "scale": 1.0
+     }
+    }
+   ],
+   "anchors": {
+    "earL": [
+     100,
+     85
+    ],
+    "earR": [
+     155,
+     85
+    ],
+    "headTop": [
+     127,
+     42
+    ]
    }
   },
   "c2": {
@@ -194,6 +362,174 @@
    "wearAnchor": {
     "ax": 127.5,
     "ay": 112
+   },
+   "eyes": [
+    {
+     "id": "close",
+     "name": "閉じる",
+     "L": {
+      "x": 101,
+      "y": 78,
+      "ax": 110.5,
+      "ay": 88.0
+     },
+     "R": {
+      "x": 136,
+      "y": 78,
+      "ax": 144.5,
+      "ay": 88.0
+     }
+    },
+    {
+     "id": "smile",
+     "name": "にっこり",
+     "L": {
+      "x": 99,
+      "y": 82,
+      "ax": 110.5,
+      "ay": 88.0
+     },
+     "R": {
+      "x": 132,
+      "y": 82,
+      "ax": 144.5,
+      "ay": 88.0
+     }
+    },
+    {
+     "id": "wink",
+     "name": "ウインク",
+     "L": null,
+     "R": {
+      "x": 134,
+      "y": 79,
+      "ax": 144.5,
+      "ay": 88.0
+     }
+    },
+    {
+     "id": "smug",
+     "name": "ニヤリ",
+     "L": {
+      "x": 98,
+      "y": 79,
+      "ax": 110.5,
+      "ay": 88.0
+     },
+     "R": {
+      "x": 136,
+      "y": 79,
+      "ax": 144.5,
+      "ay": 88.0
+     }
+    }
+   ],
+   "eyesOwn": true,
+   "brows": [
+    {
+     "id": "normal",
+     "name": "ふつう",
+     "L": {
+      "x": 103,
+      "y": 70,
+      "ax": 110.0,
+      "ay": 71.5,
+      "scale": 1.154
+     },
+     "R": {
+      "x": 138,
+      "y": 70,
+      "ax": 144.5,
+      "ay": 71.5,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "trouble",
+     "name": "困り",
+     "L": {
+      "x": 102,
+      "y": 68,
+      "ax": 110.0,
+      "ay": 71.5,
+      "scale": 1.154
+     },
+     "R": {
+      "x": 137,
+      "y": 68,
+      "ax": 144.5,
+      "ay": 71.5,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "angry",
+     "name": "怒り",
+     "L": {
+      "x": 106,
+      "y": 70,
+      "ax": 110.0,
+      "ay": 71.5,
+      "scale": 1.154
+     },
+     "R": {
+      "x": 140,
+      "y": 70,
+      "ax": 144.5,
+      "ay": 71.5,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "up",
+     "name": "おどろき",
+     "L": {
+      "x": 102,
+      "y": 68,
+      "ax": 110.0,
+      "ay": 71.5,
+      "scale": 1.154
+     },
+     "R": {
+      "x": 137,
+      "y": 68,
+      "ax": 144.5,
+      "ay": 71.5,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "gentle",
+     "name": "やさしい",
+     "L": {
+      "x": 102,
+      "y": 69,
+      "ax": 110.0,
+      "ay": 71.5,
+      "scale": 1.154
+     },
+     "R": {
+      "x": 137,
+      "y": 69,
+      "ax": 144.5,
+      "ay": 71.5,
+      "scale": 1.0
+     }
+    }
+   ],
+   "anchors": {
+    "earL": [
+     93,
+     90
+    ],
+    "earR": [
+     161,
+     90
+    ],
+    "headTop": [
+     127,
+     34
+    ]
    }
   },
   "c3": {
@@ -286,7 +622,1138 @@
    "wearAnchor": {
     "ax": 127.5,
     "ay": 112
+   },
+   "eyes": [
+    {
+     "id": "close",
+     "name": "閉じる",
+     "L": {
+      "x": 101,
+      "y": 71,
+      "ax": 112.5,
+      "ay": 84.0
+     },
+     "R": {
+      "x": 134,
+      "y": 71,
+      "ax": 142.0,
+      "ay": 83.5
+     }
+    },
+    {
+     "id": "smile",
+     "name": "にっこり",
+     "L": {
+      "x": 100,
+      "y": 71,
+      "ax": 112.5,
+      "ay": 84.0
+     },
+     "R": {
+      "x": 134,
+      "y": 71,
+      "ax": 142.0,
+      "ay": 83.5
+     }
+    },
+    {
+     "id": "wink",
+     "name": "ウインク",
+     "L": null,
+     "R": {
+      "x": 134,
+      "y": 71,
+      "ax": 142.0,
+      "ay": 83.5
+     }
+    },
+    {
+     "id": "smug",
+     "name": "ニヤリ",
+     "L": {
+      "x": 101,
+      "y": 71,
+      "ax": 112.5,
+      "ay": 84.0
+     },
+     "R": {
+      "x": 134,
+      "y": 71,
+      "ax": 142.0,
+      "ay": 83.5
+     }
+    }
+   ],
+   "eyesOwn": true,
+   "brows": [
+    {
+     "id": "normal",
+     "name": "ふつう",
+     "L": {
+      "x": 104,
+      "y": 62,
+      "ax": 112.0,
+      "ay": 63.5,
+      "scale": 1.308
+     },
+     "R": {
+      "x": 133,
+      "y": 60,
+      "ax": 139.5,
+      "ay": 62.5,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "trouble",
+     "name": "困り",
+     "L": {
+      "x": 102,
+      "y": 60,
+      "ax": 112.0,
+      "ay": 63.5,
+      "scale": 1.308
+     },
+     "R": {
+      "x": 132,
+      "y": 58,
+      "ax": 139.5,
+      "ay": 62.5,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "angry",
+     "name": "怒り",
+     "L": {
+      "x": 106,
+      "y": 62,
+      "ax": 112.0,
+      "ay": 63.5,
+      "scale": 1.308
+     },
+     "R": {
+      "x": 135,
+      "y": 60,
+      "ax": 139.5,
+      "ay": 62.5,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "up",
+     "name": "おどろき",
+     "L": {
+      "x": 102,
+      "y": 60,
+      "ax": 112.0,
+      "ay": 63.5,
+      "scale": 1.308
+     },
+     "R": {
+      "x": 132,
+      "y": 59,
+      "ax": 139.5,
+      "ay": 62.5,
+      "scale": 1.0
+     }
+    },
+    {
+     "id": "gentle",
+     "name": "やさしい",
+     "L": {
+      "x": 102,
+      "y": 61,
+      "ax": 112.0,
+      "ay": 63.5,
+      "scale": 1.308
+     },
+     "R": {
+      "x": 132,
+      "y": 60,
+      "ax": 139.5,
+      "ay": 62.5,
+      "scale": 1.0
+     }
+    }
+   ],
+   "anchors": {
+    "earL": [
+     96,
+     83
+    ],
+    "earR": [
+     157,
+     84
+    ],
+    "headTop": [
+     127,
+     33
+    ]
+   }
+  },
+  "c4": {
+   "name": "D",
+   "wear": "シャツとベスト",
+   "rin": "クール",
+   "cx": 127,
+   "headTop": 39,
+   "chin": 107,
+   "headW": 56,
+   "headWY": 61,
+   "joinY": 112,
+   "pieces": {
+    "eyeL": {
+     "x": 105,
+     "y": 76,
+     "ax": 115,
+     "ay": 84.5,
+     "core": [
+      110,
+      80,
+      10,
+      10
+     ]
+    },
+    "eyeR": {
+     "x": 135,
+     "y": 76,
+     "ax": 140,
+     "ay": 84.0,
+     "core": [
+      136,
+      80,
+      8,
+      9
+     ]
+    },
+    "browL": {
+     "x": 107,
+     "y": 70,
+     "ax": 114.5,
+     "ay": 71.5
+    },
+    "browR": {
+     "x": 135,
+     "y": 70,
+     "ax": 142.0,
+     "ay": 71.0
+    },
+    "cheekL": {
+     "x": 113,
+     "y": 91,
+     "ax": 113,
+     "ay": 92.0
+    },
+    "cheekR": {
+     "x": 140,
+     "y": 91,
+     "ax": 141,
+     "ay": 92.0
+    },
+    "nose": {
+     "x": 129,
+     "y": 92,
+     "ax": 129.0,
+     "ay": 92.0
+    },
+    "mouth": {
+     "x": 125,
+     "y": 98,
+     "ax": 129.0,
+     "ay": 98
+    }
+   },
+   "preset": {
+    "eyeGap": 25,
+    "eyeY": 84,
+    "browDy": -13,
+    "mouthY": 98,
+    "hairDy": 0,
+    "cheekGap": 28,
+    "cheekDy": 8
+   },
+   "hair": {
+    "hair_front": {
+     "ax": 127,
+     "ay": 39,
+     "headW": 56
+    },
+    "hair_back": {
+     "ax": 127,
+     "ay": 39,
+     "headW": 56
+    }
+   },
+   "wearAnchor": {
+    "ax": 127.5,
+    "ay": 112
+   },
+   "eyes": [
+    {
+     "id": "close",
+     "name": "閉じる",
+     "L": {
+      "x": 106,
+      "y": 72,
+      "ax": 115,
+      "ay": 84.5,
+      "scale": 1.0
+     },
+     "R": {
+      "x": 134,
+      "y": 71,
+      "ax": 140,
+      "ay": 84.0,
+      "scale": 0.944
+     }
+    },
+    {
+     "id": "smile",
+     "name": "にっこり",
+     "L": {
+      "x": 106,
+      "y": 72,
+      "ax": 115,
+      "ay": 84.5,
+      "scale": 1.0
+     },
+     "R": {
+      "x": 134,
+      "y": 71,
+      "ax": 140,
+      "ay": 84.0,
+      "scale": 0.944
+     }
+    },
+    {
+     "id": "wink",
+     "name": "ウインク",
+     "L": null,
+     "R": {
+      "x": 134,
+      "y": 71,
+      "ax": 140,
+      "ay": 84.0,
+      "scale": 0.944
+     }
+    },
+    {
+     "id": "smug",
+     "name": "ニヤリ",
+     "L": {
+      "x": 106,
+      "y": 72,
+      "ax": 115,
+      "ay": 84.5,
+      "scale": 1.0
+     },
+     "R": {
+      "x": 134,
+      "y": 71,
+      "ax": 140,
+      "ay": 84.0,
+      "scale": 0.944
+     }
+    }
+   ],
+   "brows": [
+    {
+     "id": "normal",
+     "name": "ふつう",
+     "L": {
+      "x": 107,
+      "y": 70,
+      "ax": 114.5,
+      "ay": 71.5,
+      "scale": 1.231
+     },
+     "R": {
+      "x": 135,
+      "y": 69,
+      "ax": 142.0,
+      "ay": 71.0,
+      "scale": 1.071
+     }
+    },
+    {
+     "id": "trouble",
+     "name": "困り",
+     "L": {
+      "x": 105,
+      "y": 68,
+      "ax": 114.5,
+      "ay": 71.5,
+      "scale": 1.231
+     },
+     "R": {
+      "x": 134,
+      "y": 67,
+      "ax": 142.0,
+      "ay": 71.0,
+      "scale": 1.071
+     }
+    },
+    {
+     "id": "angry",
+     "name": "怒り",
+     "L": {
+      "x": 110,
+      "y": 70,
+      "ax": 114.5,
+      "ay": 71.5,
+      "scale": 1.231
+     },
+     "R": {
+      "x": 137,
+      "y": 69,
+      "ax": 142.0,
+      "ay": 71.0,
+      "scale": 1.071
+     }
+    },
+    {
+     "id": "up",
+     "name": "おどろき",
+     "L": {
+      "x": 105,
+      "y": 68,
+      "ax": 114.5,
+      "ay": 71.5,
+      "scale": 1.231
+     },
+     "R": {
+      "x": 134,
+      "y": 68,
+      "ax": 142.0,
+      "ay": 71.0,
+      "scale": 1.071
+     }
+    },
+    {
+     "id": "gentle",
+     "name": "やさしい",
+     "L": {
+      "x": 106,
+      "y": 69,
+      "ax": 114.5,
+      "ay": 71.5,
+      "scale": 1.231
+     },
+     "R": {
+      "x": 134,
+      "y": 68,
+      "ax": 142.0,
+      "ay": 71.0,
+      "scale": 1.071
+     }
+    }
+   ],
+   "anchors": {
+    "earL": [
+     103,
+     85
+    ],
+    "earR": [
+     152,
+     85
+    ],
+    "headTop": [
+     127,
+     39
+    ]
    }
   }
+ },
+ "shared": {
+  "note": "キャラ1の顔の大きさで描いた共有の部品。x,y＝キャラ1の絵での左上、ax,ay＝アンカー（キャラ1の絵での位置）。cx＝キャラ1の顔のまん中。まゆは refEyeAx（キャラ1のふだんの目のアンカーの x）からのずれで置く",
+  "cx": 127,
+  "refEyeAx": {
+   "L": 114.5,
+   "R": 140.5
+  },
+  "mouths": [
+   {
+    "id": "smile",
+    "name": "笑顔",
+    "x": 120,
+    "y": 98,
+    "ax": 127,
+    "ay": 99
+   },
+   {
+    "id": "grin",
+    "name": "にっこり",
+    "x": 122,
+    "y": 98,
+    "ax": 127,
+    "ay": 101
+   },
+   {
+    "id": "o",
+    "name": "おどろき",
+    "x": 125,
+    "y": 98,
+    "ax": 127,
+    "ay": 100
+   },
+   {
+    "id": "wave",
+    "name": "困り",
+    "x": 122,
+    "y": 99,
+    "ax": 127,
+    "ay": 100
+   },
+   {
+    "id": "shy",
+    "name": "照れ",
+    "x": 121,
+    "y": 98,
+    "ax": 127,
+    "ay": 99
+   },
+   {
+    "id": "he",
+    "name": "へ の字",
+    "x": 123,
+    "y": 98,
+    "ax": 127,
+    "ay": 99
+   },
+   {
+    "id": "flat",
+    "name": "ジト目用",
+    "x": 123,
+    "y": 99,
+    "ax": 127,
+    "ay": 99
+   },
+   {
+    "id": "smirk",
+    "name": "片方の口角あげ",
+    "x": 123,
+    "y": 98,
+    "ax": 128,
+    "ay": 99
+   },
+   {
+    "id": "nyari",
+    "name": "ニヤリ",
+    "x": 122,
+    "y": 98,
+    "ax": 127,
+    "ay": 99
+   }
+  ],
+  "brows": [
+   {
+    "id": "normal",
+    "name": "ふつう",
+    "L": {
+     "x": 107,
+     "y": 68,
+     "ax": 113,
+     "ay": 69
+    },
+    "R": {
+     "x": 136,
+     "y": 68,
+     "ax": 142,
+     "ay": 70
+    }
+   },
+   {
+    "id": "trouble",
+    "name": "困り",
+    "L": {
+     "x": 106,
+     "y": 67,
+     "ax": 113,
+     "ay": 71
+    },
+    "R": {
+     "x": 134,
+     "y": 67,
+     "ax": 141,
+     "ay": 71
+    }
+   },
+   {
+    "id": "angry",
+    "name": "怒り",
+    "L": {
+     "x": 108,
+     "y": 69,
+     "ax": 112,
+     "ay": 71
+    },
+    "R": {
+     "x": 139,
+     "y": 69,
+     "ax": 143,
+     "ay": 71
+    }
+   },
+   {
+    "id": "up",
+    "name": "おどろき",
+    "L": {
+     "x": 106,
+     "y": 63,
+     "ax": 113,
+     "ay": 66
+    },
+    "R": {
+     "x": 134,
+     "y": 63,
+     "ax": 141,
+     "ay": 66
+    }
+   },
+   {
+    "id": "gentle",
+    "name": "やさしい",
+    "L": {
+     "x": 106,
+     "y": 67,
+     "ax": 113,
+     "ay": 69
+    },
+    "R": {
+     "x": 134,
+     "y": 67,
+     "ax": 141,
+     "ay": 69
+    }
+   }
+  ]
+ },
+ "wears": [
+  {
+   "id": "w01",
+   "name": "量産型ガーリー",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w01/top.png",
+    "bottom": "wear/w01/bottom.png",
+    "feet": "wear/w01/feet.png"
+   }
+  },
+  {
+   "id": "w02",
+   "name": "地雷系",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w02/top.png",
+    "bottom": "wear/w02/bottom.png",
+    "feet": "wear/w02/feet.png"
+   }
+  },
+  {
+   "id": "w03",
+   "name": "白ワンピース",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w03/top.png",
+    "feet": "wear/w03/feet.png"
+   }
+  },
+  {
+   "id": "w04",
+   "name": "オーバーオール",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w04/top.png",
+    "feet": "wear/w04/feet.png"
+   }
+  },
+  {
+   "id": "w05",
+   "name": "パーカー",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w05/top.png",
+    "bottom": "wear/w05/bottom.png",
+    "feet": "wear/w05/feet.png"
+   }
+  },
+  {
+   "id": "w06",
+   "name": "夏のセーラー服",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w06/top.png",
+    "bottom": "wear/w06/bottom.png",
+    "feet": "wear/w06/feet.png"
+   }
+  },
+  {
+   "id": "w07",
+   "name": "ブレザー",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w07/top.png",
+    "bottom": "wear/w07/bottom.png",
+    "feet": "wear/w07/feet.png"
+   }
+  },
+  {
+   "id": "w08",
+   "name": "浴衣",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w08/top.png",
+    "feet": "wear/w08/feet.png"
+   }
+  },
+  {
+   "id": "w09",
+   "name": "はいからさん",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w09/top.png",
+    "feet": "wear/w09/feet.png"
+   }
+  },
+  {
+   "id": "w10",
+   "name": "チャイナドレス",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w10/top.png",
+    "feet": "wear/w10/feet.png"
+   }
+  },
+  {
+   "id": "w11",
+   "name": "マリン",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w11/top.png",
+    "bottom": "wear/w11/bottom.png",
+    "feet": "wear/w11/feet.png"
+   }
+  },
+  {
+   "id": "w13",
+   "name": "メイド",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w13/top.png",
+    "feet": "wear/w13/feet.png"
+   }
+  },
+  {
+   "id": "w14",
+   "name": "クラシカルロリィタ",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w14/top.png",
+    "feet": "wear/w14/feet.png"
+   }
+  },
+  {
+   "id": "w15",
+   "name": "ジャージ",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w15/top.png",
+    "bottom": "wear/w15/bottom.png",
+    "feet": "wear/w15/feet.png"
+   }
+  },
+  {
+   "id": "w16",
+   "name": "冬のコート",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w16/top.png",
+    "bottom": "wear/w16/bottom.png"
+   }
+  },
+  {
+   "id": "w17",
+   "name": "秋のニット",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w17/top.png",
+    "bottom": "wear/w17/bottom.png",
+    "feet": "wear/w17/feet.png"
+   }
+  },
+  {
+   "id": "w18",
+   "name": "Y2K",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w18/top.png",
+    "bottom": "wear/w18/bottom.png"
+   }
+  },
+  {
+   "id": "w19",
+   "name": "山ガール",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w19/top.png",
+    "bottom": "wear/w19/bottom.png"
+   }
+  },
+  {
+   "id": "w20",
+   "name": "ルームウェア",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w20/top.png",
+    "bottom": "wear/w20/bottom.png",
+    "feet": "wear/w20/feet.png"
+   }
+  },
+  {
+   "id": "w21",
+   "name": "森のパーカー",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w21/top.png",
+    "bottom": "wear/w21/bottom.png"
+   }
+  },
+  {
+   "id": "w31",
+   "name": "ボウタイブラウス",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w31/top.png",
+    "bottom": "wear/w31/bottom.png",
+    "feet": "wear/w31/feet.png"
+   }
+  },
+  {
+   "id": "w32",
+   "name": "ニットワンピース",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w32/top.png",
+    "feet": "wear/w32/feet.png"
+   }
+  },
+  {
+   "id": "w33",
+   "name": "トレンチコート",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w33/top.png",
+    "bottom": "wear/w33/bottom.png",
+    "feet": "wear/w33/feet.png"
+   }
+  },
+  {
+   "id": "w34",
+   "name": "ロングカーディガン",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w34/top.png",
+    "bottom": "wear/w34/bottom.png",
+    "feet": "wear/w34/feet.png"
+   }
+  },
+  {
+   "id": "w35",
+   "name": "ワイドパンツ",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w35/top.png",
+    "bottom": "wear/w35/bottom.png",
+    "feet": "wear/w35/feet.png"
+   }
+  },
+  {
+   "id": "w36",
+   "name": "デニムジャケット",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w36/top.png",
+    "bottom": "wear/w36/bottom.png",
+    "feet": "wear/w36/feet.png"
+   }
+  },
+  {
+   "id": "w37",
+   "name": "ボーダー",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w37/top.png",
+    "bottom": "wear/w37/bottom.png",
+    "feet": "wear/w37/feet.png"
+   }
+  },
+  {
+   "id": "w38",
+   "name": "リネンのセットアップ",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w38/top.png",
+    "bottom": "wear/w38/bottom.png",
+    "feet": "wear/w38/feet.png"
+   }
+  },
+  {
+   "id": "w39",
+   "name": "キャミワンピ",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w39/top.png",
+    "feet": "wear/w39/feet.png"
+   }
+  },
+  {
+   "id": "w40",
+   "name": "スプリングコート",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w40/top.png",
+    "bottom": "wear/w40/bottom.png",
+    "feet": "wear/w40/feet.png"
+   }
+  },
+  {
+   "id": "w41",
+   "name": "ストライプワンピース",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w41/top.png",
+    "feet": "wear/w41/feet.png"
+   }
+  },
+  {
+   "id": "w42",
+   "name": "秋のロングスカート",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w42/top.png",
+    "bottom": "wear/w42/bottom.png"
+   }
+  },
+  {
+   "id": "w43",
+   "name": "チェスターコート",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w43/top.png",
+    "bottom": "wear/w43/bottom.png",
+    "feet": "wear/w43/feet.png"
+   }
+  },
+  {
+   "id": "w44",
+   "name": "サテンワンピース",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w44/top.png",
+    "feet": "wear/w44/feet.png"
+   }
+  },
+  {
+   "id": "w45",
+   "name": "大人の浴衣",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w45/top.png",
+    "feet": "wear/w45/feet.png"
+   }
+  },
+  {
+   "id": "w46",
+   "name": "テーラードジャケット",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w46/top.png",
+    "bottom": "wear/w46/bottom.png",
+    "feet": "wear/w46/feet.png"
+   }
+  }
+ ],
+ "wearOrder": [
+  "bottom",
+  "feet",
+  "top"
+ ],
+ "anchors": {
+  "handL": [
+   87,
+   219
+  ],
+  "handR": [
+   167,
+   218
+  ],
+  "shoulderL": [
+   103,
+   129
+  ],
+  "shoulderR": [
+   152,
+   129
+  ],
+  "chest": [
+   127,
+   152
+  ]
+ },
+ "items": [
+  {
+   "id": "i01",
+   "name": "ベレー帽",
+   "attach": "headTop",
+   "head": true,
+   "ax": 127,
+   "ay": 42,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i01_front.png",
+    "x": 93,
+    "y": 25
+   },
+   "back": {
+    "file": "items/i01_back.png",
+    "x": 96,
+    "y": 33
+   }
+  },
+  {
+   "id": "i02",
+   "name": "花かんむり",
+   "attach": "headTop",
+   "head": true,
+   "ax": 127,
+   "ay": 42,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i02_front.png",
+    "x": 92,
+    "y": 37
+   },
+   "back": {
+    "file": "items/i02_back.png",
+    "x": 98,
+    "y": 40
+   }
+  },
+  {
+   "id": "i03",
+   "name": "リボンのヘアピン",
+   "attach": "earL",
+   "head": true,
+   "ax": 100,
+   "ay": 85,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i03_front.png",
+    "x": 89,
+    "y": 64
+   }
+  },
+  {
+   "id": "i04",
+   "name": "紙袋",
+   "attach": "handR",
+   "head": false,
+   "ax": 167,
+   "ay": 218,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i04_front.png",
+    "x": 154,
+    "y": 230
+   },
+   "back": {
+    "file": "items/i04_back.png",
+    "x": 156,
+    "y": 229
+   }
+  },
+  {
+   "id": "i05",
+   "name": "手さげ",
+   "attach": "handL",
+   "head": false,
+   "ax": 87,
+   "ay": 219,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i05_front.png",
+    "x": 67,
+    "y": 223
+   },
+   "back": {
+    "file": "items/i05_back.png",
+    "x": 70,
+    "y": 223
+   }
+  },
+  {
+   "id": "i06",
+   "name": "ぬいぐるみ",
+   "attach": "handR",
+   "head": false,
+   "ax": 167,
+   "ay": 218,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i06_front.png",
+    "x": 157,
+    "y": 227
+   },
+   "back": {
+    "file": "items/i06_back.png",
+    "x": 161,
+    "y": 225
+   }
+  },
+  {
+   "id": "i07",
+   "name": "ポーチ",
+   "attach": "shoulderL",
+   "head": false,
+   "ax": 103,
+   "ay": 129,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i07_front.png",
+    "x": 116,
+    "y": 145
+   },
+   "back": {
+    "file": "items/i07_back.png",
+    "x": 143,
+    "y": 145
+   }
+  }
+ ],
+ "itemLayers": {
+  "behind": "後ろ髪のすぐ上（頭・体より後ろ）",
+  "front": "前髪の上・顔の部品の下"
  }
 }
