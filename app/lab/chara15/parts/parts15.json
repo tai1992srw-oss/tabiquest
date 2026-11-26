@@ -179,6 +179,30 @@
     "shy": "照れ",
     "angry": "むっと",
     "jito": "ジト目"
+   },
+   "faceParts": {
+    "order": [
+     "cheek",
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "nose",
+     "mouth"
+    ],
+    "path": "c1b/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "angry",
+     "close",
+     "jito",
+     "shy",
+     "smile",
+     "surprise",
+     "trouble",
+     "wink"
+    ],
+    "note": "顔まるごと（faces）の代わりに、部品ごとに表情をえらんで重ねる。順は order（ほお→目→まゆ→鼻→口）。どれも 384×576 の同じ枠・offset は顔と同じ。部品をぜんぶ同じ表情にすると faces と0ドット"
    }
   }
  }
