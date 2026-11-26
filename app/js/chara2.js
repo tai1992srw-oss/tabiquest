@@ -3,6 +3,7 @@
 //   絵は描き足さない。部品を、アンカーが決まった位置に来るように置いて重ねるだけ
 //   見た目（look）：{ rin, eye, brow, mouth, cheek, hairF, hairB, wear：部品の出どころの id（'c1' など。cheek・wear は '' ＝ なし）,
 //                    v：{ eyeGap 目のはば, eyeY 目の高さ, browDy 目からまゆまで, mouthY 口の高さ, cheekGap・cheekDy ほお, hairS・hairDy・hairDx 髪の大きさ（％）・高さ・横の位置 } }
+//                    colors：{ hair, skin }（色変え。'#rrggbb'。ないときは元の色） }
 //   v のはじめの値は、輪郭ごとのプリセット（parts.json の chars.<id>.preset）。単位はドット
 //   前のキャラ（ななめ向き・6ポーズ・色変え）は archive/chara-v1/ と、git のタグ chara-v1
 import { settings } from './store.js';
@@ -19,6 +20,8 @@ export const VALS = [
 export const HAIR_VALS = [
   ['hairS', '髪の大きさ', -12, 12, '％。輪郭に合わせた大きさから'], ['hairDy', '髪の高さ', -12, 12, 'ドット。小さいほど上'], ['hairDx', '髪の横の位置', -8, 8, 'ドット。小さいほど左'],
 ];
+export const COLORS = { hair: { name: '髪の色', list: ['#a8643c', '#6b4226', '#2b2224', '#e6c070', '#f4e2a8', '#b8a898', '#f09ab8', '#e2667a', '#c8ccd8', '#8a6ce0', '#3b5fb8', '#5fb8c8', '#6fbf8a'] },
+  skin: { name: '肌の色', list: ['#ffe6d2', '#fbd9bf', '#f1c4a0', '#e4b088', '#d9a074', '#c08458', '#a86c48', '#8a5638', '#6b4330'] } };
 const HAIR0 = { hairS: 0, hairDy: 0, hairDx: 0 };
 // 輪郭のプリセット（顔のバランス）に替える。髪の調整は、そのまま残す
 export const presetOf = (P, rin, v = {}) => ({ ...P.J.chars[rin].preset, ...Object.fromEntries(Object.keys(HAIR0).map(k => [k, v[k] ?? 0])) });
@@ -31,7 +34,7 @@ export function loadParts() {
   return parts || (parts = (async () => {
     const J = await (await fetch(BASE + 'parts.json')).json(), IM = { body: await image(BASE + J.body) }, ids = Object.keys(J.chars);
     await Promise.all(ids.flatMap(c => { IM[c] = {}; return ['rinkaku', 'hair_front', 'hair_back', 'wear', 'wear_hide', ...Object.keys(J.chars[c].pieces)].map(async n => { IM[c][n] = await image(`${BASE}${c}/${n}.png`); }); }));
-    return { J, IM, ids, cache: new Map(), tex: new Map(), hair: new Map() };
+    return { J, IM, ids, cache: new Map(), tex: new Map(), hair: new Map(), tint: new Map() };
   })().catch(e => { parts = null; throw e; }));
 }
 // はじめの見た目：最初の子（1つめの id）の部品とバランス
@@ -42,6 +45,7 @@ export function fixLook(P, L) {
   const o = { v: { ...HAIR0, ...P.J.chars[L.rin].preset, ...(L.v || {}) } };
   for (const [k] of SLOTS) o[k] = P.J.chars[L[k]] ? L[k] : (NONE[k] && L[k] === '' ? '' : d[k]);
   if (o.cheek && !P.J.chars[o.cheek].pieces.cheekL) o.cheek = '';
+  const col = Object.fromEntries(['hair', 'skin'].filter(k => /^#[0-9a-f]{6}$/i.test(L.colors?.[k] || '')).map(k => [k, L.colors[k]])); if (Object.keys(col).length) o.colors = col;
   return o;
 }
 // ふだんの見た目（ホームのお着替え）と、そのカードの見た目（カードに残してあればそれ）
@@ -50,14 +54,67 @@ export const lookOf = (P, st) => (st?.look?.rin ? fixLook(P, st.look) : homeLook
 export const has = (P, k, c) => k !== 'cheek' || !!P.J.chars[c].pieces.cheekL;
 export const itemName = (P, k, c) => (c === '' ? NONE[k] : k === 'wear' ? P.J.chars[c].wear : k === 'rin' ? `${P.J.chars[c].name}（${P.J.chars[c].rin}）` : P.J.chars[c].name);
 
+// ---- 色変え（髪・肌）：絵の色を、えらんだ色に置きかえる。明るさの段（影・光）と、色あいの小さな差は、元の絵のまま残す ----
+//   look.colors：{ hair:'#rrggbb', skin:'#rrggbb' }（ない部位は、元の色のまま）
+//   髪：その髪の絵で、いちばん多い色を「基準の色」とする。基準と色あいが大きくちがう所（リボンなどの飾り）は変えない
+//   肌：輪郭の絵で、いちばん多い色が基準。体・輪郭の中の肌の色と、服の絵にまざっている「まったく同じ肌の色」だけを変える（インナーの白は変えない）
+const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+function rgb2hsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  if (mx === mn) return [0, 0, l];
+  const d = mx - mn, s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn), h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h / 6, s, l];
+}
+function hsl2rgb(h, s, l) {
+  if (s === 0) return [l * 255, l * 255, l * 255];
+  const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  return [f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255];
+}
+const hueGap = (a, b) => { const d = Math.abs(a - b) % 1; return Math.min(d, 1 - d); };
+const pixels = im => { const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0); return [c, x, x.getImageData(0, 0, c.width, c.height)]; };
+// 絵の中で、いちばん多い色（まっ黒に近い線と、only に入らない色はのぞく）
+function mainColor(d, only = null) {
+  const n = new Map(); for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 128 || d[i] + d[i + 1] + d[i + 2] < 150) continue; const k = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2]; if (only && !only(d[i], d[i + 1], d[i + 2])) continue; n.set(k, (n.get(k) || 0) + 1); }
+  let best = 0, bn = 0; for (const [k, v] of n) if (v > bn) { bn = v; best = k; } return [best >> 16, (best >> 8) & 255, best & 255];
+}
+const skinLike = (r, g, b) => { const [h, s, l] = rgb2hsl(r, g, b); return (h < .12 || h > .97) && s > .25 && l > .45 && l < .93; };
+// 色の置きかえの式を作る。ref：基準の色、hex：えらんだ色、hi：その絵の中でいちばん明るい色の明るさ
+function mapper(ref, hex, hi) {
+  const R = rgb2hsl(...ref), T = rgb2hsl(...hex2rgb(hex)), rl = Math.min(.98, Math.max(.02, R[2])), gap = Math.min(.3, Math.max(0, hi - rl) * 1.15), base = Math.min(T[2], .95 - gap);
+  return (r, g, b) => {
+    const o = rgb2hsl(r, g, b), lit = o[2] > rl;
+    const l = Math.max(0, Math.min(1, lit ? base + (o[2] - rl) * 1.15 : o[2] * base / rl));      // 影は同じ割合で暗く、光は元と同じ差だけ明るく（明るすぎる色は、土台を少し下げて差を守る）
+    const s = T[1] < .08 ? T[1] + (lit ? .05 : 0) : Math.max(0, Math.min(1, R[1] > .15 ? o[1] * T[1] / R[1] : T[1]));
+    let dh = o[0] - R[0]; dh -= Math.round(dh);
+    return hsl2rgb((T[0] + dh + 1) % 1, s, l);
+  };
+}
+// 絵 im の色を置きかえた絵を返す（同じ頼みは使い回す）。kind：'hair'／'skin'／'skinIn'（服の中の肌）
+function tint(P, im, kind, hex, key) {
+  if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return im;
+  const ck = `${key}/${kind}/${hex}`; if (P.tint.has(ck)) return P.tint.get(ck);
+  const [c, x, D] = pixels(im), d = D.data, cache = new Map();
+  if (!P.skin) { const [, , B] = pixels(P.IM[P.ids[0]].rinkaku); P.skin = { ref: mainColor(B.data, skinLike), set: new Set() };   // 肌の基準の色と、体・輪郭に出てくる肌の色の一覧
+    for (const src of [P.IM.body, ...P.ids.map(i => P.IM[i].rinkaku)]) { const q = pixels(src)[2].data; for (let i = 0; i < q.length; i += 4) if (q[i + 3] > 127 && skinLike(q[i], q[i + 1], q[i + 2])) P.skin.set.add((q[i] << 16) | (q[i + 1] << 8) | q[i + 2]); } }
+  const ref = kind === 'hair' ? mainColor(d) : P.skin.ref, rh = rgb2hsl(...ref)[0];
+  const use = kind === 'hair' ? (r, g, b) => { const [h, s] = rgb2hsl(r, g, b); return s < .22 || hueGap(h, rh) < .14; }      // 髪：色あいが近い所と、色みのうすい所（線・白っぽい光）。リボンなどは変えない
+    : (r, g, b) => P.skin.set.has((r << 16) | (g << 8) | b) || (kind === 'skin' && (() => { const [h, s, l] = rgb2hsl(r, g, b); return hueGap(h, rh) < .08 && s > .2 && l < .93; })());   // 肌：肌の色と、同じ色あいのこい線（輪郭の線）
+  let hi = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 127 && use(d[i], d[i + 1], d[i + 2])) hi = Math.max(hi, rgb2hsl(d[i], d[i + 1], d[i + 2])[2]);
+  const f = mapper(ref, hex, kind === 'hair' ? hi : rgb2hsl(...ref)[2] + .04);
+  for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 128) continue; const k = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2]; let v = cache.get(k);
+    if (v === undefined) { v = use(d[i], d[i + 1], d[i + 2]) ? f(d[i], d[i + 1], d[i + 2]).map(Math.round) : null; cache.set(k, v); }
+    if (v) { d[i] = v[0]; d[i + 1] = v[1]; d[i + 2] = v[2]; } }
+  x.putImageData(D, 0, 0); if (P.tint.size > 40) P.tint.delete(P.tint.keys().next().value); P.tint.set(ck, c); return c;
+}
+
 // 髪を、輪郭の大きさに合わせる：その髪が描かれたときの頭（横はば headW・てっぺん〜あご）と、えらんだ輪郭の頭をくらべて、
 //   頭のてっぺんのまん中（アンカー）を軸に、横とたてを伸び縮みさせる。ドット絵なので、1マスを 3×3 に見て、多い色を取る（こい線は 4つ以上あれば優先）
 //   同じ大きさ（同じ輪郭用の髪）のときは、元の絵のまま。返り値：256×384 のキャンバス（アンカーの位置は元のまま）
-function fitHair(P, id, name, rin, adj = 0) {
-  const C = P.J.chars[id], R = P.J.chars[rin], a = C.hair?.[name] || { ax: C.cx, ay: C.headTop, headW: C.headW }, im = P.IM[id][name];
+function fitHair(P, id, name, rin, adj = 0, hex = '') {
+  const C = P.J.chars[id], R = P.J.chars[rin], a = C.hair?.[name] || { ax: C.cx, ay: C.headTop, headW: C.headW }, im = tint(P, P.IM[id][name], 'hair', hex, `${id}/${name}`);
   const k = 1 + adj / 100, sx = R.headW / (a.headW || C.headW) * k, sy = (R.chin - R.headTop) / (C.chin - C.headTop) * k;   // adj：髪の大きさの調整（％）
   if (Math.abs(sx - 1) < .02 && Math.abs(sy - 1) < .02) return im;
-  const key = `${id}/${name}/${rin}/${adj}`; if (P.hair.has(key)) return P.hair.get(key);
+  const key = `${id}/${name}/${rin}/${adj}/${hex}`; if (P.hair.has(key)) return P.hair.get(key);
   const [W, H] = P.J.size, t = document.createElement('canvas'); t.width = W; t.height = H; const tx = t.getContext('2d', { willReadFrequently: true }); tx.drawImage(im, 0, 0);
   const src = new Uint32Array(tx.getImageData(0, 0, W, H).data.buffer), out = new ImageData(W, H), dst = new Uint32Array(out.data.buffer), OF = [1 / 6, .5, 5 / 6], cnt = new Map();
   const dark = v => (v & 255) + ((v >> 8) & 255) + ((v >> 16) & 255) < 300;
@@ -76,18 +133,18 @@ function fitHair(P, id, name, rin, adj = 0) {
 export function compose(P, L) {
   const key = JSON.stringify(L); if (P.cache.has(key)) return P.cache.get(key);
   const { J, IM } = P, [W, H] = J.size, c = document.createElement('canvas'); c.width = W; c.height = H;
-  const x = c.getContext('2d', { willReadFrequently: true }), v = L.v, R = J.chars[L.rin];
+  const x = c.getContext('2d', { willReadFrequently: true }), v = L.v, R = J.chars[L.rin], col = L.colors || {};
   const put = (im, p, tx, ty) => x.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay));   // 部品を、アンカーが (tx, ty) に来るように置く
   const mean = (Q, k) => (Q[k + 'L'].ay + Q[k + 'R'].ay) / 2;
   // 髪：輪郭の大きさに合わせて伸び縮みさせ（fitHair）、その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
   const hy = (k, n) => R.headTop - (J.chars[L[k]].hair?.[n]?.ay ?? J.chars[L[k]].headTop) + (v.hairDy | 0);
   const hx = (k, n) => Math.round(R.cx - (J.chars[L[k]].hair?.[n]?.ax ?? J.chars[L[k]].cx)) + (v.hairDx | 0);   // 横は、頭のまん中を合わせる
   // 重ねる順：後ろ髪 → 体・輪郭（服でかくす所をのぞく）→ 服 → 前髪 → ほお → 目 → まゆ → 鼻・口
-  x.drawImage(fitHair(P, L.hairB, 'hair_back', L.rin, v.hairS | 0), hx('hairB', 'hair_back'), hy('hairB', 'hair_back'));
-  const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(IM.body, 0, 0); bx.drawImage(IM[L.rin].rinkaku, 0, 0);
+  x.drawImage(fitHair(P, L.hairB, 'hair_back', L.rin, v.hairS | 0, col.hair), hx('hairB', 'hair_back'), hy('hairB', 'hair_back'));
+  const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(tint(P, IM.body, 'skin', col.skin, 'body'), 0, 0); bx.drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);
   if (L.wear) { bx.globalCompositeOperation = 'destination-out'; bx.drawImage(IM[L.wear].wear_hide, 0, 0); }
-  x.drawImage(b, 0, 0); if (L.wear) x.drawImage(IM[L.wear].wear, 0, 0);
-  x.drawImage(fitHair(P, L.hairF, 'hair_front', L.rin, v.hairS | 0), hx('hairF', 'hair_front'), hy('hairF', 'hair_front'));
+  x.drawImage(b, 0, 0); if (L.wear) x.drawImage(tint(P, IM[L.wear].wear, 'skinIn', col.skin, `${L.wear}/wear`), 0, 0);
+  x.drawImage(fitHair(P, L.hairF, 'hair_front', L.rin, v.hairS | 0, col.hair), hx('hairF', 'hair_front'), hy('hairF', 'hair_front'));
   // 顔の部品は、輪郭のまん中から左右に同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す
   const cx = Math.round(R.cx), half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
   if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek'))); }
