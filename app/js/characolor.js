@@ -46,6 +46,15 @@ export function recolorChara(c, i, D, colors = charaColors()) {
     const s = Math.max(0, Math.min(1, ref[1] > .15 && ref[2] < .85 ? o[1] * t[1] / ref[1] : t[1]));
     // 明るさは「基準の色（いちばん多い色）→ 選んだ色」に合わせて、影は同じ割合で暗く、光は同じ割合で明るく（明暗の順番を変えない）
     const rl = Math.min(.98, Math.max(.02, ref[2]));
+    if (k === 'hair') {
+      // 髪：ハイライト（基準より明るい色）が、どの色でも見えるようにする
+      //   明るさの差は元の絵と同じだけ足す（暗い髪でも、光の帯がはっきり出る）。明るすぎて足せない色は、髪ぜんたいを少し暗くして差を守る
+      //   色あいと あざやかさの差も元の絵のまま残す（元の光は、少し黄色寄りで あざやか）
+      const hiMax = Math.max(...D.pal.chara.slice(r[0], r[1] + 1).map(v => rgb2hsl(v)[2])), gap = Math.max(0, hiMax - rl) * 1.15;
+      const base = Math.min(t[2], .95 - gap), l = Math.max(0, Math.min(1, o[2] <= rl ? o[2] * base / rl : base + (o[2] - rl) * 1.15));
+      const lit = o[2] > rl, sat = Math.max(0, Math.min(1, t[1] < .08 ? t[1] + (lit ? .06 : 0) : s));   // 白・灰・黒の髪は、光にだけ少し色をのせる
+      return hsl2rgb([(t[0] + (lit ? o[0] - ref[0] : 0) + 1) % 1, sat, l]);
+    }
     const l = Math.max(0, Math.min(1, o[2] <= rl ? o[2] * t[2] / rl : t[2] + (o[2] - rl) * (1 - t[2]) / (1 - rl) * .35));   // 基準より明るい光は、少しだけ明るく（白い服の光が白いまま残らないように）
     return hsl2rgb([t[0], s, l]);
   }
