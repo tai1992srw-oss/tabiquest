@@ -211,6 +211,13 @@ function blow(src, f, top, span) {
   for (let y = 0; y < src.height; y++) { const t = Math.max(0, (y - top) / span); x.drawImage(src, 0, y, src.width, 1, Math.round(f * Math.min(1.2, t ** 1.4)), y, src.width, 1); }
   return c;
 }
+// 顔の向きの数字（キャラ＝輪郭ごと・左右ごと）。くりたさんと見本帳の「向きの調整」で決めていく
+//   move：顔の部品を向いた側へ、near・far：手前の目・奥の目だけ さらに、eyeCut・browCut：奥の目・まゆを細くする列の数、mouth：口・鼻だけ さらに、hair：前髪（てっぺんで）、jaw：あご
+//   決まった値は parts.json の chars.<id>.turn.{L,R} に入れる。見本帳でいじった値は、その端末の localStorage（tabiquest:turnTune）に入り、そちらが先
+export const TURN_KEYS = [['move', '顔の部品', 0, 5], ['near', '手前の目', -3, 3], ['far', '奥の目', -3, 4], ['eyeCut', '奥の目を細く（列）', 0, 6], ['browCut', '奥のまゆを細く（列）', 0, 5], ['mouth', '口・鼻', -3, 3], ['hair', '前髪', 0, 5], ['jaw', 'あご', 0, 5]];
+export const TURN_DEF = { move: 2, near: 2, far: 0, eyeCut: 3, browCut: 2, mouth: 0, hair: 2, jaw: 2 };
+export const turnTune = () => { try { return JSON.parse(localStorage.getItem('tabiquest:turnTune') || '{}') || {}; } catch (e) { return {}; } };
+export function turnOf(P, rin, dir) { return { ...TURN_DEF, ...(P.J.chars[rin]?.turn?.[dir] || {}), ...(turnTune()[rin]?.[dir] || {}) }; }
 // 行ごとに、まるごと横へずらす（線の太さは変わらない）。f(y)：その行のずらし量（ドット）
 function rowShift(src, f) {
   const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d');
@@ -273,30 +280,32 @@ export function compose(P, L) {
   // 顔の部品は、輪郭のまん中から左右に同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す
   // 向き：顔の部品を向いた側へ2ドット（左右の間はせまくしない＝目が寄って詰まらないように）。
   //   向いた側の目とまゆは、内がわ（鼻の側）から細くする（外がわのはしは輪郭に寄せたまま＝奥へ回りこんで見える）
-  const cx = Math.round(R.cx) + turn * 2, half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
+  const T = turn ? turnOf(P, L.rin, turn > 0 ? 'R' : 'L') : TURN_DEF;
+  const cx = Math.round(R.cx) + turn * T.move, half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
   const far = s => (turn > 0 && s === 'R') || (turn < 0 && s === 'L');
-  const putK = (im, p, tx, ty, n) => { if (!n) return put(im, p, tx, ty); hd.drawImage(narrow(im, n), p.x + Math.round(tx - p.ax) + (turn > 0 ? n : 0), p.y + Math.round(ty - p.ay)); };   // n 列ぬいて、外がわのはしをそろえて置く
+  const putK = (im, p, tx, ty, n, dx = 0) => { if (!n) return put(im, p, tx + dx, ty); hd.drawImage(narrow(im, n), p.x + Math.round(tx + dx - p.ax) + (turn > 0 ? n : 0), p.y + Math.round(ty - p.ay)); };   // n 列ぬいて、外がわのはしをそろえて置く
   if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek'))); }
   const E = J.chars[L.eye].pieces, EX = half(v.eyeGap), B = J.chars[L.brow].pieces;
   // 表情：目・まゆの差分（アンカーは、ふだんの目・まゆと同じ）。まばたき（L.blink）は「閉じる」の目
   const F = FACE[L.face] || {}, eid = L.blink && !['close', 'smile'].includes(F.eye) ? 'close' : F.eye, ev = eid && (J.chars[L.eye].eyes || []).find(q => q.id === eid), bv = F.brow && (J.chars[L.brow].brows || []).find(q => q.id === F.brow);
   for (const s of ['L', 'R']) {
     const ep = ev?.[s] ? ev[s] : E['eye' + s], ei = ev?.[s] ? IM[L.eye][`eye${s}_${eid}`] : IM[L.eye]['eye' + s];
-    putK(tint(P, ei, 'eye', col.eye, `${L.eye}/eye${s}/${ev?.[s] ? eid : ''}`), ep, EX[s], v.eyeY + (ep.ay - mean(E, 'eye')), far(s) ? 3 : 0);
+    putK(tint(P, ei, 'eye', col.eye, `${L.eye}/eye${s}/${ev?.[s] ? eid : ''}`), ep, EX[s], v.eyeY + (ep.ay - mean(E, 'eye')), far(s) ? T.eyeCut : 0, turn * (far(s) ? T.far : T.near));
     const bp = bv?.[s] ? bv[s] : B['brow' + s], bi = bv?.[s] ? IM[L.brow][`brow${s}_${F.brow}`] : IM[L.brow]['brow' + s];
-    putK(bi, bp, EX[s] + (B['brow' + s].ax - B['eye' + s].ax), v.eyeY + v.browDy + (bp.ay - mean(B, 'brow')), far(s) ? 2 : 0);
+    putK(bi, bp, EX[s] + (B['brow' + s].ax - B['eye' + s].ax), v.eyeY + v.browDy + (bp.ay - mean(B, 'brow')), far(s) ? T.browCut : 0, turn * (far(s) ? T.far : T.near));
   }
   const M = J.chars[L.mouth], MP = M.pieces;
-  if (MP.nose) put(IM[L.mouth].nose, MP.nose, cx + (MP.nose.ax - M.cx), MP.nose.ay + ((v.eyeY - M.preset.eyeY) + (v.mouthY - M.preset.mouthY)) / 2);   // 鼻は、目と口のあいだに付いて動く
+  const mx = cx + turn * T.mouth;
+  if (MP.nose) put(IM[L.mouth].nose, MP.nose, mx + (MP.nose.ax - M.cx), MP.nose.ay + ((v.eyeY - M.preset.eyeY) + (v.mouthY - M.preset.mouthY)) / 2);   // 鼻は、目と口のあいだに付いて動く
   const mv = F.mouth && (J.shared.mouths || []).find(q => q.id === F.mouth);   // 共有の口：キャラ1の絵での位置。キャラ1のふだんの口からのずれを保って置く
-  if (mv) put(IM.mouths[mv.id], mv, cx + (mv.ax - J.shared.cx), v.mouthY + (mv.ay - J.chars[P.ids[0]].pieces.mouth.ay));
-  else put(IM[L.mouth].mouth, MP.mouth, cx + (MP.mouth.ax - M.cx), v.mouthY);
+  if (mv) put(IM.mouths[mv.id], mv, mx + (mv.ax - J.shared.cx), v.mouthY + (mv.ay - J.chars[P.ids[0]].pieces.mouth.ay));
+  else put(IM[L.mouth].mouth, MP.mouth, mx + (MP.mouth.ax - M.cx), v.mouthY);
   if (sep) {   // 頭をまとめる：輪郭 → 前髪 → 顔の部品（向きのときは、それぞれを円柱として回す。前髪は顔より少し外にある）
     const all = mk(), ax = all.getContext('2d');
     // 向き：輪郭は、目の高さから下を、あごに向かって向いた側へ（あごで2ドット）。前髪は、てっぺんで2ドット、目の少し下で 0（横の毛は、あごのあたりで後ろ髪とずれないように）
     const ramp = (y, y0, y1) => Math.max(0, Math.min(1, (y - y0) / (y1 - y0)));
-    ax.drawImage(turn ? rowShift(rinC, y => turn * 2 * ramp(y, v.eyeY, R.chin + 2) ** 2) : rinC, 0, 0);
-    ax.drawImage(turn ? rowShift(hfC, y => turn * 2 * (1 - ramp(y, v.eyeY - 10, v.eyeY + 12))) : hfC, 0, 0); ax.drawImage(head, 0, 0);
+    ax.drawImage(turn ? rowShift(rinC, y => turn * T.jaw * ramp(y, v.eyeY, R.chin + 2) ** 2) : rinC, 0, 0);
+    ax.drawImage(turn ? rowShift(hfC, y => turn * T.hair * (1 - ramp(y, v.eyeY - 10, v.eyeY + 12))) : hfC, 0, 0); ax.drawImage(head, 0, 0);
     x.drawImage(tilt ? rotate(all, tilt, R.cx + .5, R.chin, R.chin + 40) : all, 0, 0);
   }
   const lean = Math.max(-10, Math.min(10, +L.lean || 0));

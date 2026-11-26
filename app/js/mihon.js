@@ -5,7 +5,7 @@
 //   絵は、アプリの本物の描き方（card.js の engine.snapshot、chara2.js の compose）で、その場で作る。描き足しはしない
 import { PLACES, LABEL, TIMES, WEATHERS, seasonOf } from './places.js';
 import { engine } from './card.js';
-import { loadParts, SLOTS, NONE, has, itemName, homeLook, drawLook, presetOf } from './chara2.js';
+import { loadParts, SLOTS, NONE, has, itemName, homeLook, drawLook, presetOf, charaLook, charaName, fixLook, compose, TURN_KEYS, TURN_DEF, turnOf, turnTune, FACES } from './chara2.js';
 import { esc, toast } from './ui.js';
 
 const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
@@ -96,6 +96,33 @@ function renderChara(box) {
   }).catch(() => { if (my === token) box.innerHTML = '<p class="note pad">キャラの絵を読み込めませんでした。</p>'; });
   return () => {};
 }
+// ---- 向きの調整：キャラ（輪郭）ごと・左右ごとに、顔の向きの数字を動かして、左・正面・右を見くらべる ----
+//   動かした値は、この端末だけに残る（localStorage の tabiquest:turnTune）。「値をコピー」で書き出して、アプリの決まった値にする
+const tu = { c: '', dir: 'R', face: '' };
+function renderTurn(box) {
+  box.innerHTML = '<p class="note pad">読み込んでいます…</p>';
+  loadParts().then(P => {
+    if (!tu.c) tu.c = P.ids[0];
+    const T = turnOf(P, tu.c, tu.dir), save = o => { const all = turnTune(); (all[tu.c] ||= {})[tu.dir] = o; try { localStorage.setItem('tabiquest:turnTune', JSON.stringify(all)); } catch (e) {} P.cache.clear(); };
+    box.innerHTML = `<p class="note pad">キャラと向きをえらんで、数字を1つずつ動かします。真ん中が正面です。値はこの端末だけに残ります。</p>
+      <div class="chips-row">${P.ids.map(c => `<button data-tc="${c}" aria-pressed="${tu.c === c}">${esc(charaName(P, c))}</button>`).join('')}<span class="sep"></span><button data-td="L" aria-pressed="${tu.dir === 'L'}">左を向く</button><button data-td="R" aria-pressed="${tu.dir === 'R'}">右を向く</button></div>
+      <div class="chips-row sub">${FACES.slice(0, 5).map(([id, n]) => `<button data-tf="${id}" aria-pressed="${tu.face === id}">${n}</button>`).join('')}</div>
+      <div class="mh-turn"><canvas></canvas><canvas></canvas><canvas></canvas></div>
+      ${TURN_KEYS.map(([k, n, mn, mx]) => `<div class="du-sl" data-tk="${k}"><b>${n}</b><button data-d="-1">−</button><input type="range" min="${mn}" max="${mx}" step="1" value="${T[k]}" aria-label="${n}"><button data-d="1">＋</button><output>${T[k]}</output></div>`).join('')}
+      <div class="mh-foot"><button data-tu="reset">この向きを初めの値にもどす</button><button data-tu="copy">値をコピー</button></div><textarea class="mh-out" readonly></textarea>`;
+    const draw = () => { const base = { ...fixLook(P, charaLook(P, tu.c)), face: tu.face || undefined }, cvs = box.querySelectorAll('.mh-turn canvas'), R = P.J.chars[tu.c];
+      [-1, 0, 1].forEach((t, i) => { const c = compose(P, { ...base, turn: t || undefined }), cv = cvs[i]; cv.width = 100; cv.height = 110; cv.getContext('2d').drawImage(c, -(R.cx - 50), -(R.headTop - 12)); });
+      box.querySelector('.mh-out').value = JSON.stringify(turnTune()); };
+    draw();
+    box.onclick = e => { const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
+      if (d.tc) { tu.c = d.tc; return renderTurn(box); } if (d.td) { tu.dir = d.td; return renderTurn(box); } if (d.tf !== undefined) { tu.face = d.tf; return renderTurn(box); }
+      if (d.d) { const s = b.closest('.du-sl'), r = s.querySelector('input'); r.value = Math.max(+r.min, Math.min(+r.max, +r.value + +d.d)); r.dispatchEvent(new Event('input', { bubbles: true })); return; }
+      if (d.tu === 'reset') { const all = turnTune(); if (all[tu.c]) delete all[tu.c][tu.dir]; try { localStorage.setItem('tabiquest:turnTune', JSON.stringify(all)); } catch (er) {} P.cache.clear(); return renderTurn(box); }
+      if (d.tu === 'copy') { const t = box.querySelector('.mh-out'); navigator.clipboard?.writeText(t.value); toast('コピーしました'); } };
+    box.oninput = e => { const s = e.target.closest('.du-sl'); if (!s) return; const o = {}; box.querySelectorAll('.du-sl').forEach(q => { o[q.dataset.tk] = +q.querySelector('input').value; }); s.querySelector('output').textContent = e.target.value; save(o); draw(); };
+  }).catch(() => { box.innerHTML = '<p class="note pad">キャラの絵を読み込めませんでした。</p>'; });
+  return () => { box.onclick = null; box.oninput = null; };
+}
 // 全身を大きく見る
 function openBig(P, name, L) {
   document.querySelector('.mh-pop')?.remove();
@@ -154,12 +181,12 @@ export function renderMihon(view) {
   cleanup?.(); token++; queue = [];
   const newN = { place: DOTS.filter(p => isNew('place', p.id)).length };
   view.innerHTML = `<div class="mihon"><div class="phead"><h1>見本帳</h1><span class="prog">デバッグ版だけ</span></div>
-    <div class="chips-row"><button data-tab="place" aria-pressed="${ui.tab === 'place'}">名所の差分</button><button data-tab="chara" aria-pressed="${ui.tab === 'chara'}">キャラの部品</button>
+    <div class="chips-row"><button data-tab="place" aria-pressed="${ui.tab === 'place'}">名所の差分</button><button data-tab="chara" aria-pressed="${ui.tab === 'chara'}">キャラの部品</button><button data-tab="turn" aria-pressed="${ui.tab === 'turn'}">向きの調整</button>
       <span class="sep"></span><button data-only="new" aria-pressed="${ui.only === 'new'}">まだ見ていない${ui.tab === 'place' ? `（${newN.place}）` : ''}</button><button data-only="all" aria-pressed="${ui.only === 'all'}">すべて${ui.tab === 'place' ? `（${DOTS.length}）` : ''}</button></div>
     <div class="mh-body"></div>
     <div class="mh-foot"><button data-a="allseen">いま出ている物を、ぜんぶ見たことにする</button><button data-a="unseen">「見た」をぜんぶ取り消す</button><a class="btn" href="#/settings">設定へもどる</a></div></div>`;
   const body = view.querySelector('.mh-body');
-  cleanup = ui.tab === 'place' ? renderPlaces(body) : renderChara(body);
+  cleanup = ui.tab === 'place' ? renderPlaces(body) : ui.tab === 'turn' ? renderTurn(body) : renderChara(body);
   const again = () => { saveUi(); scrollKeep = 0; renderMihon(view); };
   view.querySelector('.mihon').onchange = e => { const k = e.target.dataset.ui; if (k) { ui[k] = e.target.value; again(); } };
   view.querySelector('.mihon').onclick = e => {
