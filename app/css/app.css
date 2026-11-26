@@ -755,3 +755,9 @@ body.du-open{overflow:hidden}
 .du-sl{grid-template-columns:5.6em 40px 1fr 40px 3em}
 .viewer .cam .orb.tilt{border-radius:50% 50% 46% 46%;background:#FFE3C8;box-shadow:inset 0 5px 0 #7a5a8e}
 .viewer .cam .orb.t-2{transform:rotate(-20deg)} .viewer .cam .orb.t-1{transform:rotate(-10deg)} .viewer .cam .orb.t1{transform:rotate(10deg)} .viewer .cam .orb.t2{transform:rotate(20deg)}
+.viewer .cam .orb.lean{border-radius:40% 40% 20% 20%/60% 60% 20% 20%;background:linear-gradient(#FFE3C8 0 34%,#8A6CE0 34%)}
+.viewer .cam .orb.lean.t-2{transform:rotate(-18deg)} .viewer .cam .orb.lean.t-1{transform:rotate(-9deg)} .viewer .cam .orb.lean.t1{transform:rotate(9deg)} .viewer .cam .orb.lean.t2{transform:rotate(18deg)}
+.viewer .cam .orb.wind{background:#3a3560;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,253,248,.25)}
+.viewer .cam .orb.wind::before{content:"";position:absolute;inset:7px 5px;border-top:2px solid #FFFDF8;border-bottom:2px solid #FFFDF8;border-radius:40%}
+.viewer .cam .orb.wind.w0::before{display:none}
+.viewer .cam .orb.wind.w-2,.viewer .cam .orb.wind.w2{background:#8A6CE0}

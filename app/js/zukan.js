@@ -7,7 +7,9 @@ import { book, cardsOf, cardById, setPhoto, defaultLook, shown, setFav, settings
 import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS } from './card.js';
 // 撮影でえらぶもの（下の列に出す。着替えは、お着替えの画面をひらく）
-const MODES = [['tilt', 'かしげ'], ['light', '光']];   // かしげ：首をかしげる（photo.tilt）。ポーズと表情は、新しいキャラではまだない
+const MODES = [['tilt', 'かしげ'], ['lean', '腰'], ['wind', '風'], ['light', '光']];   // かしげ：首をかしげる（photo.tilt）。ポーズと表情は、新しいキャラではまだない
+const LEANS = [[-8, '左に大きく', 't-2'], [-4, '左に', 't-1'], [0, 'まっすぐ', 't0'], [4, '右に', 't1'], [8, '右に大きく', 't2']];
+const WINDS = [[-2, '←強い', 'w-2'], [-1, '←弱い', 'w-1'], [0, 'なし', 'w0'], [1, '弱い→', 'w1'], [2, '強い→', 'w2']];
 const TILTS = [[-10, '左に大きく', 't-2'], [-5, '左に', 't-1'], [0, 'まっすぐ', 't0'], [5, '右に', 't1'], [10, '右に大きく', 't2']];   // 新しいキャラは立ち1つ・表情1つなので、ポーズと表情はまだない（前のキャラにはあった）
 import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast, icon } from './ui.js';
 
@@ -174,14 +176,15 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   function fillStrip() {
     strip.setAttribute('aria-label', MODES.find(m => m[0] === mode)[1]);
     cam.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
-    strip.innerHTML = mode === 'tilt' ? `<span class="gl">首</span>${TILTS.map(([v, n, c]) => opt('tilt', v, n, `<b class="orb tilt ${c}"></b>`)).join('')}` : `<span class="gl">光</span>${orbs('rim', [[0, '無光', 'r0'], [3, '順光', 'r3'], [1, '半逆光', 'r1'], [2, '逆光', 'r2']])}<span class="gl">グロー</span>${orbs('glow', [[0, 'なし', 'g0'], [1, '弱い', 'g1'], [2, '強い', 'g2']])}<span class="gl">明るさ</span>${orbs('light', [['bright', '明るいまま', 'lb'], ['blend', 'なじませる', 'ln']])}`;
+    const row = (k, gl, list, cls) => `<span class="gl">${gl}</span>${list.map(([v, n, c]) => opt(k, v, n, `<b class="orb ${cls} ${c}"></b>`)).join('')}`;
+    strip.innerHTML = mode === 'lean' ? row('lean', '腰', LEANS, 'lean') : mode === 'wind' ? row('wind', '風', WINDS, 'wind') : mode === 'tilt' ? `<span class="gl">首</span>${TILTS.map(([v, n, c]) => opt('tilt', v, n, `<b class="orb tilt ${c}"></b>`)).join('')}` : `<span class="gl">光</span>${orbs('rim', [[0, '無光', 'r0'], [3, '順光', 'r3'], [1, '半逆光', 'r1'], [2, '逆光', 'r2']])}<span class="gl">グロー</span>${orbs('glow', [[0, 'なし', 'g0'], [1, '弱い', 'g1'], [2, '強い', 'g2']])}<span class="gl">明るさ</span>${orbs('light', [['bright', '明るいまま', 'lb'], ['blend', 'なじませる', 'ln']])}`;
     strip.scrollLeft = 0; paint(); marks();
   }
   function paint() {}   // 小さな絵の列は、いまはない（ポーズ・表情ができたら、ここで描く）
   const marks = () => {   // えらんでいるものに印
     const on = (sel, f) => strip.querySelectorAll(sel).forEach(b => b.setAttribute('aria-pressed', String(f(b.dataset))));
     on('[data-pose]', d => +d.pose === ph.pose); on('[data-face]', d => d.face === (ph.face || '')); on('[data-light]', d => d.light === ph.light);
-    on('[data-tilt]', d => +d.tilt === (+ph.tilt || 0));
+    on('[data-tilt]', d => +d.tilt === (+ph.tilt || 0)); on('[data-lean]', d => +d.lean === (+ph.lean || 0)); on('[data-wind]', d => +d.wind === (+ph.wind || 0));
     on('[data-rim]', d => +d.rim === (ph.rim | 0)); on('[data-glow]', d => +d.glow === (ph.glow | 0));
   };
   const btn = a => root.querySelector(`.side [data-a="${a}"]`);
@@ -285,7 +288,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     else if (b.dataset.light) { ph.light = b.dataset.light; sync(); }
     else if (b.dataset.rim) { ph.rim = +b.dataset.rim; sync(); }
     else if (b.dataset.glow) { ph.glow = +b.dataset.glow; sync(); }
-    else if (b.dataset.tilt !== undefined) { ph.tilt = +b.dataset.tilt; if (!ph.tilt) delete ph.tilt; sync(); }
+    else if (b.dataset.tilt !== undefined || b.dataset.lean !== undefined || b.dataset.wind !== undefined) { const k = ['tilt', 'lean', 'wind'].find(q => b.dataset[q] !== undefined); ph[k] = +b.dataset[k]; if (!ph[k]) delete ph[k]; sync(); }
     else if (b.dataset.pose) { ph.pose = +b.dataset.pose; sync(); }
     else if (b.dataset.face !== undefined) { ph.face = b.dataset.face; sync(); }
     else if (a === 'center') { ph.x = 0; ph.y = 0; ph.s = 1; ph.r = 0; sync(); }
