@@ -77,8 +77,8 @@ export function loadParts() {
     J.wears = J.wears || []; J.wearOrder = J.wearOrder || WEAR_PARTS;
     // 表情の差分：キャラごとの目（eyes）・まゆ（brows）、共有の口（shared.mouths）
     J.shared = J.shared || {}; IM.mouths = {}; for (const c of ids) IM[c] = {};
-    await Promise.all([...ids.flatMap(c => [...(J.chars[c].eyes || []).flatMap(e => ['L', 'R'].filter(q => e[q]).map(async q => { IM[c][`eye${q}_${e.id}`] = await image(`${BASE}${c}/eye${q}_${e.id}.png`); })),
-      ...(J.chars[c].brows || []).flatMap(e => ['L', 'R'].filter(q => e[q]).map(async q => { IM[c][`brow${q}_${e.id}`] = await image(`${BASE}${c}/brow${q}_${e.id}.png`); }))]),
+    await Promise.all([...ids.flatMap(c => [...(J.chars[c].eyes || []).flatMap(e => ['L', 'R'].filter(q => e[q]).map(async q => { IM[c][`eye${q}_${e.id}`] = await image(`${BASE}${c}/eye${q}_${e.id}.png`); if (e[q].x2) IM[c][`eye${q}_${e.id}@2x`] = await image(`${BASE}${c}/eye${q}_${e.id}@2x.png`); })),
+      ...(J.chars[c].brows || []).flatMap(e => ['L', 'R'].filter(q => e[q]).map(async q => { IM[c][`brow${q}_${e.id}`] = await image(`${BASE}${c}/brow${q}_${e.id}.png`); if (e[q].x2) IM[c][`brow${q}_${e.id}@2x`] = await image(`${BASE}${c}/brow${q}_${e.id}@2x.png`); }))]),   // 差分の2倍（<部品>_<id>@2x.png・L.x2／R.x2）もあれば読む
       ...(J.shared.mouths || []).map(async m => { IM.mouths[m.id] = await image(`${BASE}shared/mouth_${m.id}.png`); })]);
     // 持ち物・かざり（items）：<id>_front.png・<id>_back.png
     J.items = J.items || []; IM.items = {};
@@ -343,10 +343,10 @@ export function compose(P, L) {
   const F = FACE[L.face] || {}, eid = L.blink && !['close', 'smile'].includes(F.eye) ? 'close' : F.eye, ev = eid && (J.chars[L.eye].eyes || []).find(q => q.id === eid), bv = F.brow && (J.chars[L.brow].brows || []).find(q => q.id === F.brow);
   for (const s of ['L', 'R']) {
     const ep = ev?.[s] ? ev[s] : E['eye' + s], ei = ev?.[s] ? IM[L.eye][`eye${s}_${eid}`] : IM[L.eye]['eye' + s];
-    const [e2, ep2] = ev?.[s] ? [null, null] : x2(L.eye, 'eye' + s);
-    putK(tint(P, ei, 'eye', col.eye, `${L.eye}/eye${s}/${ev?.[s] ? eid : ''}`), ep, EX[s], v.eyeY + (ep.ay - mean(E, 'eye')), far(s) ? Math.round(T.eyeCut * ta) : 0, Math.round(tv * (far(s) ? T.far : T.near)), e2 && tint(P, e2, 'eye', col.eye, `${L.eye}/eye${s}@2x`), ep2);
+    const [e2, ep2] = ev?.[s] ? (ev[s].x2 ? [IM[L.eye][`eye${s}_${eid}@2x`], ev[s].x2] : [null, null]) : x2(L.eye, 'eye' + s);
+    putK(tint(P, ei, 'eye', col.eye, `${L.eye}/eye${s}/${ev?.[s] ? eid : ''}`), ep, EX[s], v.eyeY + (ep.ay - mean(E, 'eye')), far(s) ? Math.round(T.eyeCut * ta) : 0, Math.round(tv * (far(s) ? T.far : T.near)), e2 && tint(P, e2, 'eye', col.eye, `${L.eye}/eye${s}@2x/${ev?.[s] ? eid : ''}`), ep2);
     const bp = bv?.[s] ? bv[s] : B['brow' + s], bi = bv?.[s] ? IM[L.brow][`brow${s}_${F.brow}`] : IM[L.brow]['brow' + s];
-    putK(bi, bp, EX[s] + (B['brow' + s].ax - B['eye' + s].ax), v.eyeY + v.browDy + (bp.ay - mean(B, 'brow')), far(s) ? Math.round(T.browCut * ta) : 0, Math.round(tv * (far(s) ? T.far : T.near)), ...(bv?.[s] ? [null, null] : x2(L.brow, 'brow' + s)));
+    putK(bi, bp, EX[s] + (B['brow' + s].ax - B['eye' + s].ax), v.eyeY + v.browDy + (bp.ay - mean(B, 'brow')), far(s) ? Math.round(T.browCut * ta) : 0, Math.round(tv * (far(s) ? T.far : T.near)), ...(bv?.[s] ? (bv[s].x2 ? [IM[L.brow][`brow${s}_${F.brow}@2x`], bv[s].x2] : [null, null]) : x2(L.brow, 'brow' + s)));
   }
   const M = J.chars[L.mouth], MP = M.pieces;
   const mx = cx + Math.round(tv * T.mouth);
