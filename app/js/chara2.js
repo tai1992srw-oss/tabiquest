@@ -197,6 +197,31 @@ function blow(src, f, top, span) {
   for (let y = 0; y < src.height; y++) { const t = Math.max(0, (y - top) / span); x.drawImage(src, 0, y, src.width, 1, Math.round(f * Math.min(1.2, t ** 1.4)), y, src.width, 1); }
   return c;
 }
+// 顔の向き（Live2D の「角度X」の考え方）：頭を、たての円柱とみなして回す。行ごとに、輪郭の左右のはしから、その行の頭のまん中 c と半はば a を取る
+//   面の上の点は、まん中ほど大きく動き、はしへ行くほど動きが小さい。奥の側はつまり、手前の側は広がる（＝目のはばや形が、自然に変わる）
+//   r：その層が頭のまん中からどれだけ外にあるか（顔＝1、前髪＝少し外）。clamp：輪郭のように、外がわのふちを動かさない層
+function headRows(P, rin) {
+  if (P.rows?.[rin]) return P.rows[rin];
+  const R = P.J.chars[rin], [, , D] = pixels(P.IM[rin].rinkaku), d = D.data, W = D.width, rows = [];
+  for (let y = 0; y < D.height; y++) { let l = -1, r = -1; for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 127) { if (l < 0) l = x; r = x; } rows[y] = l < 0 ? null : [(l + r + 1) / 2, (r - l + 1) / 2]; }
+  const wide = rows[R.headWY] || [R.cx + .5, R.headW / 2];   // 輪郭のない行（頭の上・あごの下の髪）は、頭のいちばん広い行の値
+  for (let y = 0; y < rows.length; y++) if (!rows[y] || y > R.chin || rows[y][1] < 6) rows[y] = y > R.chin ? wide : rows[y] || wide;
+  return ((P.rows ||= {})[rin] = rows);
+}
+function cylinder(src, rows, th, r, clamp) {
+  const W = src.width, H = src.height, sx = src.getContext('2d', { willReadFrequently: true }), S = new Uint32Array(sx.getImageData(0, 0, W, H).data.buffer);
+  const out = new ImageData(W, H), D = new Uint32Array(out.data.buffer);
+  for (let y = 0; y < H; y++) {
+    const [c, a0] = rows[y], a = a0 * r, edge = a * Math.sin(th) * .5;   // 円柱の外（はみ出した髪など）は、はしと同じくらいずらす
+    for (let x = 0; x < W; x++) {
+      const u = (x + .5 - c) / a; let sxp;
+      if (Math.abs(u) < 1) { let ph = Math.asin(u) - th; if (Math.abs(ph) > Math.PI / 2) { if (!clamp) continue; ph = Math.sign(ph) * Math.PI / 2; } sxp = c + a * Math.sin(ph); }
+      else sxp = clamp ? x + .5 : x + .5 - edge;
+      const q = Math.floor(sxp); if (q < 0 || q >= W) continue; D[y * W + x] = S[y * W + q];
+    }
+  }
+  const o = document.createElement('canvas'); o.width = W; o.height = H; o.getContext('2d').putImageData(out, 0, 0); return o;
+}
 function rotate(src, deg, px, py, y1) {
   const W = src.width, H = src.height, a = deg * Math.PI / 180, cs = Math.cos(a), sn = Math.sin(a), sx = src.getContext('2d', { willReadFrequently: true });
   const S = new Uint32Array(sx.getImageData(0, 0, W, H).data.buffer), out = new ImageData(W, H), D = new Uint32Array(out.data.buffer), OF = [1 / 6, .5, 5 / 6], cnt = new Map();
@@ -222,28 +247,26 @@ export function compose(P, L) {
   const x = c.getContext('2d', { willReadFrequently: true }), R = J.chars[L.rin], col = L.colors || {};
   const v = { ...L.v }; for (const k of FACE_KEYS) v[k] = P.base[k] + (L.v[k] | 0);   // キャラ1の数字を足して、絵の中の行・はばにもどす
   // 首をかしげるときは、頭の部品を別のキャンバス（hd）に描いて、あとでまわして重ねる
-  const tilt = Math.max(-12, Math.min(12, +L.tilt || 0)), mk = () => { const q = document.createElement('canvas'); q.width = W; q.height = H; return q; };
-  const back = tilt ? mk() : c, head = tilt ? mk() : c, bk = back.getContext('2d'), hd = head.getContext('2d');
+  // 顔の向き（turn：−2〜2。＋で見て右を向く）も、頭の部品を層ごとに別のキャンバスに描いて、円柱として回してから重ねる（cylinder）
+  const tilt = Math.max(-12, Math.min(12, +L.tilt || 0)), turn = Math.max(-2, Math.min(2, +L.turn || 0)), th = turn * 9 * Math.PI / 180, sep = !!(tilt || turn);
+  const mk = () => { const q = document.createElement('canvas'); q.width = W; q.height = H; return q; };
+  const back = sep ? mk() : c, rinC = sep ? mk() : null, hfC = sep ? mk() : c, head = sep ? mk() : c, bk = back.getContext('2d'), hd = head.getContext('2d');
   const put = (im, p, tx, ty) => hd.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay));   // 部品を、アンカーが (tx, ty) に来るように置く
   const mean = (Q, k) => (Q[k + 'L'].ay + Q[k + 'R'].ay) / 2;
   // 髪：輪郭の大きさに合わせて伸び縮みさせ（fitHair）、その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
   const hy = (k, n) => R.headTop - (J.chars[L[k]].hair?.[n]?.ay ?? J.chars[L[k]].headTop) + (v.hairDy | 0);
   const hx = (k, n) => Math.round(R.cx - (J.chars[L[k]].hair?.[n]?.ax ?? J.chars[L[k]].cx)) + (v.hairDx | 0);   // 横は、頭のまん中を合わせる
   // 重ねる順：後ろ髪 → 体・輪郭（服でかくす所をのぞく）→ 服 → 前髪 → ほお → 目 → まゆ → 鼻・口
-  // 顔の向き（疑似3D）：顔の部品（目・まゆ・鼻・口・ほお）を向く側へずらし、目の間を少しせまく（奥の目が近づいて見える）。
-  //   前髪は顔より少なく、後ろ髪は反対へ少しずらす（手前と奥のずれ＝視差）。turn：−2〜2（＋で、見て右を向く）
-  const turn = Math.max(-2, Math.min(2, +L.turn || 0)), td = turn * 3;
   const wind = Math.max(-2, Math.min(2, +L.wind || 0)), hairOf = (k, n, f) => { const im = fitHair(P, L[k], n, L.rin, v.hairS | 0, col.hair); return wind ? blow(im, wind * f, R.headTop - hy(k, n) + 14, 110) : im; };   // 風：後ろ髪は大きく、前髪は少しだけ
-  bk.drawImage(hairOf('hairB', 'hair_back', 7), hx('hairB', 'hair_back') - Math.round(td * .4), hy('hairB', 'hair_back'));
-  if (tilt) x.drawImage(rotate(back, tilt, R.cx + .5, R.chin, H), 0, 0);
-  const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(tint(P, IM.body, 'skin', col.skin, 'body'), 0, 0); if (!tilt) bx.drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);
-  if (tilt) hd.drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);   // かしげるときは、輪郭は頭の側に描く（体といっしょにまわさない）
+  bk.drawImage(hairOf('hairB', 'hair_back', 7), hx('hairB', 'hair_back') - Math.round(R.headW / 2 * Math.sin(th) * .35), hy('hairB', 'hair_back'));   // 後ろ髪は、向く側と反対へ少し（奥にあるので）
+  if (sep) x.drawImage(tilt ? rotate(back, tilt, R.cx + .5, R.chin, H) : back, 0, 0);
+  const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(tint(P, IM.body, 'skin', col.skin, 'body'), 0, 0); (sep ? rinC.getContext('2d') : bx).drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);   // かしげ・向きのときは、輪郭は頭の側に描く（体といっしょに動かさない）
   if (L.wear) { bx.globalCompositeOperation = 'destination-out'; bx.drawImage(IM[L.wear].wear_hide, 0, 0); }
   x.drawImage(b, 0, 0); if (L.wear) x.drawImage(tint(P, IM[L.wear].wear, 'skinIn', col.skin, `${L.wear}/wear`), 0, 0);
   else for (const k of J.wearOrder) if (L[k]) x.drawImage(tint(P, IM.w[L[k]][k], 'skinIn', col.skin, `w/${L[k]}/${k}`), 0, 0);   // 服（上下バラ）：ボトムス → 足もと → トップス
-  hd.drawImage(hairOf('hairF', 'hair_front', 3.5), hx('hairF', 'hair_front') + Math.round(td * .5), hy('hairF', 'hair_front'));
+  hfC.getContext('2d').drawImage(hairOf('hairF', 'hair_front', 3.5), hx('hairF', 'hair_front'), hy('hairF', 'hair_front'));
   // 顔の部品は、輪郭のまん中から左右に同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す
-  const cx = Math.round(R.cx) + td, half = g => { g -= Math.abs(turn) * 2; const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };   // td：顔の向きのずれ。横を向くほど、左右の間をせまく
+  const cx = Math.round(R.cx), half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
   if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek'))); }
   const E = J.chars[L.eye].pieces, EX = half(v.eyeGap), B = J.chars[L.brow].pieces;
   for (const s of ['L', 'R']) {
@@ -253,7 +276,11 @@ export function compose(P, L) {
   const M = J.chars[L.mouth], MP = M.pieces;
   if (MP.nose) put(IM[L.mouth].nose, MP.nose, cx + (MP.nose.ax - M.cx), MP.nose.ay + ((v.eyeY - M.preset.eyeY) + (v.mouthY - M.preset.mouthY)) / 2);   // 鼻は、目と口のあいだに付いて動く
   put(IM[L.mouth].mouth, MP.mouth, cx + (MP.mouth.ax - M.cx), v.mouthY);
-  if (tilt) x.drawImage(rotate(head, tilt, R.cx + .5, R.chin, R.chin + 40), 0, 0);
+  if (sep) {   // 頭をまとめる：輪郭 → 前髪 → 顔の部品（向きのときは、それぞれを円柱として回す。前髪は顔より少し外にある）
+    const rows = turn ? headRows(P, L.rin) : null, all = mk(), ax = all.getContext('2d');
+    ax.drawImage(turn ? cylinder(rinC, rows, th, 1, true) : rinC, 0, 0); ax.drawImage(turn ? cylinder(hfC, rows, th, 1.12, false) : hfC, 0, 0); ax.drawImage(turn ? cylinder(head, rows, th, 1, false) : head, 0, 0);
+    x.drawImage(tilt ? rotate(all, tilt, R.cx + .5, R.chin, R.chin + 40) : all, 0, 0);
+  }
   const lean = Math.max(-10, Math.min(10, +L.lean || 0));
   if (lean) { const o = bend(c, lean, 128, 214, 40); x.clearRect(0, 0, W, H); x.drawImage(o, 0, 0); }   // 腰（214 行・体のまん中）から上を、かたむける
   if (P.cache.size > 60) P.cache.delete(P.cache.keys().next().value);
