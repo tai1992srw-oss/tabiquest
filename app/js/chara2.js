@@ -435,8 +435,8 @@ const BASE15 = 'assets/chara15/';
 const isBig = (P, id) => !!P.big?.J.chars[id];
 //   服：Tシャツ（みんな）・そのキャラの服（chars.<c>.wears。キャラ1b の制服＝2026-11-27 素体に合わせて作り直した物。前の「デザインの服」は使わない）・素体
 export const bigWears = (P, id) => [['tshirt', 'Tシャツ'], ...Object.entries(P.big.J.chars[id].wears || {}).map(([k, w]) => [k, w.name || k]), ['sotai', '素体']];
-export const WEAR15_PARTS = [['top', 'トップス'], ['bottom', 'スカート・ソックス'], ['shoes', 'くつ']];
-export const bigWearParts = (P, L) => { const wp = P.big.J.chars[L.big]?.wears?.[L.w15]?.parts; return wp ? WEAR15_PARTS.filter(([k]) => wp[k]) : []; };
+export const WEAR15_PARTS = [['top', 'トップス'], ['bottom', 'ボトムス'], ['shoes', 'くつ']];
+export const bigWearParts = (P, L) => { const w = P.big.J.chars[L.big]?.wears?.[L.w15], wp = w?.parts; return wp ? WEAR15_PARTS.filter(([k]) => wp[k]).map(([k, n]) => [k, w.partNames?.[k] || n]) : []; };   // 名前は parts15.json の partNames（くつ・ソックス など）
 export const bigHairs = P => Object.entries(P.big.J.hairPresets).map(([k, h]) => [k, h.base]);
 // 表情（FACES の id）を、顔の部品ごとの表情（faceParts.exprs）にする。e：目、b：まゆ、m：口（ないときは ふだん）
 const EXPR15 = { smile: { m: 'smile' }, grin: { e: 'smile', b: 'smile', m: 'smile' }, close: { e: 'close', b: 'close', m: 'close' }, wink: { e: 'wink', b: 'wink', m: 'wink' },

@@ -53,7 +53,7 @@ const [W, H] = J.size, IM = {};
 const img = src => IM[src] || (IM[src] = new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ng(new Error(src)); i.src = BASE + src + '?t=' + BUST; }));
 const S = { up: { top: true, bottom: true, shoes: true }, fp: {}, cheek: {}, split: false, c: Object.keys(J.chars).includes('c1b') ? 'c1b' : Object.keys(J.chars)[0], wear: 'tshirt', face: 'normal', hair: '', view: 'body', blink: true };
 const WEARS = [['tshirt', 'Tシャツ'], ['uniform', '制服（新）'], ['design', '制服（前）'], ['sotai', '素体']];
-const UP = [['top', 'トップス'], ['bottom', 'スカート・ソックス'], ['shoes', 'くつ']];   // 制服（新）は、べつべつに着せられる
+const UP = [['top', 'トップス'], ['bottom', 'スカート'], ['shoes', 'くつ・ソックス']];   // 制服（新）は、べつべつに着せられる
 const VIEWS = [['body', '全身'], ['face', '顔の寄り'], ['all', '表情をぜんぶ並べる']];
 const faceName = (C, f) => f === 'normal' ? 'ふだん' : (C.faceNames?.[f] || f);
 const PART_NAMES = { cheek: 'ほお', eyeL: '目（絵の左）', eyeR: '目（絵の右）', browL: 'まゆ（絵の左）', browR: 'まゆ（絵の右）', nose: '鼻', mouth: '口' };
