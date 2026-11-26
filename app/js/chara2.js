@@ -177,7 +177,7 @@ function tint(P, im, kind, hex, key) {
 //   頭のてっぺんのまん中（アンカー）を軸に、横とたてを伸び縮みさせる。ドット絵なので、1マスを 3×3 に見て、多い色を取る（こい線は 4つ以上あれば優先）
 //   同じ大きさ（同じ輪郭用の髪）のときは、元の絵のまま。返り値：256×384 のキャンバス（アンカーの位置は元のまま）
 function fitHair(P, id, name, rin, adj = 0, hex = '') {
-  const C = P.J.chars[id], R = P.J.chars[rin], a = C.hair?.[name] || { ax: C.cx, ay: C.headTop, headW: C.headW }, im = tint(P, P.IM[id][name], 'hair', hex, `${id}/${name}`);
+  const C = P.J.chars[id], R = P.J.chars[rin], a = C.hair?.[name] || { ax: C.headCx ?? C.cx, ay: C.headTop, headW: C.headW }, im = tint(P, P.IM[id][name], 'hair', hex, `${id}/${name}`);
   const k = 1 + adj / 100, sx = R.headW / (a.headW || C.headW) * k, sy = (R.chin - R.headTop) / (C.chin - C.headTop) * k;   // adj：髪の大きさの調整（％）
   if (Math.abs(sx - 1) < .02 && Math.abs(sy - 1) < .02) return im;
   const key = `${id}/${name}/${rin}/${adj}/${hex}`; if (P.hair.has(key)) return P.hair.get(key);
@@ -306,7 +306,7 @@ export function compose(P, L) {
   const mean = (Q, k) => (Q[k + 'L'].ay + Q[k + 'R'].ay) / 2;
   // 髪：輪郭の大きさに合わせて伸び縮みさせ（fitHair）、その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
   const hy = (k, n) => R.headTop - (J.chars[L[k]].hair?.[n]?.ay ?? J.chars[L[k]].headTop) + (v.hairDy | 0);
-  const hx = (k, n) => Math.round(R.cx - (J.chars[L[k]].hair?.[n]?.ax ?? J.chars[L[k]].cx)) + (v.hairDx | 0);   // 横は、頭のまん中を合わせる
+  const hx = (k, n) => { const O = J.chars[L[k]]; return Math.round((R.headCx ?? R.cx) - (O.hair?.[n]?.ax ?? O.headCx ?? O.cx)) + (v.hairDx | 0); };   // 横は、頭の形のまん中（headCx）を合わせる（2026-11-27。前は顔の部品のまん中 cx）
   // 重ねる順：後ろ髪 → 体・輪郭（服でかくす所をのぞく）→ 服 → 前髪 → ほお → 目 → まゆ → 鼻・口
   const wind = Math.max(-2, Math.min(2, +L.wind || 0)), hairOf = (k, n, f) => { const im = fitHair(P, L[k], n, L.rin, v.hairS | 0, col.hair); return wind ? blow(im, wind * f, R.headTop - hy(k, n) + 14, 110) : im; };   // 風：後ろ髪は大きく、前髪は少しだけ
   bk.drawImage(hairOf('hairB', 'hair_back', 7), hx('hairB', 'hair_back'), hy('hairB', 'hair_back'));
