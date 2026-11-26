@@ -128,7 +128,7 @@ function ui() {
   if (FP(S.c)) {
     const F = FP(S.c), fp = fpOf(S.c), mixed = F.order.some(k => fp[k] !== fp[F.order[0]]);
     if (mixed) for (const b of document.getElementById('faces').children) b.className = '';
-    const rows = S.split ? F.order.filter(k => !(J.shared?.cheek && k === 'cheek')).map(k => [k, [k]]) : [['eye', ['eyeL', 'eyeR']], ['brow', ['browL', 'browR']], ['nose', ['nose']], ['mouth', ['mouth']]];
+    const rows = S.split ? F.order.filter(k => !(J.shared?.cheek && k === 'cheek')).map(k => [k, [k]]) : [['eye', ['eyeL', 'eyeR']], ['brow', ['browL', 'browR']], ['nose', ['nose']], ['mouth', ['mouth']]].filter(([, ks]) => ks.every(k => F.order.includes(k)));   // order にない部品（鼻なしのキャラの nose）は出さない
     const RN = { eye: '目', brow: 'まゆ', cheek: 'ほお', nose: '鼻', mouth: '口' };
     const head = document.createElement('div'); head.className = 'grp'; head.innerHTML = '<b>部品ごとにえらぶ</b>';
     const sp = document.createElement('button'); sp.textContent = S.split ? '目・まゆ：左右べつ' : '目・まゆ：左右いっしょ'; sp.onclick = () => { S.split = !S.split; ui(); };
