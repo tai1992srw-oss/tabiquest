@@ -2,7 +2,6 @@
 import { PLACES, placeById, CATEGORIES, PLAIN_BG } from './places.js';
 import { settings, saveSettings, book, mode, arrive, cardsOf, visited, exportBook, importBook, persist, DEBUG } from './store.js';
 import { engine, snapshot, clearSnaps } from './card.js';
-import { renderCharaColors } from './characolor.js';
 import { locate, here, statusOf, fmtDist, current } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, img, toast, fmtDate, prefCity, icon } from './ui.js';
@@ -46,7 +45,7 @@ import * as kawasakidaishi from './scenes/kawasakidaishi.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.69';
+export const VERSION = '0.10.70';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);
@@ -233,7 +232,7 @@ async function renderSettings() {
     </section>
     ${items.length ? `<p class="note pad">${items.join('　')}</p>` : ''}
     <h3 class="gh">キャラ</h3>
-    <div class="group" id="chcolors"></div>
+    <p class="note pad">キャラの見た目は、ホームの「お着替え」で変えられます。</p>
     <div class="group persona"><h2>キャラの性格</h2><p class="note">ホームのふきだしの話し方が変わります。</p>
       <div class="chips-row">${PERSONAS.map(p => `<button data-persona="${p.id}" aria-pressed="${p.id === charaPersona()}">${esc(p.name)}</button>`).join('')}</div>
       <p class="note pv"></p></div>
@@ -255,7 +254,6 @@ async function renderSettings() {
     </div>
     <div id="dbg"></div>
     <button class="ver" id="ver">タビクエ v${VERSION}</button>`;
-  renderCharaColors(view.querySelector('#chcolors'), () => clearSnaps());
   const pv = view.querySelector('.persona .pv'), sample = () => loadSerifu().then(d => { pv.textContent = `「${pick(d.places.minatomirai)[0]}」`; }).catch(() => {});
   sample();
   view.querySelectorAll('[data-persona]').forEach(bt => bt.onclick = () => { setCharaPersona(bt.dataset.persona); view.querySelectorAll('[data-persona]').forEach(x => x.setAttribute('aria-pressed', String(x === bt))); sample(); });

@@ -4,8 +4,7 @@
 //   差分：昼の絵・夜の絵・雪の絵（どれも同じ位置）と、空（朝・夕暮れ・夜・曇り・冬）を組み合わせる
 //   印（景色の G）：1＝海のきらめき 2＝街灯の灯り 3＝窓（夜にまたたく） 5＝観覧車の輪（夜に色が回る。B＝角度） 6＝提灯（夕暮れ・夜に灯る） 7＝ライトアップする建物（夕暮れに灯る。夜は夜の絵）
 import { loadTextures, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
-import { recolorChara, lookColors } from '../characolor.js';
-import { loadParts, applyParts } from '../charaparts.js';
+import { loadParts, applyParts } from '../chara2.js';
 import { TIME, TIME_GRAY, WEATHER, tint, both, mix, kindOf, season, gradeChara, charaPlace, placeChara } from './look.js';
 const THREE = window.THREE;
 
@@ -106,8 +105,8 @@ export async function buildDot(cfg) {
       self.gullN = st.time === 'night' || ['rain', 'snow'].includes(st.weather) ? 0 : st.weather === 'cloudy' || st.season === 'winter' ? 1 : st.season === 'summer' ? 3 : 2;
       self.leaves = st.season === 'autumn' && st.weather !== 'snow' && cfg.leaves;
       self.steam = cfg.steam && st.weather !== 'rain' ? cfg.steam : null;
-      if (CP) applyParts(CP, ch, st);
-      setPal(ch.chara, palTex(D.pal.chara, (c, i) => gradeChara(recolorChara(c, i, D, lookColors(st)), st)));
+      // キャラ：その見た目の絵と色の表（chara2.js）。色の表に、時間帯・天気の色づけをかける
+      setPal(ch.chara, palTex((CP && applyParts(CP, ch, st)) || D.pal.chara, c => gradeChara(c, st)));
     },
     frame(par, f, newF, rm, st) {
       const off = v => Math.round(-par * v * k);

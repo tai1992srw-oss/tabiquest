@@ -8,8 +8,7 @@ import { PLACES, LABEL, seasonOf } from './places.js';
 import { book, mode, settings, saveBook, saveSettings, defaultLook } from './store.js';
 import { openDress } from './dress.js';
 import { engine, clearSnaps, reduceMotion } from './card.js';
-import { recolorChara, renderCharaColors } from './characolor.js';
-import { loadParts, sheet as partsSheet, charaHair, charaOutfit } from './charaparts.js';
+import { loadParts, homeLook, frameCanvas } from './chara2.js';
 import { current, distance } from './geo.js';
 import { conditionsAt, renderTime, timeOfDay } from './conditions.js';
 import { esc, toast, icon } from './ui.js';
@@ -48,17 +47,12 @@ const setBlur = v => { try { localStorage.setItem('tabiquest:homeblur', String(v
 let charaImg = null;
 function loadChara() {
   return charaImg || (charaImg = (async () => {
-    const D = await (await fetch('assets/kamakura/data.json')).json();
-    const P = await loadParts(), im = partsSheet(P, charaHair(), 'close', charaOutfit(), '', settings.charaShape || '', settings.charaKao || '');
-    const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
-    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0);
-    const d = x.getImageData(0, 0, c.width, c.height), pal = D.pal.chara.map((v, i) => recolorChara(v, i, D));   // ふだんのお着替えの色
-    for (let k = 0; k < d.data.length; k += 4) { if (d.data[k + 3] < 128) { d.data[k + 3] = 0; continue; } const p = pal[d.data[k]] || [255, 0, 255]; d.data[k] = p[0]; d.data[k + 1] = p[1]; d.data[k + 2] = p[2]; d.data[k + 3] = 255; }
-    x.putImageData(d, 0, 0);
+    const P = await loadParts(), im = frameCanvas(P, homeLook(P)), c = im;   // ふだんの見た目の立ち絵（色つき・1コマ）
+    const d = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height);
     // 足もと：立ちのコマで、いちばん下のドットの行
     let bot = 0; for (let y = 0; y < im.fh; y++) for (let i = 0; i < im.fw; i++) if (d.data[(y * c.width + i) * 4 + 3]) { bot = y; break; }
     let top = im.fh; for (let y = 0; y < im.fh && top === im.fh; y++) for (let i = 0; i < im.fw; i++) if (d.data[(y * c.width + i) * 4 + 3]) { top = y; break; }
-    return Object.assign(c, { fw: im.fw, fh: im.fh, frames: im.frames, poses: D.charaPoses || ['立ち'], top, bot: bot + 1 });
+    return Object.assign(c, { poses: ['立ち'], top, bot: bot + 1 });   // ポーズは立ち1つ（ほかの名前は、立ちで出る）
   })().catch(e => { charaImg = null; throw e; }));
 }
 
@@ -163,7 +157,7 @@ export function renderHome(view, { header } = {}) {
     }
     else if (a === 'dress') {   // ホームのお着替え＝ふだんの見た目。これから作るカードと、ホームのキャラに使う（前に撮ったカードは変わらない）
       openDress({ look: defaultLook(), title: 'お着替え', note: 'ふだんの見た目。これからのカードにも使います',
-        onSave: L => { settings.charaColors = L.colors; if (L.hair) settings.charaHair = L.hair; else delete settings.charaHair; if (L.outfit) settings.charaOutfit = L.outfit; else delete settings.charaOutfit; if (L.shape) settings.charaShape = L.shape; else delete settings.charaShape; if (L.kao) settings.charaKao = L.kao; else delete settings.charaKao;
+        onSave: L => { settings.chara2 = L;
           saveSettings(); clearSnaps(); charaImg = null; showChara(); toast('お着替えを保存しました'); } });
     }
     else if (a === 'blur') {   // ぼかし具合を動かして見る（後ろが見えるシート）

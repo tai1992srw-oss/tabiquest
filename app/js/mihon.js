@@ -1,13 +1,11 @@
 // 見本帳（デバッグ版だけ。#/mihon）。足した名所の差分と、服・髪型・表情を、まとめて見るためのページ
 //   名所：ドット絵の名所ごとに、時間帯・天気・季節の小さな絵を並べる。押すと、全画面の「パラパラ見る」が始まる（openFlip）
-//   キャラ：服（セット）・髪型・表情の一覧。押すと、6つのポーズを大きく見る
+//   キャラ：部品（輪郭・目・まゆ・口・ほお・髪・服）の一覧。押すと、全身を大きく見る
 //   「まだ見ていない」：この端末で「見た」を押していない物だけ。名所や服を足すと、何もしなくてもここに出る
-//   絵は、アプリの本物の描き方（card.js の engine.snapshot、charaparts.js の sheet）で、その場で作る。描き足しはしない
+//   絵は、アプリの本物の描き方（card.js の engine.snapshot、chara2.js の compose）で、その場で作る。描き足しはしない
 import { PLACES, LABEL, TIMES, WEATHERS, seasonOf } from './places.js';
 import { engine } from './card.js';
-import { loadParts, sheet, hairList, outfitList, faceList } from './charaparts.js';
-import { recolorChara } from './characolor.js';
-import { defaultLook } from './store.js';
+import { loadParts, SLOTS, NONE, has, itemName, homeLook, drawLook } from './chara2.js';
 import { esc, toast } from './ui.js';
 
 const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
@@ -81,59 +79,29 @@ function renderPlaces(box) {
   return () => io.disconnect();
 }
 
-// ---- キャラ（服・髪型・表情） ----
-let envP = null;
-const loadEnv = () => envP || (envP = Promise.all([loadParts(), fetch('assets/kamakura/data.json').then(r => r.json())]).then(([P, D]) => ({ P, D })).catch(e => { envP = null; throw e; }));
-// 見た目 L の f 番めのポーズを cv に描く。crop：'face' なら顔のあたりだけ。絵のためこみ（sheet）は、ここで作った分は消す（数が多いので）
-function paint(cv, { P, D }, L, lod, f = 0, crop = '') {
-  const key = (L.hair || '') + '|' + (L.outfit || '') + '|' + (L.face || '') + '|' + lod, had = !!P.sheets[key];
-  const sh = sheet(P, L.hair || '', lod, L.outfit || '', L.face || ''), src = sh.px.data, sw = sh.px.width, fw = sh.fw, fh = sh.fh;
-  if (!had) delete P.sheets[key];
-  const pal = D.pal.chara.map((c, i) => recolorChara(c, i, D, L.colors || {}));
-  let box = [0, 0, fw, fh];
-  if (crop === 'face') {
-    let x0 = fw, x1 = 0, y0 = fh; for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) if (src[(y * sw + f * fw + x) * 4 + 3] > 127) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; }
-    const s = Math.round(fh * .4), mid = Math.round((x0 + x1) / 2); box = [Math.max(0, mid - (s >> 1)), Math.max(0, y0 - 4), s, s];
-  }
-  const [cx, cy, cw, ch] = box, out = new ImageData(cw, ch), o = out.data;
-  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
-    const sx = cx + x, sy = cy + y; if (sx >= fw || sy >= fh) continue;
-    const q = (sy * sw + f * fw + sx) * 4, k = (y * cw + x) * 4; if (src[q + 3] < 128) continue;
-    const c = pal[src[q]] || [255, 0, 255]; o[k] = c[0]; o[k + 1] = c[1]; o[k + 2] = c[2]; o[k + 3] = 255;
-  }
-  cv.width = cw; cv.height = ch; cv.getContext('2d').putImageData(out, 0, 0);
-}
+// ---- キャラの部品（輪郭・目・まゆ・口・ほお・前髪・後ろ髪・服） ----
+//   ふだんの見た目のうち、その部品だけを替えた絵を並べる。押すと、全身を大きく見る
 function renderChara(box) {
   box.innerHTML = '<p class="note pad">読み込んでいます…</p>';
-  const my = token; let stop = false;
-  loadEnv().then(async env => {
-    if (my !== token) return;
-    const { P } = env, base = defaultLook();
-    const groups = [
-      ['wear', '服（セット）', outfitList(P).filter(u => u.id), u => ({ ...base, outfit: u.id }), ''],
-      ['hair', '髪型', hairList(P).filter(h => h.id), h => ({ ...base, hair: h.id }), ''],
-      ['face', '表情', faceList(P).filter(q => q.id), q => ({ ...base, face: q.id }), 'face'],
-    ].map(([kind, name, items, look, crop]) => ({ kind, name, look, crop, items: items.filter(i => ui.only === 'all' || isNew(kind, i.id)), total: items.length }));
-    box.innerHTML = `<p class="note pad">色と髪型は、いまのホームのお着替えのままです。絵を押すと、6つのポーズを大きく見られます。</p>` + groups.map(g => `<h3 class="gh">${g.name}（${g.items.length}${ui.only === 'all' ? '' : ` / ${g.total}`}）</h3>
-      ${g.items.length ? `<div class="mh-grid ${g.crop}">${g.items.map(i => `<div class="mh-c"><button class="mh-cv" data-open="${g.kind}:${i.id}" aria-label="${esc(i.name)}を大きく見る"><canvas></canvas></button><b>${esc(i.name)}</b><small>${esc(i.id)}</small><button data-seen="${g.kind}:${i.id}" aria-pressed="${!isNew(g.kind, i.id)}">${isNew(g.kind, i.id) ? '見た' : '見た ✓'}</button></div>`).join('')}</div>` : '<p class="note pad">まだ見ていない物はありません。</p>'}`).join('');
-    box._open = id => { const [kind, k] = id.split(':'), g = groups.find(x => x.kind === kind), it = g.items.find(i => i.id === k); if (it) openPoses(env, it.name, g.look(it)); };
-    for (const g of groups) for (const i of g.items) {
-      if (stop || my !== token) return;
-      const cv = box.querySelector(`[data-open="${g.kind}:${i.id}"] canvas`); if (!cv) continue;
-      try { paint(cv, env, g.look(i), g.crop ? 'close' : 'normal', 0, g.crop); } catch (e) { cv.closest('.mh-c').classList.add('ng'); }
-      await new Promise(r => setTimeout(r, 0));
-    }
+  const my = token;
+  loadParts().then(P => {
+    if (my !== token) return; const base = homeLook(P), key = (k, c) => `${k}/${c || 'none'}`;
+    const groups = SLOTS.map(([k, name]) => { const all = P.ids.filter(c => has(P, k, c)).concat(NONE[k] ? [''] : []); return { k, name, total: all.length, items: all.filter(c => ui.only === 'all' || isNew('wear', key(k, c))) }; });
+    const look = (k, c) => { const t = JSON.parse(JSON.stringify(base)); t[k] = c; if (k === 'rin') t.v = { ...P.J.chars[c].preset }; return t; };
+    box.innerHTML = '<p class="note pad">ほかの部品は、いまのホームのお着替えのままです。絵を押すと、全身を大きく見られます。</p>' + groups.map(g => `<h3 class="gh">${g.name}（${g.items.length}${ui.only === 'all' ? '' : ` / ${g.total}`}）</h3>
+      ${g.items.length ? `<div class="mh-grid">${g.items.map(c => `<div class="mh-c"><button class="mh-cv" data-open="${g.k}:${c}" aria-label="${esc(itemName(P, g.k, c))}を大きく見る"><canvas></canvas></button><b>${esc(itemName(P, g.k, c))}</b><button data-seen="wear:${key(g.k, c)}" aria-pressed="${!isNew('wear', key(g.k, c))}">${isNew('wear', key(g.k, c)) ? '見た' : '見た ✓'}</button></div>`).join('')}</div>` : '<p class="note pad">まだ見ていない物はありません。</p>'}`).join('');
+    box._open = id => { const i = id.indexOf(':'), k = id.slice(0, i), c = id.slice(i + 1); openBig(P, `${SLOTS.find(q => q[0] === k)[1]}：${itemName(P, k, c)}`, look(k, c)); };
+    for (const g of groups) for (const c of g.items) { const cv = box.querySelector(`[data-open="${g.k}:${c}"] canvas`); if (cv) drawLook(cv, P, look(g.k, c), g.k === 'wear' ? 'body' : 'face'); }
   }).catch(() => { if (my === token) box.innerHTML = '<p class="note pad">キャラの絵を読み込めませんでした。</p>'; });
-  return () => { stop = true; };
+  return () => {};
 }
-// 6つのポーズを大きく見る
-function openPoses(env, name, L) {
+// 全身を大きく見る
+function openBig(P, name, L) {
   document.querySelector('.mh-pop')?.remove();
-  const n = env.P.J.poses, root = document.createElement('div'); root.className = 'mh-pop'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', name);
-  root.innerHTML = `<div class="mh-popin"><div class="mh-h"><b>${esc(name)}</b><button data-x>とじる</button></div><div class="mh-poses">${Array.from({ length: n }, () => '<canvas></canvas>').join('')}</div></div>`;
+  const root = document.createElement('div'); root.className = 'mh-pop'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', name);
+  root.innerHTML = `<div class="mh-popin"><div class="mh-h"><b>${esc(name)}</b><button data-x>とじる</button></div><div class="mh-poses one"><canvas></canvas></div></div>`;
   root.onclick = e => { if (e.target === root || e.target.closest('[data-x]')) root.remove(); };
-  document.body.append(root);
-  (async () => { const cvs = root.querySelectorAll('canvas'); for (let f = 0; f < n; f++) { if (!root.isConnected) return; try { paint(cvs[f], env, L, 'close', f); } catch (e) {} await new Promise(r => setTimeout(r, 0)); } })();
+  document.body.append(root); drawLook(root.querySelector('canvas'), P, L, 'body');
 }
 
 // ---- パラパラ見る（全画面。ストーリーズのように、押して次の差分、上下にはらって次の名所） ----
@@ -185,7 +153,7 @@ export function renderMihon(view) {
   cleanup?.(); token++; queue = [];
   const newN = { place: DOTS.filter(p => isNew('place', p.id)).length };
   view.innerHTML = `<div class="mihon"><div class="phead"><h1>見本帳</h1><span class="prog">デバッグ版だけ</span></div>
-    <div class="chips-row"><button data-tab="place" aria-pressed="${ui.tab === 'place'}">名所の差分</button><button data-tab="chara" aria-pressed="${ui.tab === 'chara'}">服・髪型・表情</button>
+    <div class="chips-row"><button data-tab="place" aria-pressed="${ui.tab === 'place'}">名所の差分</button><button data-tab="chara" aria-pressed="${ui.tab === 'chara'}">キャラの部品</button>
       <span class="sep"></span><button data-only="new" aria-pressed="${ui.only === 'new'}">まだ見ていない${ui.tab === 'place' ? `（${newN.place}）` : ''}</button><button data-only="all" aria-pressed="${ui.only === 'all'}">すべて${ui.tab === 'place' ? `（${DOTS.length}）` : ''}</button></div>
     <div class="mh-body"></div>
     <div class="mh-foot"><button data-a="allseen">いま出ている物を、ぜんぶ見たことにする</button><button data-a="unseen">「見た」をぜんぶ取り消す</button><a class="btn" href="#/settings">設定へもどる</a></div></div>`;

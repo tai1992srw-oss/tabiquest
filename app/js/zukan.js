@@ -6,11 +6,8 @@ const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さ
 import { book, cardsOf, cardById, setPhoto, defaultLook, shown, setFav, settings } from './store.js';
 import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS } from './card.js';
-import { charaColors } from './characolor.js';
-import { charaHair, charaOutfit, faceList } from './charaparts.js';
-import { loadThumbData, drawPose, drawFace } from './camthumb.js';
 // 撮影でえらぶもの（下の列に出す。着替えは、お着替えの画面をひらく）
-const MODES = [['pose', 'ポーズ'], ['face', '表情'], ['light', '光']];
+const MODES = [['light', '光']];   // 新しいキャラは立ち1つ・表情1つなので、ポーズと表情はまだない（前のキャラにはあった）
 import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast, icon } from './ui.js';
 
 // 図鑑・旅の記録・称号の上に出す切り替え（同じ図鑑タブの中の3つの見方）
@@ -137,7 +134,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   const p0 = first && placeById(first.placeId);
   if (!p0) { onClose(); return () => {}; }
   const list = preview ? [first] : cardsOf(p0.id).slice().reverse();   // 古い順
-  let idx = Math.max(0, list.findIndex(c => c.id === first.id)), card = first, p = p0, el = null, ph = null, lk = {}, lh = '', lo = '', ls = '', lkao = '';
+  let idx = Math.max(0, list.findIndex(c => c.id === first.id)), card = first, p = p0, el = null, ph = null, cur = null;   // cur：この撮影の見た目（chara2.js の look。null＝ふだんの見た目）
   const root = document.createElement('div'); root.className = 'viewer story'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
   root.innerHTML = `<div class="bgblur"></div><div class="frame">
       <div class="stage"></div>
@@ -168,40 +165,29 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     <div class="cflash"></div>`;
   document.body.append(root);
   const stage = root.querySelector('.stage'), cam = root.querySelector('.cam'), camf = root.querySelector('.camf'), strip = cam.querySelector('.strip');
-  let mode = 'pose', snap0 = '', env = null, coachT = 0;
-  const look = () => ({ colors: { ...lk }, hair: lh, outfit: lo, ...(ls ? { shape: ls } : {}), ...(lkao ? { kao: lkao } : {}) });
+  let mode = 'light', snap0 = '', env = null, coachT = 0;
+  const look = () => (cur ? JSON.parse(JSON.stringify(cur)) : defaultLook());
   // 下の列：ポーズと表情は、いまの見た目のままの小さな絵。光は記号（光・グロー・明るさを1列に並べる）
   const opt = (attr, v, name, inner, cls = '') => `<button class="opt ${cls}" data-${attr}="${v}" aria-pressed="false"><i aria-hidden="true">${inner}</i>${name}</button>`;
   const orbs = (attr, list) => list.map(([v, n, c]) => opt(attr, v, n, `<b class="orb ${c}"></b>`)).join('');
   function fillStrip() {
     strip.setAttribute('aria-label', MODES.find(m => m[0] === mode)[1]);
     cam.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
-    strip.innerHTML = mode === 'pose' ? POSES.map(([i, n]) => opt('pose', i, n, '<canvas></canvas>', 'pose')).join('')
-      : mode === 'face' ? (env ? faceList(env.P, lkao).map(q => opt('face', q.id, q.name, '<canvas></canvas>', 'face')).join('') : '')
-      : `<span class="gl">光</span>${orbs('rim', [[0, '無光', 'r0'], [3, '順光', 'r3'], [1, '半逆光', 'r1'], [2, '逆光', 'r2']])}<span class="gl">グロー</span>${orbs('glow', [[0, 'なし', 'g0'], [1, '弱い', 'g1'], [2, '強い', 'g2']])}<span class="gl">明るさ</span>${orbs('light', [['bright', '明るいまま', 'lb'], ['blend', 'なじませる', 'ln']])}`;
+    strip.innerHTML = `<span class="gl">光</span>${orbs('rim', [[0, '無光', 'r0'], [3, '順光', 'r3'], [1, '半逆光', 'r1'], [2, '逆光', 'r2']])}<span class="gl">グロー</span>${orbs('glow', [[0, 'なし', 'g0'], [1, '弱い', 'g1'], [2, '強い', 'g2']])}<span class="gl">明るさ</span>${orbs('light', [['bright', '明るいまま', 'lb'], ['blend', 'なじませる', 'ln']])}`;
     strip.scrollLeft = 0; paint(); marks();
   }
-  function paint() {   // 小さな絵を描き直す（列を作ったとき、お着替えで見た目が変わったとき）
-    if (!env) return; const L = look();
-    strip.querySelectorAll('.opt.pose').forEach((b, i) => drawPose(b.querySelector('canvas'), env, L, ph.face || '', i));
-    strip.querySelectorAll('.opt.face').forEach(b => drawFace(b.querySelector('canvas'), env, L, b.dataset.face));
-  }
+  function paint() {}   // 小さな絵の列は、いまはない（ポーズ・表情ができたら、ここで描く）
   const marks = () => {   // えらんでいるものに印
     const on = (sel, f) => strip.querySelectorAll(sel).forEach(b => b.setAttribute('aria-pressed', String(f(b.dataset))));
     on('[data-pose]', d => +d.pose === ph.pose); on('[data-face]', d => d.face === (ph.face || '')); on('[data-light]', d => d.light === ph.light);
     on('[data-rim]', d => +d.rim === (ph.rim | 0)); on('[data-glow]', d => +d.glow === (ph.glow | 0));
   };
-  loadThumbData().then(v => { env = v; if (!cam.hidden) fillStrip(); }).catch(() => {});
   const btn = a => root.querySelector(`.side [data-a="${a}"]`);
 
   function load(i) {
     idx = i; card = list[i]; p = placeById(card.placeId);
     ph = { x: 0, y: 0, s: 1, r: 0, light: 'bright', pose: 0, rim: 0, glow: 0, ...(card.photo || {}) };
-    ls = card.look ? card.look.shape || '' : settings.charaShape || '';   // この撮影の体型
-    lkao = card.look ? card.look.kao || '' : settings.charaKao || '';   // この撮影の顔のタイプ
-    lo = card.look ? card.look.outfit || '' : charaOutfit();   // この撮影の衣装
-    lh = card.look ? card.look.hair || '' : charaHair();   // この撮影の髪型（前に撮ったカードで髪型がなければ、元の短い髪）
-    lk = { ...(card.look?.colors || charaColors()) };   // この撮影のお着替え（色）。残すまではカードに書かない
+    cur = card.look?.rin ? JSON.parse(JSON.stringify(card.look)) : null;   // この撮影のお着替え。残すまではカードに書かない（前のキャラの見た目のカードは、ふだんの見た目で出る）
     stage.innerHTML = ''; el = cardEl(p, card); stage.append(el);
     if (btn('clean').getAttribute('aria-pressed') === 'true') el.classList.add('clean');
     btn('fav')?.setAttribute('aria-pressed', String(!!card.fav));
@@ -215,12 +201,12 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     setPosing(false);
   }
   const sync = () => { engine.setState({ ...card, photo: { ...ph }, look: look() }); marks(); };
-  const dirty = () => JSON.stringify([ph, lk, lh, lo]) !== snap0;
+  const dirty = () => JSON.stringify([ph, cur]) !== snap0;
   function setPosing(on) {
     cam.hidden = camf.hidden = !on; root.classList.toggle('posing', on); root.classList.remove('camhide'); btn('photo').setAttribute('aria-pressed', String(on));
     el?.classList.toggle('posing', on); clearTimeout(coachT);
     if (!on) return;
-    snap0 = JSON.stringify([ph, lk, lh, lo]); fillStrip(); sync();   // snap0：入ったときの配置（× でやめたら、ここへ戻す）
+    snap0 = JSON.stringify([ph, cur]); fillStrip(); sync();   // snap0：入ったときの配置（× でやめたら、ここへ戻す）
     const c = camf.querySelector('.coach'); c.hidden = false; coachT = setTimeout(() => { c.hidden = true; }, 4200);   // 動かし方は、入ったときに数秒だけ出す
     snapshot(p.scene, { ...card, photo: { x: 9 } }).then(u => { root.querySelector('.bgblur').style.backgroundImage = `url("${u}")`; }).catch(() => {});   // カードの外は、景色をぼかした色でうめる
   }
@@ -274,7 +260,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     else if (e.key === 'ArrowLeft' && idx > 0) load(idx - 1); else if (e.key === 'ArrowRight' && idx < list.length - 1) load(idx + 1); };
   const close = () => { document.removeEventListener('keydown', onKey); clearTimeout(coachT); engine.stop(); root.remove(); };
   // 撮影をやめる：変えていたら確かめてから、入ったときの配置に戻す
-  function quit() { if (dirty()) { if (!confirm('この配置をやめて、とじますか？')) return; [ph, lk, lh, lo] = JSON.parse(snap0); sync(); } setPosing(false); }
+  function quit() { if (dirty()) { if (!confirm('この配置をやめて、とじますか？')) return; [ph, cur] = JSON.parse(snap0); sync(); } setPosing(false); }
   root.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.classList.contains('tap')) { if (b.classList.contains('prev') && idx > 0) load(idx - 1); else if (b.classList.contains('next') && idx < list.length - 1) load(idx + 1); return; }
@@ -289,7 +275,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     }
     else if (a === 'save') saveImage();
     else if (a === 'dress') {   // この撮影だけのお着替え。カードの画面からひらいたときは、決定でこのカードに残す。撮影の中からひらいたときは、「残す」を押すまで残さない（試し見は残さない）
-      const inCam = root.classList.contains('posing'), before = look(), apply = L => { lk = { ...L.colors }; lh = L.hair || ''; lo = L.outfit || ''; ls = L.shape || ''; lkao = L.kao || ''; sync(); if (inCam) paint(); };
+      const inCam = root.classList.contains('posing'), before = look(), apply = L => { cur = L; sync(); };
       openDress({ look: before, home: defaultLook(), title: 'お着替え', note: preview ? '試し見なので、残りません' : inCam ? '「残す」を押すと、このカードに残ります' : 'この撮影だけ。ホームのお着替えは変わりません',
         onChange: apply, onSave: L => { apply(L); if (!preview && !inCam) { const k = look(); setPhoto(card.id, card.photo ?? null, k); card.look = k; clearSnaps(); toast('このカードのお着替えを残しました'); } } });
     }

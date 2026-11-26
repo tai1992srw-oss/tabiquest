@@ -2,8 +2,7 @@
 // 写真の形は変えず、時間帯・天気は色づけだけで表す。背景を描き足さない
 import { gradeChara, charaPlace, placeChara } from './look.js';
 import { near, palTex, setPal, makeLayer, makeChara, makeParticles, charaLods } from '../card.js';
-import { recolorChara, lookColors } from '../characolor.js';
-import { loadParts, applyParts } from '../charaparts.js';
+import { loadParts, applyParts } from '../chara2.js';
 const THREE = window.THREE;
 
 let charaData = null;
@@ -60,8 +59,8 @@ export async function build(place) {
       u.uAdd.value.set(t.add[0] + w.add[0], t.add[1] + w.add[1], t.add[2] + w.add[2]);
       u.uDesat.value = Math.min(1, t.desat + w.desat);
       const night = st.time === 'night', eve = st.time === 'evening';
-      if (CP) applyParts(CP, ch, st);
-      setPal(ch.chara, palTex(C.pal, (c, i) => gradeChara(recolorChara(c, i, C.D, lookColors(st)), st)));
+      // キャラ：その見た目の絵と色の表（chara2.js）。色の表に、時間帯・天気の色づけをかける
+      setPal(ch.chara, palTex((CP && applyParts(CP, ch, st)) || C.pal, c => gradeChara(c, st)));
     },
     frame(par, f, newF, rm, st) {
       const off = v => Math.round(-par * v * k);

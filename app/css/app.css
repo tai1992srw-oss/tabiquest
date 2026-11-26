@@ -742,3 +742,13 @@ body.du-open{overflow:hidden}
 .du-steps button,.du-shape>button{min-height:40px;padding:4px 2px;border-radius:10px;background:var(--paper2);font:700 11px var(--sans);color:var(--ink)}
 .du-steps button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
 .du-shape>button{align-self:flex-start;padding:4px 14px}
+/* お着替え（キャラクリ）の「バランス」：1ドットずつ動かすスライダー */
+.du-sl{display:grid;grid-template-columns:5.6em 40px 1fr 40px 2.6em;align-items:center;gap:6px}
+.du-sl b{font:700 13px var(--sans)}
+.du-sl output{font:700 13px ui-monospace,monospace;text-align:right}
+.du-sl small{grid-column:1/-1;margin-top:-4px;font-size:11px;color:var(--sub)}
+.du-sl button{min-height:40px;padding:0;border-radius:12px;background:var(--paper2);font-size:18px;color:var(--ink)}
+.du-sl input[type=range]{width:100%;height:36px;accent-color:var(--teal)}
+.du-grid.face .du-item canvas{aspect-ratio:auto;max-width:96px}
+.mh-poses.one{grid-template-columns:1fr;justify-items:center}
+.mh-poses.one canvas{width:auto;max-width:100%;height:min(70dvh,752px)}
