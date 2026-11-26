@@ -736,3 +736,9 @@ body.du-open{overflow:hidden}
 .mh-flip{z-index:55;user-select:none;-webkit-user-select:none}
 .mh-flip .mh-fb{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:26px 12px calc(env(safe-area-inset-bottom) + 12px);font:700 12px var(--sans);color:#fff;text-shadow:0 1px 2px #000;background:linear-gradient(transparent,rgba(0,0,0,.5));pointer-events:none}
 .mh-flip .mh-fb .shoot{pointer-events:auto;padding:8px 14px;border-radius:999px;background:rgba(10,12,30,.55);color:#fff;text-decoration:none;font:700 12px var(--sans)}
+/* お着替えの「体型」 */
+.du-shape{display:flex;flex-direction:column;gap:4px;margin-top:10px}
+.du-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.du-steps button,.du-shape>button{min-height:40px;padding:4px 2px;border-radius:10px;background:var(--paper2);font:700 11px var(--sans);color:var(--ink)}
+.du-steps button[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+.du-shape>button{align-self:flex-start;padding:4px 14px}

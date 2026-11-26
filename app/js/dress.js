@@ -5,7 +5,7 @@
 //   部位を足すとき：TABS に1行足し、items(P) でアイテムの一覧、get／set で look のどこに入れるかを書く
 import { settings, saveSettings } from './store.js';
 import { PARTS, recolorChara } from './characolor.js';
-import { loadParts, sheet, hairList, outfitList, wearOf, packWear, WEAR_KEYS } from './charaparts.js';
+import { loadParts, sheet, hairList, outfitList, wearOf, packWear, WEAR_KEYS, shapeInfo, shapeSteps, packShape } from './charaparts.js';
 import { esc, toast } from './ui.js';
 
 const COLORS = Object.fromEntries(PARTS.map(p => [p.k, p]));
@@ -29,10 +29,13 @@ const TABS = [
     set: (L, v) => { const [k, id] = v.split(':'); if (k === 'set') L.outfit = id; else { const W = wearOf(L.outfit); W[k] = id; L.outfit = packWear(W); } },
     colorNote: L => (wearOf(L.outfit).top && wearOf(L.outfit).bottom ? '服の色は、インナーの見えている所だけ変わります' : ''),
     filters: [['all', 'すべて'], ['set', 'セット'], ['top', 'トップス'], ['bottom', 'ボトムス'], ['socks', 'くつ下'], ['shoes', 'くつ'], ['acc', '装飾品']] },
+  // 体型：頭の大きさ・脚の長さ・あごの長さを、5段でえらぶ（look.shape。charaparts.js の「体型」）
+  { id: 'shape', name: '体型', icon: '◆', kind: 'shape', focus: 'body', colors: [] },
   { id: 'coord', name: 'コーデ', icon: '★', kind: 'coord', focus: 'body', colors: [] },
 ];
 const NONE = { top: 'インナー（上）', bottom: 'インナー（下）', socks: 'くつ下なし', shoes: 'はだし', acc: '装飾品なし' };
-const clone = L => ({ colors: { ...(L?.colors || {}) }, hair: L?.hair || '', outfit: L?.outfit || '' });
+const clone = L => ({ colors: { ...(L?.colors || {}) }, hair: L?.hair || '', outfit: L?.outfit || '', ...(L?.shape ? { shape: L.shape } : {}) });
+const SHAPES = [['頭の大きさ', ['小さい', 'やや小さい', 'ふつう', 'やや大きい', '大きい']], ['脚の長さ', ['短い', 'やや短い', 'ふつう', 'やや長い', '長い']], ['あごの長さ', ['短い', 'やや短い', 'ふつう', 'やや長い', '長い']]];
 const same = (a, b) => JSON.stringify(clone(a)) === JSON.stringify(clone(b));
 
 let dataP = null;
@@ -40,7 +43,9 @@ const loadData = () => dataP || (dataP = Promise.all([loadParts(), fetch('assets
 
 // 見た目 L の立ちの絵を、cv に描く。crop：[x, y, w, h]（寄り用の絵の中の範囲）、z：何倍か
 function draw(cv, { P, D }, L, lod, crop, z) {
-  const src = sheet(P, L.hair || '', lod, L.outfit || '').px, [fw] = P.J[lod], pal = D.pal.chara.map((c, i) => recolorChara(c, i, D, L.colors || {}));
+  const src = sheet(P, L.hair || '', lod, L.outfit || '', '', L.shape || '').px, [fw] = P.J[lod], pal = D.pal.chara.map((c, i) => recolorChara(c, i, D, L.colors || {}));
+  // 体型を変えた絵は上へ長い：全身は上へ広げ、顔は動いた先へ合わせる
+  const si = shapeInfo(P, lod, L.shape); if (si) crop = crop.face ? [crop[0], Math.max(0, crop[1] + si.dy - si.up), crop[2], crop[3]] : [crop[0], crop[1], crop[2], crop[3] + si.ext];
   const [cx, cy, cw, ch] = crop, out = new ImageData(cw, ch), o = out.data, p = src.data;
   for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
     const sx = cx + x, sy = cy + y; if (sx < 0 || sx >= fw || sy < 0 || sy >= src.height) continue;
@@ -49,6 +54,7 @@ function draw(cv, { P, D }, L, lod, crop, z) {
   }
   const t = document.createElement('canvas'); t.width = cw; t.height = ch; t.getContext('2d').putImageData(out, 0, 0);
   cv.width = cw * z; cv.height = ch * z; const x = cv.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(t, 0, 0, cv.width, cv.height);
+  return crop;
 }
 // 絵の中で、キャラがいる範囲（透明でない所）を1回だけ調べる。顔＝上から髪と顔が入る高さまで
 function bounds(P, lod) {
@@ -56,7 +62,7 @@ function bounds(P, lod) {
   const [fw, fh] = P.J[lod]; let x0 = fw, x1 = 0, y0 = fh, y1 = 0;
   for (const h of ['', ...P.J.hairs.map(h => h.id)]) { const d = sheet(P, h, lod, '').px; for (let y = 0; y < fh; y += 2) for (let x = 0; x < fw; x += 2) if (d.data[(y * d.width + x) * 4 + 3] > 127) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
   const H = y1 - y0 + 1, mid = Math.round((x0 + x1) / 2), fs = Math.round(H * .44);
-  return (P[k] = { body: [Math.max(0, x0 - 4), Math.max(0, y0 - 4), Math.min(fw, x1 + 5) - Math.max(0, x0 - 4), Math.min(fh, y1 + 3) - Math.max(0, y0 - 4)], face: [Math.max(0, mid - Math.round(fs / 2)), Math.max(0, y0 - 6), fs, fs] });
+  return (P[k] = { body: [Math.max(0, x0 - 4), Math.max(0, y0 - 4), Math.min(fw, x1 + 5) - Math.max(0, x0 - 4), Math.min(fh, y1 + 3) - Math.max(0, y0 - 4)], face: Object.assign([Math.max(0, mid - Math.round(fs / 2)), Math.max(0, y0 - 6), fs, fs], { face: true }) });
 }
 
 // お着替えの画面をひらく
@@ -89,7 +95,7 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
     panel.style.height = Math.round(Math.max(min, Math.min(max, free - crop[3] * (kind === 'body' ? 1 : 2) - 22))) + 'px';   // 顔は2倍、全身は1倍がちょうど入る高さに
     const fit = c => Math.min((stage.clientHeight - 20) / c[3], (stage.clientWidth - 16) / c[2]); let z = Math.floor(fit(crop));
     if (z < 1) { lod = 'normal'; crop = bounds(env.P, lod)[kind]; z = Math.max(1, Math.floor(fit(crop))); }
-    draw(cv, env, L, lod, crop, 1); cv.style.width = crop[2] * z + 'px'; cv.style.height = crop[3] * z + 'px';
+    const used = draw(cv, env, L, lod, crop, 1), zz = Math.min(z, (stage.clientHeight - 12) / used[3]); cv.style.width = used[2] * zz + 'px'; cv.style.height = used[3] * zz + 'px';
   };
   const change = (fn, keep = true) => { if (keep) { hist.push(clone(L)); if (hist.length > 30) hist.shift(); } fn(L); root.querySelector('[data-a=undo]').disabled = !hist.length; paint(); renderBody(false); onChange?.(clone(L)); };
   // 色の帯：いつも見える所（タブのすぐ下）に、その部位の色を横1列で出す。多いときは横にすべらせる
@@ -101,7 +107,13 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   // 下の一覧を描く。full＝タブを切りかえたとき（絵から作り直す）。そうでなければ、えらんだ印と色だけ直す
   function renderBody(full = true) {
     if (!env) return; renderBar();
-    if (!full && tab.kind !== 'coord') { body.querySelectorAll('.du-item').forEach(b => b.setAttribute('aria-pressed', String(tab.on ? tab.on(L, b.dataset.v) : b.dataset.v === tab.get(L)))); if (tab.kind === 'items') thumbs(); return; }
+    if (!full && tab.kind !== 'coord' && tab.kind !== 'shape') { body.querySelectorAll('.du-item').forEach(b => b.setAttribute('aria-pressed', String(tab.on ? tab.on(L, b.dataset.v) : b.dataset.v === tab.get(L)))); if (tab.kind === 'items') thumbs(); return; }
+    if (tab.kind === 'shape') {
+      const st = shapeSteps(L.shape);
+      body.innerHTML = `<p class="du-hint">頭・脚・あごの長さで、幼く／大人っぽく見せます。服や髪は、そのまま合います</p>` + SHAPES.map(([nm, labs], i) => `<div class="du-shape"><span class="du-lab">${nm}</span><div class="du-steps">${labs.map((l, k) => `<button data-shape="${i}:${k - 2}" aria-pressed="${st[i] === k - 2}">${l}</button>`).join('')}</div></div>`).join('')
+        + `<div class="du-shape"><button data-shape="reset" ${L.shape ? '' : 'disabled'}>体型を元にもどす</button></div>`;
+      return;
+    }
     if (tab.kind === 'coord') {
       const cs = coords();
       body.innerHTML = `<p class="du-hint">気に入った組み合わせを残して、1回で着替えられます（${cs.length}／12）</p><div class="du-grid coord"><button class="du-item add" data-a="addcoord" ${cs.length >= 12 ? 'disabled' : ''}><span class="du-plus" aria-hidden="true">＋</span><span class="du-nm">いまのコーデを残す</span></button>${cs.map((c, i) => `<div class="du-cell"><button class="du-item" data-coord="${i}" aria-pressed="${same(c.look, L)}"><canvas></canvas><span class="du-nm">${esc(c.name)}</span></button><button class="du-del" data-del="${i}" aria-label="${esc(c.name)}を消す">×</button></div>`).join('')}</div>`;
@@ -118,13 +130,17 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   // 一覧の小さな絵：そのアイテムだけを替えた見た目（色はいまのまま）
   function thumbs() {
     const B = bounds(env.P, 'normal');
-    body.querySelectorAll('.du-item[data-v]').forEach(b => { const t = clone(L); tab.set(t, b.dataset.v); draw(b.querySelector('canvas'), env, t, 'normal', B[tab.crop], 1); });
+    body.querySelectorAll('.du-item[data-v]').forEach(b => { const t = clone(L); delete t.shape; tab.set(t, b.dataset.v); draw(b.querySelector('canvas'), env, t, 'normal', B[tab.crop], 1); });
   }
   const close = () => { root.remove(); document.body.classList.remove('du-open'); removeEventListener('resize', paint); document.removeEventListener('keydown', onKey); onClose?.(); };
   const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); root.querySelector('[data-a=cancel]').click(); } };
   root.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return; const a = b.dataset.a;
     if (b.dataset.flt) { flt[tab.id] = b.dataset.flt; renderBody(); }
+    else if (b.dataset.shape) {
+      const st = shapeSteps(L.shape); if (b.dataset.shape === 'reset') st.fill(0); else { const [i, v] = b.dataset.shape.split(':').map(Number); if (st[i] === v) return; st[i] = v; }
+      change(x => { const k = packShape(...st); if (k) x.shape = k; else delete x.shape; }); renderBody();
+    }
     else if (b.dataset.tab) { tab = TABS.find(t => t.id === b.dataset.tab); root.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b))); paint(); renderBody(); }
     else if (b.dataset.v !== undefined) { if (!(tab.on ? tab.on(L, b.dataset.v) : tab.get(L) === b.dataset.v)) change(x => tab.set(x, b.dataset.v)); }
     else if (b.dataset.c !== undefined) { const k = b.closest('.du-colors').dataset.k; change(x => { if (b.dataset.c) x.colors[k] = b.dataset.c; else delete x.colors[k]; }); }

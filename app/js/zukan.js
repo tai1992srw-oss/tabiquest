@@ -3,7 +3,7 @@ import { PLACES, placeById, LABEL, TIMES, WEATHERS, PLAIN_BG } from './places.js
 // キャラのポーズ（コマの順。assets の data.json の charaPoses と同じ）
 //   体は1つで、腕を差し替える（2026-11-26）。番号は前の13ポーズのまま。なくなったポーズ（ジャンプ・撮る・ながめる・歩く・ハート・地図・自撮り）のカードは、立ちで出る
 const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さし'], [4, '手をふる'], [7, '持つ']];
-import { book, cardsOf, cardById, setPhoto, defaultLook, shown, setFav } from './store.js';
+import { book, cardsOf, cardById, setPhoto, defaultLook, shown, setFav, settings } from './store.js';
 import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS } from './card.js';
 import { charaColors } from './characolor.js';
@@ -137,7 +137,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   const p0 = first && placeById(first.placeId);
   if (!p0) { onClose(); return () => {}; }
   const list = preview ? [first] : cardsOf(p0.id).slice().reverse();   // 古い順
-  let idx = Math.max(0, list.findIndex(c => c.id === first.id)), card = first, p = p0, el = null, ph = null, lk = {}, lh = '', lo = '';
+  let idx = Math.max(0, list.findIndex(c => c.id === first.id)), card = first, p = p0, el = null, ph = null, lk = {}, lh = '', lo = '', ls = '';
   const root = document.createElement('div'); root.className = 'viewer story'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
   root.innerHTML = `<div class="bgblur"></div><div class="frame">
       <div class="stage"></div>
@@ -169,7 +169,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   document.body.append(root);
   const stage = root.querySelector('.stage'), cam = root.querySelector('.cam'), camf = root.querySelector('.camf'), strip = cam.querySelector('.strip');
   let mode = 'pose', snap0 = '', env = null, coachT = 0;
-  const look = () => ({ colors: { ...lk }, hair: lh, outfit: lo });
+  const look = () => ({ colors: { ...lk }, hair: lh, outfit: lo, ...(ls ? { shape: ls } : {}) });
   // 下の列：ポーズと表情は、いまの見た目のままの小さな絵。光は記号（光・グロー・明るさを1列に並べる）
   const opt = (attr, v, name, inner, cls = '') => `<button class="opt ${cls}" data-${attr}="${v}" aria-pressed="false"><i aria-hidden="true">${inner}</i>${name}</button>`;
   const orbs = (attr, list) => list.map(([v, n, c]) => opt(attr, v, n, `<b class="orb ${c}"></b>`)).join('');
@@ -197,6 +197,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   function load(i) {
     idx = i; card = list[i]; p = placeById(card.placeId);
     ph = { x: 0, y: 0, s: 1, r: 0, light: 'bright', pose: 0, rim: 0, glow: 0, ...(card.photo || {}) };
+    ls = card.look ? card.look.shape || '' : settings.charaShape || '';   // この撮影の体型
     lo = card.look ? card.look.outfit || '' : charaOutfit();   // この撮影の衣装
     lh = card.look ? card.look.hair || '' : charaHair();   // この撮影の髪型（前に撮ったカードで髪型がなければ、元の短い髪）
     lk = { ...(card.look?.colors || charaColors()) };   // この撮影のお着替え（色）。残すまではカードに書かない
@@ -287,7 +288,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     }
     else if (a === 'save') saveImage();
     else if (a === 'dress') {   // この撮影だけのお着替え。カードの画面からひらいたときは、決定でこのカードに残す。撮影の中からひらいたときは、「残す」を押すまで残さない（試し見は残さない）
-      const inCam = root.classList.contains('posing'), before = look(), apply = L => { lk = { ...L.colors }; lh = L.hair || ''; lo = L.outfit || ''; sync(); if (inCam) paint(); };
+      const inCam = root.classList.contains('posing'), before = look(), apply = L => { lk = { ...L.colors }; lh = L.hair || ''; lo = L.outfit || ''; ls = L.shape || ''; sync(); if (inCam) paint(); };
       openDress({ look: before, home: defaultLook(), title: 'お着替え', note: preview ? '試し見なので、残りません' : inCam ? '「残す」を押すと、このカードに残ります' : 'この撮影だけ。ホームのお着替えは変わりません',
         onChange: apply, onSave: L => { apply(L); if (!preview && !inCam) { const k = look(); setPhoto(card.id, card.photo ?? null, k); card.look = k; clearSnaps(); toast('このカードのお着替えを残しました'); } } });
     }

@@ -94,10 +94,12 @@ export function shadowLight(st) {
 export function placeChara(ch, cx, feet, s, H, drop, r = 0, st) {
   const w = ch.CW * s, h = ch.CH * s; ch.pickLod?.(s);
   const left = Math.round((cx - w / 2) * RS) / RS, bottom = Math.round((H - feet + drop) * RS) / RS;
-  ch.chara.scale.set(s, s, 1); ch.chara.rotation.z = r;
-  ch.chara.position.set(left + w / 2, bottom + h / 2, 4);
+  // 体型を変えた絵は、コマが上へ長い（ch.ext＝のびた割合。charaparts.js の applyParts）。回す軸と足もとは元のまま、絵だけ上へのばす
+  const e = ch.ext || 0, px = left + w / 2 - Math.sin(r) * h * e / 2, py = bottom + h / 2 + Math.cos(r) * h * e / 2;
+  ch.chara.scale.set(s, s * (1 + e), 1); ch.chara.rotation.z = r;
+  ch.chara.position.set(px, py, 4);
   const L = shadowLight(st), u = ch.shadow.material.uniforms;
-  u.uC.value.set(left + w / 2, bottom + h / 2); u.uFoot.value.set(cx, Math.round(H - feet)); u.uS.value = s; u.uR.value = r;
+  u.uC.value.set(px, py); u.uCS.value.set(ch.CW, ch.CH * (1 + e)); u.uFoot.value.set(cx, Math.round(H - feet)); u.uS.value = s; u.uR.value = r;
   u.uK.value.set(L.k[0], L.k[1]); u.uFade.value = L.fade; u.uMul.value = L.op;
   ch.shadow.visible = feet < H;
   // 光の当て方（撮影で選ぶ。photo.rim：0＝無光、1＝半逆光、2＝逆光、3＝順光）。光は影と反対の側・上から。色は時間帯と天気で変える。キャラを回したら、光の向きも絵の中で回す

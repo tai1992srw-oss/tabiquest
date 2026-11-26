@@ -25,7 +25,9 @@ export function loadParts() {
       W[u.id + '_' + lod] = { d, w: im.width };
     })));
     wearIds = Object.fromEntries(WEAR_KEYS.map(k => [k, new Set((J.wear?.[k] || []).map(u => u.id))]));
-    return { J, L, W, sheets: {}, tex: {} };
+    // 線の色（暗い色）の表：体型を変えるとき、細い線が消えないように優先する
+    const dark = new Uint8Array(256); try { const D = await (await fetch('assets/kamakura/data.json')).json(); D.pal.chara.forEach((c, i) => { if (c[0] + c[1] + c[2] < 300) dark[i] = 1; }); } catch (e) {}
+    return { J, L, W, dark, sheets: {}, tex: {} };
   })().catch(e => { parts = null; throw e; }));
 }
 export const hairList = P => [{ id: '', name: 'ベリーショート' }, ...P.J.hairs];
@@ -53,9 +55,87 @@ export const lookOutfit = st => (st?.look ? st.look.outfit || '' : charaOutfit()
 export const faceList = P => [{ id: '', name: 'ほほえみ' }, ...(P.J.faces || [])];
 export const lookFace = st => st?.photo?.face || '';
 
+// ---- 体型（2026-11-26）：頭の大きさ・脚の長さ・あごの長さを、絵を重ねるときに伸び縮みさせる。絵は描き足さない ----
+//   look.shape：'' ＝ 元のまま、'1,-1,0' のように「頭,脚,あご」の段（−2〜2）。頭＝あごの下を軸に大きく／小さく、脚＝腰〜足首の行を足す／抜く、あご＝口の上〜あごの下の行を足す／抜く
+//   背が高くなると元のコマ（寄りで 272×376）に入らないので、体型を変えた絵はコマを上へ EXT 行のばす（足もとは下のまま）。カードでは look.js の placeChara が、その分だけ絵を上へのばして置く
+export const SHAPE = { head: [.88, .94, 1, 1.1, 1.2], leg: [.82, .9, 1, 1.08, 1.15], jaw: [.78, .88, 1, 1.15, 1.3] };
+const EXT = { close: 40, normal: 20 };
+export const shapeSteps = s => { const a = String(s || '').split(',').map(v => Math.max(-2, Math.min(2, v | 0))); return [a[0] || 0, a[1] || 0, a[2] || 0]; };
+export const packShape = (h, l, j) => (h || l || j ? `${h},${l},${j}` : '');
+export function shapeOf(s) { const [a, b, c] = shapeSteps(s); return a || b || c ? { h: SHAPE.head[a + 2], l: SHAPE.leg[b + 2], j: SHAPE.jaw[c + 2], key: packShape(a, b, c) } : null; }
+export const charaShape = () => settings.charaShape || '';
+export const lookShape = st => (st?.look ? st.look.shape || '' : charaShape());
+// 立ちの体の行（寄りの絵で）：あごの下 91・口の上 73・腰 205・足首 350、首のまん中の x 138
+function geom(P, lod, sh) {
+  const k = lod === 'close' ? 1 : .5, [fw, fh] = P.J[lod], R = v => Math.round(v * k), NECK = R(91), JAW = R(73), HIP = R(205), ANK = R(350), ext = EXT[lod];
+  const r = []; for (let y = NECK; y < HIP; y++) r.push(y);
+  const ln = Math.max(1, Math.round((ANK - HIP) * sh.l)); for (let i = 0; i < ln; i++) r.push(HIP + Math.min(ANK - HIP - 1, Math.floor(i * (ANK - HIP) / ln)));
+  for (let y = ANK; y < fh; y++) r.push(y);
+  const FH2 = fh + ext, neckP = FH2 - r.length, dy = neckP - NECK;   // neckP：新しい絵での、あごの下の行。dy：首より上の行をずらす量
+  const jn = Math.max(2, Math.round((NECK - JAW) * sh.j)), jr = []; for (let y = 0; y < JAW; y++) jr.push(y);
+  for (let i = 0; i < jn; i++) jr.push(JAW + Math.min(NECK - JAW - 1, Math.floor(i * (NECK - JAW) / jn)));
+  return { fw, fh, FH2, ext, NECK, r, neckP, dy, jr, jd: jn - (NECK - JAW), CX: 138 * k, h: sh.h };
+}
+// お着替えの画面などで、切り出す場所を合わせるための数字。ext：上へのばした行、dy：顔が元の絵の行から動いた量、up：頭のてっぺんがさらに上がる量
+export function shapeInfo(P, lod, shape) {
+  const sh = shapeOf(shape); if (!sh) return null; const g = geom(P, lod, sh);
+  return { ext: g.ext, dy: g.dy, up: Math.round((sh.h - 1) * g.NECK * .85 + g.jd * sh.h) };
+}
+function sheetShape(P, hair, lod, outfit, face, sh) {
+  const key = hair + '|' + outfit + '|' + face + '|' + lod + '|' + sh.key; if (P.sheets[key]) return P.sheets[key];
+  const G = geom(P, lod, sh), { fw, fh, FH2, NECK, r, neckP, dy, jr } = G, n = P.J.poses, hi = P.J.hairs.findIndex(h => h.id === hair), W = wearOf(outfit), cols = P.J.wearCols || WEAR_KEYS;
+  const ord = (P.J.over || []).includes(W.bottom) ? ['socks', 'shoes', 'top', 'bottom', 'acc'] : ['socks', 'shoes', 'bottom', 'top', 'acc'];
+  const under = ord.filter(k => W[k] && P.W[W[k] + '_' + lod]).map(k => [P.W[W[k] + '_' + lod], cols.indexOf(k)]), slv = W.top ? P.W[W.top + '_' + lod] : null, sc = cols.length;
+  const af = W.acc ? P.W[W.acc + '_' + lod] : null, afc = cols.indexOf('acc'), zone = P.L['zone_' + lod];
+  const body = P.L['body_' + lod].data, arms = P.L['arms_' + lod].data, hairs = P.L['hair_' + lod], hw = hairs.width;
+  const faces = P.L['face_' + lod], fl = P.J.faces || [], fi = fl.findIndex(q => q.id === face), bi = (P.J.closed || []).includes(face) ? -1 : fl.findIndex(q => q.id === P.J.blink);
+  const by = (P.J.blinkY?.close ?? 0) * (lod === 'close' ? 1 : .5), src = arms.length / 4 / fh;
+  // 頭の絵を先に作る（どのポーズでも同じ）。1マスを 3×3 に見て、多い色を取る。線の色は 3つ以上あれば優先
+  const top0 = NECK - jr.length, cnt = new Int16Array(256), OFF = [1 / 6, .5, 5 / 6];
+  const headImg = get => {
+    const o = new Int16Array(fw * FH2).fill(-1);
+    for (let y = 0; y < FH2; y++) for (let x = 0; x < fw; x++) {
+      const seen = []; let solid = 0;
+      for (const oy of OFF) { const yy = Math.floor((y + oy - neckP) / G.h + neckP) - dy, sy = yy >= NECK ? yy : (yy - top0 >= 0 ? jr[yy - top0] : -1); if (sy < 0 || sy >= fh) continue;
+        for (const ox of OFF) { const sx = Math.floor((x + ox - G.CX) / G.h + G.CX); if (sx < 0 || sx >= fw) continue; const v = get(sx, sy); if (v < 0) continue; solid++; if (!cnt[v]) seen.push(v); cnt[v]++; } }
+      if (solid >= 5) { let best = seen[0], bd = -1; for (const v of seen) { if (cnt[v] > cnt[best]) best = v; if (P.dark[v] && cnt[v] >= 3 && (bd < 0 || cnt[v] > cnt[bd])) bd = v; } o[y * fw + x] = bd >= 0 ? bd : best; }
+      for (const v of seen) cnt[v] = 0;
+    }
+    return o;
+  };
+  const skin = headImg((x, y) => (y < NECK && body[(y * fw + x) * 4 + 3] > 127 ? body[(y * fw + x) * 4] : -1));
+  const feat = blink => headImg((x, y) => {
+    let v = -1;
+    if (fi >= 0) { const q = (y * faces.width + fi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
+    if (blink && bi >= 0 && y < by) { const q = (y * faces.width + bi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
+    if (hi >= 0) { const h = (y * hw + hi * fw + x) * 4; if (hairs.data[h + 3] > 127) v = hairs.data[h]; }
+    return v;
+  });
+  const F0 = feat(false), F1 = bi >= 0 ? feat(true) : F0;
+  const out = new ImageData(fw * n * 2, FH2), o = out.data, aw = fw * n * 2;
+  for (let f = 0; f < n * 2; f++) { const pf = f % n, F = f >= n ? F1 : F0;
+    for (let y = 0; y < FH2; y++) { const yb = y >= neckP ? r[y - neckP] : y - dy;   // 体・服・腕は、この行の元の行
+      for (let x = 0; x < fw; x++) {
+        let v = -1; const hk = y * fw + x;
+        if (yb >= NECK) { const b = (yb * fw + x) * 4; if (body[b + 3] > 127) v = body[b]; }
+        if (skin[hk] >= 0) v = skin[hk];
+        if (yb >= 0) for (const [wl, i] of under) { const q = wl.d[yb * wl.w + i * fw + x]; if (q !== 255) v = q; }
+        if (F[hk] >= 0) v = F[hk];
+        if (yb >= 0) {
+          const a = (yb * src + pf * fw + x) * 4, front = af && af.d[yb * af.w + afc * fw + x] !== 255 && zone.data[(yb * zone.width + pf * fw + x) * 4 + 3] > 127;
+          if (!front && arms[a + 3] > 127) v = arms[a];
+          if (slv && !front) { const q = slv.d[yb * slv.w + (sc + pf) * fw + x]; if (q !== 255) v = q; }
+        }
+        if (v >= 0) { const k = (y * aw + f * fw + x) * 4; o[k] = v; o[k + 3] = 255; }
+      } } }
+  const c = document.createElement('canvas'); c.width = aw; c.height = FH2; c.getContext('2d').putImageData(out, 0, 0);
+  return (P.sheets[key] = Object.assign(c, { fw, fh: FH2, frames: n * 2, blink: n, px: out, ext: G.ext }));
+}
+
 // 髪型 hair・細かさ lod（'close'／'normal'）のコマの絵（色番号の絵。横にポーズのコマが並ぶ）
 //   face：表情の番号。コマは「ポーズ n 個」のうしろに「同じポーズのまばたき n 個」（目のあたりだけ「目をとじる」の層に替える。目を閉じた表情は、まばたきなし）
-export function sheet(P, hair, lod, outfit = '', face = '') {
+export function sheet(P, hair, lod, outfit = '', face = '', shape = '') {
+  const sh = shapeOf(shape); if (sh) return sheetShape(P, hair, lod, outfit, face, sh);
   const key = hair + '|' + outfit + '|' + face + '|' + lod; if (P.sheets[key]) return P.sheets[key];
   const [fw, fh] = P.J[lod], n = P.J.poses, hi = P.J.hairs.findIndex(h => h.id === hair), W = wearOf(outfit), cols = P.J.wearCols || WEAR_KEYS;
   // 体に着せる順：くつ下 → くつ → ボトムス → トップス → 装飾品。サスペンダーやジャンパースカートのように、上に重ねるボトムス（J.over）は、トップスのあと
@@ -84,7 +164,9 @@ export function sheet(P, hair, lod, outfit = '', face = '') {
 }
 // カードのキャラに、その見た目（髪型）の絵を入れる。ch：card.js の makeChara の返り値。見た目が変わったときだけ絵を作り直す
 export function applyParts(P, ch, st) {
-  const hair = lookHair(st), outfit = lookOutfit(st), face = lookFace(st), key = hair + '|' + outfit + '|' + face; if (ch.partsKey === key) return; ch.partsKey = key;
-  const tex = lod => { const k = key + '|' + lod; if (!P.tex[k]) { const t = new THREE.CanvasTexture(sheet(P, hair, lod, outfit, face)); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; P.tex[k] = t; } return P.tex[k]; };
-  ch.setLods([{ s: 1, tex: tex('normal'), size: P.J.normal }, { s: 2, tex: tex('close'), size: P.J.close }]);
+  const hair = lookHair(st), outfit = lookOutfit(st), face = lookFace(st), shape = shapeOf(lookShape(st))?.key || '', key = hair + '|' + outfit + '|' + face + '|' + shape; if (ch.partsKey === key) return; ch.partsKey = key;
+  const tex = lod => { const k = key + '|' + lod; if (!P.tex[k]) { const t = new THREE.CanvasTexture(sheet(P, hair, lod, outfit, face, shape)); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; P.tex[k] = t; } return P.tex[k]; };
+  const size = lod => [P.J[lod][0], P.J[lod][1] + (shape ? EXT[lod] : 0)];
+  ch.ext = shape ? EXT.close / P.J.close[1] : 0;   // 体型を変えた絵は、コマが上へこの割合だけ長い（placeChara が、その分だけ上へのばして置く）
+  ch.setLods([{ s: 1, tex: tex('normal'), size: size('normal') }, { s: 2, tex: tex('close'), size: size('close') }]);
 }
