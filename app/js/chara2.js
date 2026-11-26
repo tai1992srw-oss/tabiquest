@@ -59,7 +59,7 @@ export function fixLook(P, L) {
 }
 // ふだんの見た目（ホームのお着替え）と、そのカードの見た目（カードに残してあればそれ）
 export const homeLook = P => fixLook(P, settings.chara2);
-export const lookOf = (P, st) => (st?.look?.rin ? fixLook(P, st.look) : homeLook(P));
+export const lookOf = (P, st) => { const L = st?.look?.rin ? fixLook(P, st.look) : homeLook(P), t = +st?.photo?.tilt || 0; return t ? { ...L, tilt: t } : L; };   // 首のかしげは、撮影の設定（photo.tilt）から
 export const has = (P, k, c) => k !== 'cheek' || !!P.J.chars[c].pieces.cheekL;
 export const itemName = (P, k, c) => (c === '' ? NONE[k] : k === 'wear' ? P.J.chars[c].wear : k === 'rin' ? `${P.J.chars[c].name}（${P.J.chars[c].rin}）` : P.J.chars[c].name);
 
@@ -143,23 +143,48 @@ function fitHair(P, id, name, rin, adj = 0, hex = '') {
   tx.putImageData(out, 0, 0); if (P.hair.size > 24) P.hair.delete(P.hair.keys().next().value); P.hair.set(key, t); return t;
 }
 
+// 首のかしげ：頭（後ろ髪・輪郭・顔・前髪）を、あごの下のまん中を軸に deg 度まわす（＋で、見て右に倒れる）
+//   ドット絵なので、1マスを 3×3 に見て、多い色を取る（こい線は 4つ以上あれば優先）。y0〜y1 の行だけ見る（頭のあたり）
+function rotate(src, deg, px, py, y1) {
+  const W = src.width, H = src.height, a = deg * Math.PI / 180, cs = Math.cos(a), sn = Math.sin(a), sx = src.getContext('2d', { willReadFrequently: true });
+  const S = new Uint32Array(sx.getImageData(0, 0, W, H).data.buffer), out = new ImageData(W, H), D = new Uint32Array(out.data.buffer), OF = [1 / 6, .5, 5 / 6], cnt = new Map();
+  const dark = v => (v & 255) + ((v >> 8) & 255) + ((v >> 16) & 255) < 300;
+  for (let y = 0; y < Math.min(H, y1); y++) for (let x = 0; x < W; x++) {
+    cnt.clear(); let solid = 0;
+    for (const oy of OF) for (const ox of OF) {
+      const dx = x + ox - px, dy = y + oy - py, u = Math.floor(cs * dx + sn * dy + px), w = Math.floor(-sn * dx + cs * dy + py);   // 逆にまわして、元の絵のどこかを見る
+      if (u < 0 || u >= W || w < 0 || w >= H) continue; const v = S[w * W + u]; if ((v >>> 24) < 128) continue; solid++; cnt.set(v, (cnt.get(v) || 0) + 1);
+    }
+    if (solid < 5) continue;
+    let best = 0, bn = 0, bd = 0, dn = 0; for (const [v, n] of cnt) { if (n > bn) { bn = n; best = v; } if (n >= 4 && dark(v) && n > dn) { dn = n; bd = v; } }
+    D[y * W + x] = dn ? bd : best;
+  }
+  const c = document.createElement('canvas'); c.width = W; c.height = H; c.getContext('2d').putImageData(out, 0, 0); return c;
+}
+
 // 見た目 L の立ち絵（256×384 のキャンバス）。同じ見た目は使い回す
+//   L.tilt：首のかしげ（度。−12〜12。撮影でえらぶ。0 ＝ まっすぐ）
 export function compose(P, L) {
   const key = JSON.stringify(L); if (P.cache.has(key)) return P.cache.get(key);
   const { J, IM } = P, [W, H] = J.size, c = document.createElement('canvas'); c.width = W; c.height = H;
   const x = c.getContext('2d', { willReadFrequently: true }), R = J.chars[L.rin], col = L.colors || {};
   const v = { ...L.v }; for (const k of FACE_KEYS) v[k] = P.base[k] + (L.v[k] | 0);   // キャラ1の数字を足して、絵の中の行・はばにもどす
-  const put = (im, p, tx, ty) => x.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay));   // 部品を、アンカーが (tx, ty) に来るように置く
+  // 首をかしげるときは、頭の部品を別のキャンバス（hd）に描いて、あとでまわして重ねる
+  const tilt = Math.max(-12, Math.min(12, +L.tilt || 0)), mk = () => { const q = document.createElement('canvas'); q.width = W; q.height = H; return q; };
+  const back = tilt ? mk() : c, head = tilt ? mk() : c, bk = back.getContext('2d'), hd = head.getContext('2d');
+  const put = (im, p, tx, ty) => hd.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay));   // 部品を、アンカーが (tx, ty) に来るように置く
   const mean = (Q, k) => (Q[k + 'L'].ay + Q[k + 'R'].ay) / 2;
   // 髪：輪郭の大きさに合わせて伸び縮みさせ（fitHair）、その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
   const hy = (k, n) => R.headTop - (J.chars[L[k]].hair?.[n]?.ay ?? J.chars[L[k]].headTop) + (v.hairDy | 0);
   const hx = (k, n) => Math.round(R.cx - (J.chars[L[k]].hair?.[n]?.ax ?? J.chars[L[k]].cx)) + (v.hairDx | 0);   // 横は、頭のまん中を合わせる
   // 重ねる順：後ろ髪 → 体・輪郭（服でかくす所をのぞく）→ 服 → 前髪 → ほお → 目 → まゆ → 鼻・口
-  x.drawImage(fitHair(P, L.hairB, 'hair_back', L.rin, v.hairS | 0, col.hair), hx('hairB', 'hair_back'), hy('hairB', 'hair_back'));
-  const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(tint(P, IM.body, 'skin', col.skin, 'body'), 0, 0); bx.drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);
+  bk.drawImage(fitHair(P, L.hairB, 'hair_back', L.rin, v.hairS | 0, col.hair), hx('hairB', 'hair_back'), hy('hairB', 'hair_back'));
+  if (tilt) x.drawImage(rotate(back, tilt, R.cx + .5, R.chin, H), 0, 0);
+  const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(tint(P, IM.body, 'skin', col.skin, 'body'), 0, 0); if (!tilt) bx.drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);
+  if (tilt) hd.drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);   // かしげるときは、輪郭は頭の側に描く（体といっしょにまわさない）
   if (L.wear) { bx.globalCompositeOperation = 'destination-out'; bx.drawImage(IM[L.wear].wear_hide, 0, 0); }
   x.drawImage(b, 0, 0); if (L.wear) x.drawImage(tint(P, IM[L.wear].wear, 'skinIn', col.skin, `${L.wear}/wear`), 0, 0);
-  x.drawImage(fitHair(P, L.hairF, 'hair_front', L.rin, v.hairS | 0, col.hair), hx('hairF', 'hair_front'), hy('hairF', 'hair_front'));
+  hd.drawImage(fitHair(P, L.hairF, 'hair_front', L.rin, v.hairS | 0, col.hair), hx('hairF', 'hair_front'), hy('hairF', 'hair_front'));
   // 顔の部品は、輪郭のまん中から左右に同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す
   const cx = Math.round(R.cx), half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
   if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek'))); }
@@ -171,6 +196,7 @@ export function compose(P, L) {
   const M = J.chars[L.mouth], MP = M.pieces;
   if (MP.nose) put(IM[L.mouth].nose, MP.nose, cx + (MP.nose.ax - M.cx), MP.nose.ay + ((v.eyeY - M.preset.eyeY) + (v.mouthY - M.preset.mouthY)) / 2);   // 鼻は、目と口のあいだに付いて動く
   put(IM[L.mouth].mouth, MP.mouth, cx + (MP.mouth.ax - M.cx), v.mouthY);
+  if (tilt) x.drawImage(rotate(head, tilt, R.cx + .5, R.chin, R.chin + 40), 0, 0);
   if (P.cache.size > 60) P.cache.delete(P.cache.keys().next().value);
   P.cache.set(key, c); return c;
 }
