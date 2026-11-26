@@ -198,7 +198,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   function load(i) {
     idx = i; card = list[i]; p = placeById(card.placeId);
     ph = { x: 0, y: 0, s: 1, r: 0, light: 'bright', pose: 0, rim: 0, glow: 0, ...(card.photo || {}) };
-    cur = card.look?.rin ? JSON.parse(JSON.stringify(card.look)) : null;   // この撮影のお着替え。残すまではカードに書かない（前のキャラの見た目のカードは、ふだんの見た目で出る）
+    cur = card.look?.rin || card.look?.big ? JSON.parse(JSON.stringify(card.look)) : null;   // この撮影のお着替え。残すまではカードに書かない（前のキャラの見た目のカードは、ふだんの見た目で出る）
     stage.innerHTML = ''; el = cardEl(p, card); stage.append(el);
     if (btn('clean').getAttribute('aria-pressed') === 'true') el.classList.add('clean');
     btn('fav')?.setAttribute('aria-pressed', String(!!card.fav));

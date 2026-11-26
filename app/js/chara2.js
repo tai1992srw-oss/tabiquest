@@ -88,16 +88,18 @@ export function loadParts() {
     // 顔の部品の2倍（pieces.<部品>.x2 がある物）：<c>/<部品>@2x.png（くりた決定「顔のパーツは2倍の細かさ」。体・髪・服は 256×384 のまま）
     await Promise.all(ids.flatMap(c => Object.entries(J.chars[c].pieces).filter(([, q]) => q.x2).map(async ([n]) => { IM[c][n + '@2x'] = await image(`${BASE}${c}/${n}@2x.png`); })));
     const base = J.chars[ids[0]].preset; for (const c of ids) J.chars[c].rel = Object.fromEntries(FACE_KEYS.map(k => [k, (J.chars[c].preset[k] ?? base[k]) - base[k]]));   // キャラ1との差
-    return { J, IM, ids, base, cache: new Map(), tex: new Map(), hair: new Map(), tint: new Map() };
+    const big = await loadBig().catch(e => { console.warn('1.5倍のキャラを読みこめませんでした', e); return null; });
+    return { J, IM, ids, base, big, bigIds: big ? big.ids : [], cache: new Map(), tex: new Map(), hair: new Map(), tint: new Map() };
   })().catch(e => { parts = null; throw e; }));
 }
 // キャラのプリセット：そのキャラの部品とバランスを、ひとそろい（色は元の色、髪の調整は 0）。名前は、ならび順に「キャラ1」「キャラ2」…
-export const charaLook = (P, id) => ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, k === 'cheek' && !P.J.chars[id].pieces.cheekL ? '' : id])), v: presetOf(P, id) });
-export const charaName = (P, id) => `キャラ${P.ids.indexOf(id) + 1}`;
+export const charaLook = (P, id) => isBig(P, id) ? bigLook(P, id) : ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, k === 'cheek' && !P.J.chars[id].pieces.cheekL ? '' : id])), v: presetOf(P, id) });
+export const charaName = (P, id) => isBig(P, id) ? P.big.J.chars[id].name : `キャラ${P.ids.indexOf(id) + 1}`;
 // はじめの見た目：最初の子（1つめの id）の部品とバランス
 export const firstLook = P => ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, P.ids[0]])), v: presetOf(P, P.ids[0]) });
 // 見た目をととのえる（前のキャラの見た目や、欠けた項目は、はじめの見た目で埋める）
 export function fixLook(P, L) {
+  if (L?.big) return isBig(P, L.big) ? fixBig(P, L) : firstLook(P);   // 1.5倍のキャラ
   const d = firstLook(P); if (!L || !P.J.chars[L.rin]) return d;
   const o = { v: { ...HAIR0, ...P.J.chars[L.rin].rel, ...(L.v || {}) } };
   if (o.v.eyeY > 40) for (const k of FACE_KEYS) o.v[k] -= P.base[k];   // 前の形（絵の中の行・はばそのもの）で残した見た目は、キャラ1との差に直す
@@ -111,7 +113,7 @@ export function fixLook(P, L) {
 }
 // ふだんの見た目（ホームのお着替え）と、そのカードの見た目（カードに残してあればそれ）
 export const homeLook = P => fixLook(P, settings.chara2);
-export const lookOf = (P, st) => { const L = st?.look?.rin ? fixLook(P, st.look) : homeLook(P), o = {}; for (const k of ['tilt', 'turn', 'lean', 'wind']) if (+st?.photo?.[k]) o[k] = +st.photo[k]; if (FACE[st?.photo?.face] && st.photo.face) o.face = st.photo.face; return Object.keys(o).length ? { ...L, ...o } : L; };   // 首のかしげ・腰・風は、撮影の設定（photo）から
+export const lookOf = (P, st) => { const L = st?.look?.rin || st?.look?.big ? fixLook(P, st.look) : homeLook(P), o = {}; for (const k of ['tilt', 'turn', 'lean', 'wind']) if (+st?.photo?.[k]) o[k] = +st.photo[k]; if (FACE[st?.photo?.face] && st.photo.face) o.face = st.photo.face; return Object.keys(o).length ? { ...L, ...o } : L; };   // 首のかしげ・腰・風は、撮影の設定（photo）から
 export const has = (P, k, c) => k !== 'cheek' || !!P.J.chars[c].pieces.cheekL;
 export const itemName = (P, k, c) => (c === '' ? NONE[k] : k === 'wear' ? P.J.chars[c].wear : k === 'rin' ? `${P.J.chars[c].name}（${P.J.chars[c].rin}）` : P.J.chars[c].name);
 
@@ -286,6 +288,7 @@ function rotate(src, deg, px, py, y1) {
 //   L.tilt：首のかしげ（度。−12〜12）、L.turn：顔の向き（−1〜1。小数も可）、L.lean：腰からかたむける（度。−10〜10。いまは撮影でえらべない）、L.wind：風（−2〜2。＋で右へなびく）。どれも撮影でえらぶ。0 ＝ なし
 export function compose(P, L) {
   const key = JSON.stringify(L); if (P.cache.has(key)) return P.cache.get(key);
+  if (L.big && isBig(P, L.big)) { const b = composeBig(P, L); if (P.cache.size > 40) P.cache.delete(P.cache.keys().next().value); P.cache.set(key, b); return b; }
   const { J, IM } = P, [W, H] = J.size, c = document.createElement('canvas'); c.width = W; c.height = H;
   const x = c.getContext('2d', { willReadFrequently: true }), R = J.chars[L.rin], col = L.colors || {};
   const v = { ...L.v }; for (const k of FACE_KEYS) v[k] = P.base[k] + (L.v[k] | 0);   // キャラ1の数字を足して、絵の中の行・はばにもどす
@@ -375,7 +378,8 @@ export function compose(P, L) {
   P.cache.set(key, out); return out;   // 顔の部品が2倍のときは 512×768（それ以外は 256×384）。使う側は、幅÷256 を倍率として使う
 }
 // 切り出す場所：顔（輪郭のまわり）と全身。[x, y, w, h]（立ち絵の中で）
-export const cropOf = (P, L, kind) => { const R = P.J.chars[L.rin]; return kind === 'face' ? [R.cx - 48, Math.max(0, R.headTop - 26), 96, 108] : [56, 0, 144, 376]; };
+export const cropOf = (P, L, kind) => { if (L.big && isBig(P, L.big)) { const B = P.big.chars[L.big]; return kind === 'face' ? [B.cx - 48, Math.max(0, B.headTop - 26), 96, 108] : [56, 0, 144, 376]; }
+  const R = P.J.chars[L.rin]; return kind === 'face' ? [R.cx - 48, Math.max(0, R.headTop - 26), 96, 108] : [56, 0, 144, 376]; };
 // 立ち絵を cv に描く（kind：'face'／'body'）
 export function drawLook(cv, P, L, kind = 'body') {
   const [x, y, w, h] = cropOf(P, L, kind), im = compose(P, L), k = im.width / P.J.size[0]; cv.width = w * k; cv.height = h * k; cv.getContext('2d').drawImage(im, -x * k, -y * k); return [x, y, w, h];
@@ -413,4 +417,62 @@ export function applyParts(P, ch, st) {
   const L = lookOf(P, st), key = JSON.stringify(L);
   if (ch.partsKey !== key) { ch.partsKey = key; const r = indexed(P, L, ch.frames || 1); ch.pal2 = r.pal; ch.ext = 0; ch.setLods([{ s: 2, tex: r.tex, size: r.size }]); }
   return ch.pal2;
+}
+
+// ---- 1.5倍のキャラ（2026-11-27。キャラ1b・キャラ0）：384×576・全身の枠の絵を、そのまま重ねる（dot/chara15/ → assets/chara15/。README のとおり） ----
+//   見た目（look）：{ big：キャラ（'c1b'・'c0'）, w15：服（'tshirt'・'design'＝そのキャラのデザインの服・'sotai'＝素体）, h15：髪の色のプリセットの名前（'' ＝ 元の色）, face・blink }
+//   ふつうのキャラ（256×384）の部品（輪郭・バランス・服・小物・向き・かしげ・風）は、まだ合わない。返す絵は 384×576（使う側は、はばの比 1.5 で合わせる）
+//   重ねる順：後ろ髪 → 素体の体 → 頭 → 服 → 前髪 → ほお（全キャラ共通）→ 目 → まゆ → 口。デザインの服は 後ろ髪 → 体 → 服 → 前髪 → 顔（offset なし）
+const BASE15 = 'assets/chara15/';
+const isBig = (P, id) => !!P.big?.J.chars[id];
+const W15 = [['tshirt', 'Tシャツ'], ['design', 'デザインの服'], ['sotai', '素体']];
+export const bigWears = (P, id) => W15.filter(([k]) => k !== 'design' || P.big.J.chars[id].design);
+export const bigHairs = P => Object.entries(P.big.J.hairPresets).map(([k, h]) => [k, h.base]);
+// 表情（FACES の id）を、顔の部品ごとの表情（faceParts.exprs）にする。e：目、b：まゆ、m：口（ないときは ふだん）
+const EXPR15 = { smile: { m: 'smile' }, grin: { e: 'smile', b: 'smile', m: 'smile' }, close: { e: 'close', b: 'close', m: 'close' }, wink: { e: 'wink', b: 'wink', m: 'wink' },
+  wow: { e: 'surprise', b: 'surprise', m: 'surprise' }, komari: { e: 'trouble', b: 'trouble', m: 'trouble' }, shy: { e: 'shy', b: 'shy', m: 'shy' }, smug: { e: 'jito', m: 'wink' },
+  muu: { e: 'angry', b: 'angry', m: 'angry' }, jito: { e: 'jito', b: 'jito' } };
+async function loadBig() {
+  const J = await (await fetch(BASE15 + 'parts15.json')).json(), IM = {}, files = new Set([J.sotaiBody, ...Object.values(J.wear)]);
+  const SC = J.shared?.cheek; if (SC) for (const k of Object.keys(SC.kinds)) files.add(SC.path.replace('{kind}', k));
+  const chars = {};
+  for (const [c, C] of Object.entries(J.chars)) {
+    Object.values(C.layers).forEach(f => files.add(f)); if (C.design) { files.add(C.design.body); files.add(C.design.wear); }
+    const F = C.faceParts; if (F) { for (const k of F.order) if (k !== 'cheek' || !SC) for (const e of F.exprs) files.add(F.path.replace('{part}', k).replace('{expr}', e)); }
+    else files.add(C.faceNoCheek || C.faces.normal.replace('face.png', 'face_nocheek.png'));
+    const o = C.offset || [0, 0]; chars[c] = { cx: Math.round(J.size[0] / 2 / 1.5), headTop: Math.round((57 + o[1]) / 1.5) };   // 顔の寄りの切りぬき（256×384 の目もり）
+  }
+  await Promise.all([...files].map(async f => { IM[f] = await image(BASE15 + f).catch(() => null); }));
+  const ids = Object.keys(J.chars).sort((a, b) => (a === 'c1b' ? -1 : b === 'c1b' ? 1 : 0));   // キャラ1b を先に
+  return { J, IM, ids, chars, tint: new Map() };
+}
+const bigLook = (P, id) => ({ big: id, w15: P.big.J.chars[id].design ? 'design' : 'tshirt', h15: '' });
+function fixBig(P, L) {
+  const o = { big: L.big, w15: bigWears(P, L.big).some(([k]) => k === L.w15) ? L.w15 : bigLook(P, L.big).w15, h15: P.big.J.hairPresets[L.h15] ? L.h15 : '' };
+  for (const k of ['face', 'blink']) if (L[k]) o[k] = L[k];
+  return o;
+}
+// 髪の色：キャラ0の6色（colors.hair）で描いた髪を、プリセットの同じ番の色に置きかえる（色がぴったり同じドットだけ）
+function hair15(P, f, preset) {
+  const B = P.big, im = B.IM[f], to = B.J.hairPresets[preset]; if (!im || !to) return im;
+  const key = f + '|' + preset; if (B.tint.has(key)) return B.tint.get(key);
+  const [W, H] = B.J.size, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0);
+  const d = x.getImageData(0, 0, W, H), u = d.data, map = new Map(), hx = h => parseInt(h.slice(1), 16);
+  for (const [k, v] of Object.entries(B.J.colors.hair)) if (to[k]) map.set(hx(v), hx(to[k]));
+  for (let i = 0; i < u.length; i += 4) { if (!u[i + 3]) continue; const t = map.get((u[i] << 16) | (u[i + 1] << 8) | u[i + 2]); if (t !== undefined) { u[i] = t >> 16; u[i + 1] = (t >> 8) & 255; u[i + 2] = t & 255; } }
+  x.putImageData(d, 0, 0); B.tint.set(key, c); return c;
+}
+function composeBig(P, L) {
+  const B = P.big, J = B.J, C = J.chars[L.big], [W, H] = J.size, o = C.offset || [0, 0], design = L.w15 === 'design' && C.design, fo = design ? [0, 0] : o;
+  const preset = L.h15 || C.hairPreset || '', Ly = C.layers, ex = EXPR15[L.face] || {}, SC = J.shared?.cheek, F = C.faceParts;
+  const eye = L.blink ? 'close' : ex.e || 'normal', part = k => (k.startsWith('eye') ? eye : k.startsWith('brow') ? ex.b || 'normal' : k === 'mouth' ? ex.m || 'normal' : 'normal');
+  const L1 = []; const put = (im, dx = 0, dy = 0) => im && L1.push([im, dx, dy]);
+  if (design) { put(hair15(P, Ly.hair_back, preset)); put(B.IM[C.design.body]); put(B.IM[C.design.wear]); put(hair15(P, Ly.hair_front, preset)); }
+  else { put(hair15(P, Ly.hair_back, preset), ...o); put(B.IM[J.sotaiBody]); put(B.IM[Ly.head], ...o); if (L.w15 === 'tshirt') put(B.IM[J.wear.tshirt]); put(hair15(P, Ly.hair_front, preset), ...o); }
+  if (SC) { const a = C.cheekAnchor || SC.ref; put(B.IM[SC.path.replace('{kind}', L.face === 'shy' ? 'shy' : 'normal')], fo[0] + a[0] - SC.ref[0], fo[1] + a[1] - SC.ref[1]); }   // ほお（共通）は顔の部品のいちばん下
+  if (F) for (const k of F.order) { if (k === 'cheek' && SC) continue; put(B.IM[F.path.replace('{part}', k).replace('{expr}', part(k))], ...fo); }
+  else put(B.IM[SC ? C.faceNoCheek || C.faces.normal.replace('face.png', 'face_nocheek.png') : C.faces.normal], ...fo);
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d', { willReadFrequently: true }); x.imageSmoothingEnabled = false;
+  for (const [im, dx, dy] of L1) x.drawImage(im, dx, dy);
+  return c;
 }

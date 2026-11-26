@@ -3,7 +3,7 @@
 //   見た目（look）と、絵の組み立ては chara2.js。絵は描き足さない
 //   輪郭を替えると、バランスはその輪郭のプリセットになる（そこから自由に動かせる）
 import { settings, saveSettings } from './store.js';
-import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf } from './chara2.js';
+import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf, bigWears, bigHairs } from './chara2.js';
 import { esc, toast } from './ui.js';
 
 const ICON = { rin: '◯', eye: '◉', brow: '⌒', mouth: '◡', cheek: '❀', hairF: '✂', hairB: '≋', wear: '♥' };
@@ -13,6 +13,9 @@ const slot = id => ({ id, name: SLOTS.find(q => q[0] === id)[1], icon: ICON[id],
 // 服のタブ：上の絞りこみ（セット・トップス・ボトムス・足もと）で、ひとそろいと部分を切りかえる
 const DRESS = [{ id: 'wear', name: '服', icon: ICON.wear, kind: 'wear', focus: 'body' }, { id: 'hair', name: '髪', icon: ICON.hairF, kind: 'slot', focus: 'face' }, { id: 'items', name: '小物', icon: '✿', kind: 'items', focus: 'body' }, { id: 'coord', name: 'コーデ', icon: '★', kind: 'coord', focus: 'body' }];
 const FACE = [{ id: 'chara', name: 'キャラ', icon: '☻', kind: 'chara', focus: 'body' }, slot('rin'), slot('eye'), slot('brow'), slot('mouth'), slot('cheek'), { id: 'bal', name: 'バランス', icon: '⇔', kind: 'bal', focus: 'face' }];
+// 1.5倍のキャラ（キャラ1b・キャラ0）：服（Tシャツ・デザインの服・素体）と髪の色だけえらべる。顔の部品・バランス・小物は、まだ合わない
+const DRESS15 = [{ id: 'w15', name: '服', icon: ICON.wear, kind: 'w15', focus: 'body' }, { id: 'h15', name: '髪の色', icon: ICON.hairF, kind: 'h15', focus: 'face' }, DRESS[3]];
+const FACE15 = [FACE[0]];
 const clone = L => JSON.parse(JSON.stringify(L));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -22,7 +25,9 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 export function openDress({ look, home = null, title = 'お着替え', note = '', onChange, onSave, onClose } = {}) {
   document.querySelector('.dressup')?.remove();
   let wf = 'set';   // 服の絞りこみ
-  let P = null, first = null, L = null, homeL = null, TABS = DRESS, tab = TABS[0], hist = [], whole = false;
+  let P = null, first = null, L = null, homeL = null, TABS = DRESS, tab = TABS[0], hist = [], whole = false, faceMode = false;
+  // タブの組：ふつうのキャラか 1.5倍のキャラか、「顔をつくる」か で変わる
+  const syncTabs = () => { const T = L?.big ? (faceMode ? FACE15 : DRESS15) : (faceMode ? FACE : DRESS); if (T !== TABS) { TABS = T; if (!TABS.includes(tab)) tab = TABS[0]; renderTabs(); return true; } return false; };
   const root = document.createElement('div'); root.className = 'dressup'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', title);
   root.innerHTML = `
     <div class="du-top"><button class="du-x" data-a="cancel" aria-label="やめてとじる">×</button><div class="du-ttl"><b>${esc(title)}</b>${note ? `<small>${esc(note)}</small>` : ''}</div><button class="du-ok" data-a="save">決定</button></div>
@@ -45,12 +50,18 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
     const z = Math.max(.5, Math.floor(Math.min((stage.clientHeight - 20) / crop[3], (stage.clientWidth - 16) / crop[2]) * 2) / 2);
     drawLook(cv, P, L, kind); cv.style.width = crop[2] * z + 'px'; cv.style.height = crop[3] * z + 'px';
   };
-  const change = (fn, keep = true) => { if (keep) { hist.push(clone(L)); if (hist.length > 40) hist.shift(); } fn(L); root.querySelector('[data-a=undo]').disabled = !hist.length; paint(); renderBody(false); onChange?.(clone(L)); };
-  const coords = () => (settings.chara2Coords || []).filter(c => c.look?.rin);
+  const change = (fn, keep = true) => { if (keep) { hist.push(clone(L)); if (hist.length > 40) hist.shift(); } fn(L); root.querySelector('[data-a=undo]').disabled = !hist.length; const sw = syncTabs(); paint(); renderBody(sw); onChange?.(clone(L)); };
+  const coords = () => (settings.chara2Coords || []).filter(c => c.look?.rin || c.look?.big);
   // 下の一覧を描く。full＝タブを切りかえたとき（絵から作り直す）。そうでなければ、えらんだ印と数字だけ直す
   function renderBody(full = true) {
     if (!P) return;
-    if (tab.kind === 'items') {   // 持ち物・かざり：押すと付ける・はずす（同じ所に付く物は入れかわる）。いくつでも組み合わせられる
+    if (tab.kind === 'w15') {   // 1.5倍のキャラの服
+      if (full) body.innerHTML = `<div class="du-grid body">${bigWears(P, L.big).map(([k, n]) => `<button class="du-item" data-w15="${k}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
+      body.querySelectorAll('[data-w15]').forEach(b => { b.setAttribute('aria-pressed', String(L.w15 === b.dataset.w15)); drawLook(b.querySelector('canvas'), P, { ...L, w15: b.dataset.w15 }, 'body'); });
+    } else if (tab.kind === 'h15') {   // 1.5倍のキャラの髪の色（プリセット）
+      if (full) body.innerHTML = `<div class="du-grid face">${[['', '元の色'], ...bigHairs(P).map(([k]) => [k, k])].map(([k, n]) => `<button class="du-item" data-h15="${esc(k)}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
+      body.querySelectorAll('[data-h15]').forEach(b => { b.setAttribute('aria-pressed', String((L.h15 || '') === b.dataset.h15)); drawLook(b.querySelector('canvas'), P, { ...L, h15: b.dataset.h15 }, 'face'); });
+    } else if (tab.kind === 'items') {   // 持ち物・かざり：押すと付ける・はずす（同じ所に付く物は入れかわる）。いくつでも組み合わせられる
       if (full) body.innerHTML = `<p class="du-hint">押すと付けたり、はずしたりできます。同じ所に付く物（右手の紙袋とぬいぐるみなど）は、入れかわります</p><div class="du-grid body"><button class="du-item" data-it=""><canvas></canvas><span class="du-nm">ぜんぶはずす</span></button>${itemList(P).map(it => `<button class="du-item" data-it="${it.id}"><canvas></canvas><span class="du-nm">${esc(it.name)}</span></button>`).join('')}</div>`;
       body.querySelectorAll('[data-it]').forEach(b => { const id = b.dataset.it, on = id ? (L.items || []).includes(id) : !(L.items || []).length; b.setAttribute('aria-pressed', String(on)); const t = clone(L); if (id) { if (!on) toggleItem(P, t, id); } else delete t.items; drawLook(b.querySelector('canvas'), P, t, 'body'); });
     } else if (tab.kind === 'wear') {
@@ -65,7 +76,7 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
       setSliders(); if (ck) markColors(ck);
       body.querySelectorAll('.du-item').forEach(b => { b.setAttribute('aria-pressed', String(cur(L, tab.id) === b.dataset.v)); const t = clone(L); pick(t, tab.id, b.dataset.v); drawLook(b.querySelector('canvas'), P, t, tab.focus); });
     } else if (tab.kind === 'chara') {   // キャラのプリセット：部品とバランスを、そのキャラのひとそろいにする
-      if (full) body.innerHTML = `<p class="du-hint">キャラをえらぶと、顔・髪・服・バランスが、そのキャラのひとそろいになります。そこから自由に変えられます</p><div class="du-grid coord">${P.ids.map(c => `<button class="du-item" data-chara="${c}"><canvas></canvas><span class="du-nm">${esc(charaName(P, c))}</span></button>`).join('')}</div>`;
+      if (full) body.innerHTML = `<p class="du-hint">キャラをえらぶと、顔・髪・服・バランスが、そのキャラのひとそろいになります。そこから自由に変えられます</p><div class="du-grid coord">${[...P.ids, ...P.bigIds].map(c => `<button class="du-item" data-chara="${c}"><canvas></canvas><span class="du-nm">${esc(charaName(P, c))}</span></button>`).join('')}</div>`;
       body.querySelectorAll('[data-chara]').forEach(b => { const t = fixLook(P, charaLook(P, b.dataset.chara)); b.setAttribute('aria-pressed', String(same(t, fixLook(P, L)))); drawLook(b.querySelector('canvas'), P, t, 'body'); });
     } else if (tab.kind === 'bal') {
       if (full) body.innerHTML = `<p class="du-hint">1ドットずつ動かせます。数字は、キャラ1の顔を ±0 とした差です。「もどす」で、いまの輪郭に合う値にもどります</p>${sliders(VALS)}<div class="du-shape"><button data-a="preset">輪郭に合う値にもどす</button></div>`;
@@ -93,6 +104,8 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   root.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || !P) { if (b?.dataset.a === 'cancel') close(); return; } const a = b.dataset.a;
     if (b.dataset.tab) { tab = TABS.find(t => t.id === b.dataset.tab); root.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b))); paint(); renderBody(); }
+    else if (b.dataset.w15) { if (L.w15 !== b.dataset.w15) change(x => { x.w15 = b.dataset.w15; }); }
+    else if (b.dataset.h15 !== undefined) { if ((L.h15 || '') !== b.dataset.h15) change(x => { x.h15 = b.dataset.h15; }); }
     else if (b.dataset.chara) { const t = fixLook(P, charaLook(P, b.dataset.chara)); if (!same(t, fixLook(P, L))) change(x => { for (const k of Object.keys(x)) delete x[k]; Object.assign(x, t); }); }
     else if (b.dataset.c !== undefined) { const k = b.closest('.du-colors').dataset.k; if ((L.colors?.[k] || '') !== b.dataset.c) change(x => setColor(x, k, b.dataset.c)); }
     else if (b.dataset.it !== undefined) { const id = b.dataset.it; if (id) change(x => toggleItem(P, x, id)); else if ((L.items || []).length) change(x => { delete x.items; }); }
@@ -102,13 +115,13 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
     else if (b.dataset.d) { const s = b.closest('.du-sl'), r = s.querySelector('input'), nv = Math.max(+r.min, Math.min(+r.max, L.v[s.dataset.k] + +b.dataset.d)); if (nv !== L.v[s.dataset.k]) change(x => { x.v[s.dataset.k] = nv; }); }
     else if (a === 'preset') { const pv = presetOf(P, L.rin, L.v); if (!same(pv, L.v)) change(x => { x.v = pv; }); }
     else if (a === 'hair0') { if (HAIR_VALS.some(([k]) => L.v[k])) change(x => { for (const [k] of HAIR_VALS) x.v[k] = 0; }); }
-    else if (b.dataset.coord !== undefined) { const c = coords()[+b.dataset.coord]; if (c) { change(x => Object.assign(x, fixLook(P, c.look))); renderBody(); } }
+    else if (b.dataset.coord !== undefined) { const c = coords()[+b.dataset.coord]; if (c) { change(x => { for (const k of Object.keys(x)) delete x[k]; Object.assign(x, fixLook(P, c.look)); }); renderBody(); } }
     else if (b.dataset.del !== undefined) { const cs = coords().slice(), c = cs[+b.dataset.del]; if (c && confirm(`「${c.name}」を消しますか？`)) { cs.splice(+b.dataset.del, 1); settings.chara2Coords = cs; saveSettings(); renderBody(); } }
     else if (a === 'addcoord') { const cs = coords().slice(), name = (prompt('コーデの名前', `コーデ${cs.length + 1}`) || '').trim().slice(0, 12); if (!name) return; cs.push({ name, look: clone(L) }); settings.chara2Coords = cs; saveSettings(); renderBody(); toast(`「${name}」を残しました`); }
-    else if (a === 'undo') { const p = hist.pop(); if (p) { L = p; b.disabled = !hist.length; paint(); renderBody(); onChange?.(clone(L)); } }
+    else if (a === 'undo') { const p = hist.pop(); if (p) { L = p; b.disabled = !hist.length; syncTabs(); paint(); renderBody(); onChange?.(clone(L)); } }
     else if (a === 'home' && homeL) { if (!same(L, homeL)) { change(x => { for (const k of Object.keys(x)) delete x[k]; Object.assign(x, clone(homeL)); }); renderBody(); } }
     else if (a === 'face') {   // 「顔をつくる」の入り切り：下のタブを、顔の部品とバランスに切りかえる
-      const on = TABS !== FACE; TABS = on ? FACE : DRESS; tab = TABS[0]; b.setAttribute('aria-pressed', String(on)); b.textContent = on ? 'お着替えにもどる' : '顔をつくる'; renderTabs(); paint(); renderBody();
+      faceMode = !faceMode; syncTabs(); tab = TABS[0]; renderTabs(); b.setAttribute('aria-pressed', String(faceMode)); b.textContent = faceMode ? 'お着替えにもどる' : '顔をつくる'; paint(); renderBody();
     }
     else if (a === 'zoom') { whole = !whole; b.setAttribute('aria-pressed', String(whole)); paint(); }
     else if (a === 'save') { onSave?.(clone(L)); close(); }
@@ -123,7 +136,7 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   });
   root.addEventListener('change', e => { if (!(e.target.closest('.du-sl') || e.target.type === 'color') || !sliding) return; hist.push(sliding); sliding = null; root.querySelector('[data-a=undo]').disabled = false; renderBody(false); });
   addEventListener('resize', paint); document.addEventListener('keydown', onKey);
-  loadParts().then(v => { P = v; L = fixLook(P, look); first = clone(L); homeL = home ? fixLook(P, home) : null; paint(); renderBody(); }).catch(() => { body.innerHTML = '<p class="du-load">キャラの絵を読みこめませんでした</p>'; });
+  loadParts().then(v => { P = v; L = fixLook(P, look); first = clone(L); homeL = home ? fixLook(P, home) : null; syncTabs(); paint(); renderBody(); }).catch(() => { body.innerHTML = '<p class="du-load">キャラの絵を読みこめませんでした</p>'; });
   root.querySelector('.du-ok').focus({ preventScroll: true });
   return close;
 }
