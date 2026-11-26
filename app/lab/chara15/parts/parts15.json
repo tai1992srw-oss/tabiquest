@@ -1,0 +1,185 @@
+{
+ "size": [
+  384,
+  576
+ ],
+ "sotai": "sotai.png",
+ "sotaiBody": "sotai_body.png",
+ "sotaiChinY": 166,
+ "order": {
+  "sotai": [
+   "hair_back",
+   "sotaiBody",
+   "head(+offset)",
+   "wear",
+   "hair_front(+offset)",
+   "face(+offset)"
+  ],
+  "design": [
+   "hair_back",
+   "body_design",
+   "wear_design",
+   "hair_front",
+   "face"
+  ]
+ },
+ "wear": {
+  "tshirt": "wear/tshirt.png"
+ },
+ "colors": {
+  "hair": {
+   "line": "#211012",
+   "shadow2": "#3C2010",
+   "shadow1": "#4B2B16",
+   "base": "#7F4F30",
+   "light": "#A36C48",
+   "highlight": "#D8A680"
+  },
+  "skin": {
+   "line": "#211012",
+   "edge": "#402A1E",
+   "shadow2": "#D4956A",
+   "shadow1": "#E6AC81",
+   "base": "#FDDCBB"
+  },
+  "line": "#211012"
+ },
+ "hairPresets": {
+  "キャラ1のデザイン": {
+   "line": "#211012",
+   "shadow2": "#5C3420",
+   "shadow1": "#73432A",
+   "base": "#C27B56",
+   "light": "#F9A77D",
+   "highlight": "#FFC2A2"
+  },
+  "黒": {
+   "line": "#211012",
+   "shadow2": "#1B1719",
+   "shadow1": "#221D20",
+   "base": "#3A3236",
+   "light": "#5E5862",
+   "highlight": "#A8A0A8"
+  },
+  "こげ茶": {
+   "line": "#211012",
+   "shadow2": "#2B150C",
+   "shadow1": "#351C11",
+   "base": "#5A3424",
+   "light": "#744835",
+   "highlight": "#996F5D"
+  },
+  "金": {
+   "line": "#211012",
+   "shadow2": "#664F20",
+   "shadow1": "#80632B",
+   "base": "#D8AE5A",
+   "light": "#FFD279",
+   "highlight": "#FFDF9E"
+  },
+  "ピンク": {
+   "line": "#211012",
+   "shadow2": "#673946",
+   "shadow1": "#804959",
+   "base": "#D9879E",
+   "light": "#FFA9C1",
+   "highlight": "#FFC0D2"
+  },
+  "銀": {
+   "line": "#211012",
+   "shadow2": "#4F5057",
+   "shadow1": "#63656D",
+   "base": "#A9ACB8",
+   "light": "#DBDEEC",
+   "highlight": "#F1F4FF"
+  },
+  "青": {
+   "line": "#211012",
+   "shadow2": "#1C2D57",
+   "shadow1": "#263A6D",
+   "base": "#4F6CB8",
+   "light": "#7395EC",
+   "highlight": "#A0BAFF"
+  },
+  "赤": {
+   "line": "#211012",
+   "shadow2": "#4F150C",
+   "shadow1": "#631D12",
+   "base": "#A8402F",
+   "light": "#D8604C",
+   "highlight": "#FF9887"
+  },
+  "むらさき": {
+   "line": "#211012",
+   "shadow2": "#38244E",
+   "shadow1": "#472F62",
+   "base": "#7D5AA6",
+   "light": "#A67ED5",
+   "highlight": "#D6B3FF"
+  },
+  "みどり": {
+   "line": "#211012",
+   "shadow2": "#294126",
+   "shadow1": "#345131",
+   "base": "#5E8A5A",
+   "light": "#7EB17A",
+   "highlight": "#BAEBB5"
+  }
+ },
+ "chars": {
+  "c0": {
+   "name": "キャラ0",
+   "offset": [
+    0,
+    0
+   ],
+   "layers": {
+    "hair_back": "c0/hair_back.png",
+    "head": "c0/head.png",
+    "hair_front": "c0/hair_front.png"
+   },
+   "faces": {
+    "normal": "c0/face.png"
+   }
+  },
+  "c1b": {
+   "name": "キャラ1b",
+   "offset": [
+    0,
+    12
+   ],
+   "hairPreset": "キャラ1のデザイン",
+   "layers": {
+    "hair_back": "c1b/hair_back.png",
+    "head": "c1b/head.png",
+    "hair_front": "c1b/hair_front.png"
+   },
+   "design": {
+    "body": "c1b/body_design.png",
+    "wear": "c1b/wear_design.png",
+    "note": "デザインの服（制服）。そのキャラの絵の体に重ねる。offset はかけない"
+   },
+   "faces": {
+    "normal": "c1b/face.png",
+    "angry": "c1b/face_angry.png",
+    "close": "c1b/face_close.png",
+    "jito": "c1b/face_jito.png",
+    "shy": "c1b/face_shy.png",
+    "smile": "c1b/face_smile.png",
+    "surprise": "c1b/face_surprise.png",
+    "trouble": "c1b/face_trouble.png",
+    "wink": "c1b/face_wink.png"
+   },
+   "faceNames": {
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目"
+   }
+  }
+ }
+}

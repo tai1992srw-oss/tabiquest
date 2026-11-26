@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1.5倍キャラの表情</title>
+<!-- 1.5倍のキャラ（384×576）の表情をためす画面。絵は dot/chara15/ を tools/chara15_sync.py で parts/ に写したもの。
+     重ね方は dot/chara15/README.md のとおり（このページでは絵を描き足さない。重ねる・髪の色を置きかえるだけ） -->
+<style>
+  :root { --paper: #f6f1e7; --ink: #2b2530; --fuji: #8e7cc3; --fuji2: #e9e3f5; --line: #d8cfe6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }
+  header { padding: 12px 16px 4px; }
+  h1 { font-size: 17px; margin: 0; }
+  .note { font-size: 12px; opacity: .7; margin: 2px 0 0; }
+  main { display: flex; flex-wrap: wrap; gap: 16px; padding: 8px 16px 24px; align-items: flex-start; }
+  .stage { flex: 1 1 340px; display: flex; justify-content: center; }
+  .stage canvas { image-rendering: pixelated; width: min(100%, 384px); max-height: 78vh; object-fit: contain; background: #fff8; border: 1px solid var(--line); border-radius: 10px; }
+  .stage.face canvas { width: min(100%, 432px); }
+  .panel { flex: 1 1 300px; max-width: 460px; }
+  .grp { margin: 0 0 12px; }
+  .grp b { display: block; font-size: 12px; margin: 0 0 4px; opacity: .75; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; }
+  button.on { background: var(--fuji); border-color: var(--fuji); color: #fff; }
+  button:disabled { opacity: .35; cursor: default; }
+  .sw { width: 30px; height: 30px; padding: 0; border-radius: 50%; }
+  .sw.on { outline: 3px solid var(--fuji); outline-offset: 2px; }
+  #grid { display: none; padding: 0 16px 24px; }
+  #grid.show { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  #grid figure { margin: 0; text-align: center; font-size: 12px; }
+  #grid canvas { image-rendering: pixelated; width: 100%; background: #fff8; border: 1px solid var(--line); border-radius: 8px; }
+</style>
+</head>
+<body>
+<header><h1>1.5倍キャラの表情</h1><p class="note">384×576 のためし。表情は顔まるごと1枚の差しかえ。</p></header>
+<main>
+  <div class="stage" id="stage"><canvas id="cv" width="384" height="576"></canvas></div>
+  <div class="panel">
+    <div class="grp"><b>キャラ</b><div class="chips" id="chars"></div></div>
+    <div class="grp"><b>服</b><div class="chips" id="wears"></div></div>
+    <div class="grp"><b>表情</b><div class="chips" id="faces"></div></div>
+    <div class="grp"><b>髪の色</b><div class="chips" id="hairs"></div></div>
+    <div class="grp"><b>見かた</b><div class="chips" id="views"></div></div>
+  </div>
+</main>
+<div id="grid"></div>
+<script type="module">
+const BASE = './parts/';
+const J = await (await fetch(BASE + 'parts15.json', { cache: 'no-cache' })).json();
+const [W, H] = J.size, IM = {};
+const img = src => IM[src] || (IM[src] = new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ng(new Error(src)); i.src = BASE + src; }));
+const S = { c: Object.keys(J.chars).includes('c1b') ? 'c1b' : Object.keys(J.chars)[0], wear: 'tshirt', face: 'normal', hair: '', view: 'body', blink: true };
+const WEARS = [['tshirt', 'Tシャツ'], ['design', '制服（デザイン）'], ['sotai', '素体']];
+const VIEWS = [['body', '全身'], ['face', '顔の寄り'], ['all', '表情をぜんぶ並べる']];
+const faceName = (C, f) => f === 'normal' ? 'ふだん' : (C.faceNames?.[f] || f);
+const hex = h => parseInt(h.slice(1), 16);
+
+// 髪の色：キャラ0の6色（colors.hair）で描いた髪を、プリセットの同じ番の色に置きかえる（色がぴったり同じドットだけ）
+const tinted = new Map();
+async function hairImg(src, preset) {
+  const im = await img(src); if (!preset || !J.hairPresets[preset]) return im;
+  const key = src + '|' + preset; if (tinted.has(key)) return tinted.get(key);
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+  const d = x.getImageData(0, 0, W, H), u = new Uint8ClampedArray(d.data.buffer), map = new Map();
+  for (const [k, v] of Object.entries(J.colors.hair)) { const to = J.hairPresets[preset][k]; if (to) map.set(hex(v), hex(to)); }
+  for (let i = 0; i < u.length; i += 4) { if (!u[i + 3]) continue; const t = map.get((u[i] << 16) | (u[i + 1] << 8) | u[i + 2]); if (t !== undefined) { u[i] = t >> 16; u[i + 1] = (t >> 8) & 255; u[i + 2] = t & 255; } }
+  x.putImageData(d, 0, 0); tinted.set(key, c); return c;
+}
+// 重ねる（README の順）
+async function compose(cv, c, wear, face) {
+  const C = J.chars[c], L = C.layers, o = C.offset || [0, 0], preset = S.hair || C.hairPreset || '';
+  const fsrc = C.faces[face] || C.faces.normal, design = wear === 'design' && C.design;
+  const steps = design
+    ? [[hairImg(L.hair_back, preset), 0], [img(C.design.body), 0], [img(C.design.wear), 0], [hairImg(L.hair_front, preset), 0], [img(fsrc), 0]]
+    : [[hairImg(L.hair_back, preset), 1], [img(J.sotaiBody), 0], [img(L.head), 1], ...(wear === 'tshirt' ? [[img(J.wear.tshirt), 0]] : []), [hairImg(L.hair_front, preset), 1], [img(fsrc), 1]];
+  const ims = await Promise.all(steps.map(s => s[0]));
+  const x = cv.getContext('2d'); cv.width = W; cv.height = H; x.imageSmoothingEnabled = false; x.clearRect(0, 0, W, H);
+  ims.forEach((im, i) => x.drawImage(im, steps[i][1] ? o[0] : 0, steps[i][1] ? o[1] : 0));
+  return o;
+}
+// 顔の寄り：頭のあたりを切りぬく（素体のあご sotaiChinY ＋ offset から上）
+function crop(src, o, dst) {
+  const chin = (J.sotaiChinY || 166) + o[1], h = 176, w = 176, x0 = W / 2 - w / 2 + o[0], y0 = Math.max(0, chin - h + 34);
+  dst.width = w; dst.height = h; const x = dst.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(src, x0, y0, w, h, 0, 0, w, h);
+}
+const cv = document.getElementById('cv'), buf = document.createElement('canvas');
+let blinkT = 0, blinking = false;
+async function draw() {
+  const face = blinking ? 'close' : S.face, o = await compose(buf, S.c, S.wear, face);
+  if (S.view === 'face') crop(buf, o, cv); else { cv.width = W; cv.height = H; cv.getContext('2d').drawImage(buf, 0, 0); }
+  document.getElementById('stage').className = 'stage' + (S.view === 'face' ? ' face' : '');
+}
+async function drawAll() {
+  const C = J.chars[S.c], g = document.getElementById('grid'); g.innerHTML = '';
+  for (const f of Object.keys(C.faces)) {
+    const fig = document.createElement('figure'), t = document.createElement('canvas'), b = document.createElement('canvas');
+    const o = await compose(b, S.c, S.wear, f); crop(b, o, t); fig.append(t, Object.assign(document.createElement('figcaption'), { textContent: faceName(C, f) })); g.append(fig);
+  }
+}
+function chips(id, list, key, after) {
+  const el = document.getElementById(id); el.innerHTML = '';
+  for (const [v, n, dis] of list) { const b = document.createElement('button'); b.textContent = n; b.disabled = !!dis; if (S[key] === v) b.className = 'on'; b.onclick = () => { S[key] = v; after?.(); ui(); }; el.append(b); }
+}
+function ui() {
+  const C = J.chars[S.c];
+  if (!C.faces[S.face]) S.face = 'normal'; if (S.wear === 'design' && !C.design) S.wear = 'tshirt';
+  chips('chars', Object.entries(J.chars).map(([k, c]) => [k, c.name]), 'c', () => { S.hair = ''; });
+  chips('wears', WEARS.map(([k, n]) => [k, n, k === 'design' && !C.design]), 'wear');
+  chips('faces', Object.keys(C.faces).map(f => [f, faceName(C, f)]), 'face');
+  const hl = document.getElementById('hairs'); hl.innerHTML = '';
+  for (const [k, p] of [['', null], ...Object.entries(J.hairPresets)]) {
+    const b = document.createElement('button'); b.className = 'sw' + ((S.hair || C.hairPreset || '') === k || (!k && !S.hair && !C.hairPreset) ? ' on' : '');
+    b.title = k || 'もとの色'; b.style.background = p ? p.base : J.colors.hair.base; b.onclick = () => { S.hair = k; ui(); }; hl.append(b);
+  }
+  chips('views', [...VIEWS, ['blink', S.blink ? 'まばたき：あり' : 'まばたき：なし']], 'view', null);
+  const vb = document.getElementById('views').lastChild; vb.className = ''; vb.onclick = () => { S.blink = !S.blink; ui(); };
+  document.getElementById('grid').classList.toggle('show', S.view === 'all'); if (S.view === 'all') drawAll();
+  draw();
+}
+ui();
+// まばたき：ふだん・表情のまま、ときどき「目を閉じる」の顔に 0.15 秒（その表情が閉じた目のときはしない）
+setInterval(async () => {
+  const C = J.chars[S.c]; if (!S.blink || !C.faces.close || ['close', 'wink', 'smile'].includes(S.face) || performance.now() < blinkT) return;
+  blinking = true; await draw(); setTimeout(() => { blinking = false; draw(); }, 150); blinkT = performance.now() + 2500 + Math.random() * 3000;
+}, 300);
+</script>
+</body>
+</html>
