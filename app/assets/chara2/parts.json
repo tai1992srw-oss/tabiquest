@@ -256,7 +256,21 @@
      }
     }
    ],
-   "eyesOwn": true
+   "eyesOwn": true,
+   "anchors": {
+    "earL": [
+     100,
+     85
+    ],
+    "earR": [
+     155,
+     85
+    ],
+    "headTop": [
+     127,
+     42
+    ]
+   }
   },
   "c2": {
    "name": "B",
@@ -502,7 +516,21 @@
      }
     }
    ],
-   "eyesOwn": true
+   "eyesOwn": true,
+   "anchors": {
+    "earL": [
+     93,
+     90
+    ],
+    "earR": [
+     161,
+     90
+    ],
+    "headTop": [
+     127,
+     34
+    ]
+   }
   },
   "c3": {
    "name": "C",
@@ -748,7 +776,21 @@
      }
     }
    ],
-   "eyesOwn": true
+   "eyesOwn": true,
+   "anchors": {
+    "earL": [
+     96,
+     83
+    ],
+    "earR": [
+     157,
+     84
+    ],
+    "headTop": [
+     127,
+     33
+    ]
+   }
   }
  },
  "shared": {
@@ -1104,11 +1146,342 @@
     "top": "wear/w21/top.png",
     "bottom": "wear/w21/bottom.png"
    }
+  },
+  {
+   "id": "w31",
+   "name": "ボウタイブラウス",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w31/top.png",
+    "bottom": "wear/w31/bottom.png",
+    "feet": "wear/w31/feet.png"
+   }
+  },
+  {
+   "id": "w32",
+   "name": "ニットワンピース",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w32/top.png",
+    "feet": "wear/w32/feet.png"
+   }
+  },
+  {
+   "id": "w33",
+   "name": "トレンチコート",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w33/top.png",
+    "bottom": "wear/w33/bottom.png",
+    "feet": "wear/w33/feet.png"
+   }
+  },
+  {
+   "id": "w34",
+   "name": "ロングカーディガン",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w34/top.png",
+    "bottom": "wear/w34/bottom.png",
+    "feet": "wear/w34/feet.png"
+   }
+  },
+  {
+   "id": "w35",
+   "name": "ワイドパンツ",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w35/top.png",
+    "bottom": "wear/w35/bottom.png",
+    "feet": "wear/w35/feet.png"
+   }
+  },
+  {
+   "id": "w36",
+   "name": "デニムジャケット",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w36/top.png",
+    "bottom": "wear/w36/bottom.png",
+    "feet": "wear/w36/feet.png"
+   }
+  },
+  {
+   "id": "w37",
+   "name": "ボーダー",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w37/top.png",
+    "bottom": "wear/w37/bottom.png",
+    "feet": "wear/w37/feet.png"
+   }
+  },
+  {
+   "id": "w38",
+   "name": "リネンのセットアップ",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w38/top.png",
+    "bottom": "wear/w38/bottom.png",
+    "feet": "wear/w38/feet.png"
+   }
+  },
+  {
+   "id": "w39",
+   "name": "キャミワンピ",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w39/top.png",
+    "feet": "wear/w39/feet.png"
+   }
+  },
+  {
+   "id": "w40",
+   "name": "スプリングコート",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w40/top.png",
+    "bottom": "wear/w40/bottom.png",
+    "feet": "wear/w40/feet.png"
+   }
+  },
+  {
+   "id": "w41",
+   "name": "ストライプワンピース",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w41/top.png",
+    "feet": "wear/w41/feet.png"
+   }
+  },
+  {
+   "id": "w42",
+   "name": "秋のロングスカート",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w42/top.png",
+    "bottom": "wear/w42/bottom.png"
+   }
+  },
+  {
+   "id": "w43",
+   "name": "チェスターコート",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w43/top.png",
+    "bottom": "wear/w43/bottom.png",
+    "feet": "wear/w43/feet.png"
+   }
+  },
+  {
+   "id": "w44",
+   "name": "サテンワンピース",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w44/top.png",
+    "feet": "wear/w44/feet.png"
+   }
+  },
+  {
+   "id": "w45",
+   "name": "大人の浴衣",
+   "kind": "onepiece",
+   "layers": {
+    "top": "wear/w45/top.png",
+    "feet": "wear/w45/feet.png"
+   }
+  },
+  {
+   "id": "w46",
+   "name": "テーラードジャケット",
+   "kind": "separate",
+   "layers": {
+    "top": "wear/w46/top.png",
+    "bottom": "wear/w46/bottom.png",
+    "feet": "wear/w46/feet.png"
+   }
   }
  ],
  "wearOrder": [
   "bottom",
   "feet",
   "top"
- ]
+ ],
+ "anchors": {
+  "handL": [
+   87,
+   219
+  ],
+  "handR": [
+   167,
+   218
+  ],
+  "shoulderL": [
+   103,
+   129
+  ],
+  "shoulderR": [
+   152,
+   129
+  ],
+  "chest": [
+   127,
+   152
+  ]
+ },
+ "items": [
+  {
+   "id": "i01",
+   "name": "ベレー帽",
+   "attach": "headTop",
+   "head": true,
+   "ax": 127,
+   "ay": 42,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i01_front.png",
+    "x": 93,
+    "y": 25
+   },
+   "back": {
+    "file": "items/i01_back.png",
+    "x": 96,
+    "y": 33
+   }
+  },
+  {
+   "id": "i02",
+   "name": "花かんむり",
+   "attach": "headTop",
+   "head": true,
+   "ax": 127,
+   "ay": 42,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i02_front.png",
+    "x": 92,
+    "y": 37
+   },
+   "back": {
+    "file": "items/i02_back.png",
+    "x": 98,
+    "y": 40
+   }
+  },
+  {
+   "id": "i03",
+   "name": "リボンのヘアピン",
+   "attach": "earL",
+   "head": true,
+   "ax": 100,
+   "ay": 85,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i03_front.png",
+    "x": 89,
+    "y": 64
+   }
+  },
+  {
+   "id": "i04",
+   "name": "紙袋",
+   "attach": "handR",
+   "head": false,
+   "ax": 167,
+   "ay": 218,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i04_front.png",
+    "x": 154,
+    "y": 230
+   },
+   "back": {
+    "file": "items/i04_back.png",
+    "x": 156,
+    "y": 229
+   }
+  },
+  {
+   "id": "i05",
+   "name": "手さげ",
+   "attach": "handL",
+   "head": false,
+   "ax": 87,
+   "ay": 219,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i05_front.png",
+    "x": 67,
+    "y": 223
+   },
+   "back": {
+    "file": "items/i05_back.png",
+    "x": 70,
+    "y": 223
+   }
+  },
+  {
+   "id": "i06",
+   "name": "ぬいぐるみ",
+   "attach": "handR",
+   "head": false,
+   "ax": 167,
+   "ay": 218,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i06_front.png",
+    "x": 157,
+    "y": 227
+   },
+   "back": {
+    "file": "items/i06_back.png",
+    "x": 161,
+    "y": 225
+   }
+  },
+  {
+   "id": "i07",
+   "name": "ポーチ",
+   "attach": "shoulderL",
+   "head": false,
+   "ax": 103,
+   "ay": 129,
+   "layers": {
+    "back": "behind",
+    "front": "front"
+   },
+   "front": {
+    "file": "items/i07_front.png",
+    "x": 116,
+    "y": 145
+   },
+   "back": {
+    "file": "items/i07_back.png",
+    "x": 143,
+    "y": 145
+   }
+  }
+ ],
+ "itemLayers": {
+  "behind": "後ろ髪のすぐ上（頭・体より後ろ）",
+  "front": "前髪の上・顔の部品の下"
+ }
 }

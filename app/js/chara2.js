@@ -39,6 +39,14 @@ export const FACES = [
   ['muu', 'むっ', { brow: 'angry', mouth: 'he' }],
 ];
 const FACE = Object.fromEntries(FACES.map(([id, , f]) => [id, f]));
+// 持ち物・かざり：look.items に、物の番号をならべる。同じ所（attach）に付く物は1つだけ（紙袋とぬいぐるみは、どちらも右手）
+//   置き方：そのキャラの attach の点 + (絵の位置 − キャラ1での付く点)。頭に付く物（head）は、頭の大きさ（headW）に合わせて伸び縮みさせ、かしげ・向きでも頭といっしょに動く
+export const itemList = P => P.J.items;
+export function toggleItem(P, L, id) {
+  const it = P.J.items.find(q => q.id === id); if (!it) return; const cur = L.items || [];
+  L.items = cur.includes(id) ? cur.filter(q => q !== id) : [...cur.filter(q => P.J.items.find(r => r.id === q)?.attach !== it.attach), id];
+  if (!L.items.length) delete L.items;
+}
 export const NONE = { cheek: 'なし', wear: 'インナー' };   // 「なし」をえらべる部品
 // 動かせる値：[名前, 画面の名前, 下限, 上限, 説明]
 // 値はどれも「キャラ1（1つめの輪郭）を ±0 とした差」で持つ（2026-11-26 くりた：キャラごとにすてきなバランスを作り、入れるときはキャラ1を ±0 の基準にする）
@@ -72,6 +80,9 @@ export function loadParts() {
     await Promise.all([...ids.flatMap(c => [...(J.chars[c].eyes || []).flatMap(e => ['L', 'R'].filter(q => e[q]).map(async q => { IM[c][`eye${q}_${e.id}`] = await image(`${BASE}${c}/eye${q}_${e.id}.png`); })),
       ...(J.chars[c].brows || []).flatMap(e => ['L', 'R'].filter(q => e[q]).map(async q => { IM[c][`brow${q}_${e.id}`] = await image(`${BASE}${c}/brow${q}_${e.id}.png`); }))]),
       ...(J.shared.mouths || []).map(async m => { IM.mouths[m.id] = await image(`${BASE}shared/mouth_${m.id}.png`); })]);
+    // 持ち物・かざり（items）：<id>_front.png・<id>_back.png
+    J.items = J.items || []; IM.items = {};
+    await Promise.all(J.items.flatMap(it => { IM.items[it.id] = {}; return ['front', 'back'].filter(k => it[k]).map(async k => { IM.items[it.id][k] = await image(BASE + it[k].file); }); }));
     await Promise.all(J.wears.flatMap(w => { IM.w[w.id] = {}; return Object.entries(w.layers).map(async ([k, f]) => { IM.w[w.id][k] = await image(BASE + f); }); }));   // 服（上下バラ）：wear/<番号>/{top,bottom,feet}.png
     await Promise.all(ids.flatMap(c => { return ['rinkaku', 'hair_front', 'hair_back', 'wear', 'wear_hide', ...Object.keys(J.chars[c].pieces)].map(async n => { IM[c][n] = await image(`${BASE}${c}/${n}.png`); }); }));
     const base = J.chars[ids[0]].preset; for (const c of ids) J.chars[c].rel = Object.fromEntries(FACE_KEYS.map(k => [k, (J.chars[c].preset[k] ?? base[k]) - base[k]]));   // キャラ1との差
@@ -92,6 +103,7 @@ export function fixLook(P, L) {
   if (o.cheek && !P.J.chars[o.cheek].pieces.cheekL) o.cheek = '';
   for (const k of WEAR_PARTS) { const w = wearOf(P, L[k]); o[k] = w && w.layers[k] ? w.id : ''; }
   if (WEAR_PARTS.some(k => o[k])) o.wear = '';
+  const its = (L.items || []).filter(id => P.J.items?.some(q => q.id === id)); if (its.length) o.items = its;
   const col = Object.fromEntries(['hair', 'skin', 'eye'].filter(k => /^#[0-9a-f]{6}$/i.test(L.colors?.[k] || '')).map(k => [k, L.colors[k]])); if (Object.keys(col).length) o.colors = col;
   return o;
 }
@@ -281,6 +293,13 @@ export function compose(P, L) {
   //   顔の向きは1段まで（くりた「横向きは1段階でいい」）。−1〜1 の間の小数もとれて、ぬるっと動かすときは 1/8 ずつ（tv）。前の ±2 は ±1 として出す
   const mk = () => { const q = document.createElement('canvas'); q.width = W; q.height = H; return q; };
   const back = sep ? mk() : c, rinC = sep ? mk() : null, hfC = sep ? mk() : c, head = sep ? mk() : c, bk = back.getContext('2d'), hd = head.getContext('2d');
+  // 持ち物・かざりの層を描く（side：'back'／'front'、head：頭に付く物か）。頭の物は、キャラ1の頭はばとの比で伸び縮み（付く点を軸に）
+  const items = (L.items || []).map(id => J.items.find(q => q.id === id)).filter(Boolean), c1 = J.chars[P.ids[0]];
+  const drawItems = (g, side, head) => { for (const it of items) { if (!!it.head !== head || !it[side]) continue; const im = IM.items[it.id][side];
+    const at = head ? (R.anchors?.[it.attach] || (it.attach === 'headTop' ? [R.cx, R.headTop] : [it.ax, it.ay])) : (J.anchors?.[it.attach] || [it.ax, it.ay]);
+    const k = head ? R.headW / c1.headW : 1, ox = at[0] + (head ? (v.hairDx | 0) : 0), oy = at[1] + (head ? (v.hairDy | 0) : 0);
+    const dx = Math.round(ox + (it[side].x - it.ax) * k), dy = Math.round(oy + (it[side].y - it.ay) * k);
+    g.imageSmoothingEnabled = false; if (k === 1) g.drawImage(im, dx, dy); else g.drawImage(im, dx, dy, Math.max(1, Math.round(im.width * k)), Math.max(1, Math.round(im.height * k))); } };
   const put = (im, p, tx, ty) => hd.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay));   // 部品を、アンカーが (tx, ty) に来るように置く
   const mean = (Q, k) => (Q[k + 'L'].ay + Q[k + 'R'].ay) / 2;
   // 髪：輪郭の大きさに合わせて伸び縮みさせ（fitHair）、その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
@@ -288,13 +307,17 @@ export function compose(P, L) {
   const hx = (k, n) => Math.round(R.cx - (J.chars[L[k]].hair?.[n]?.ax ?? J.chars[L[k]].cx)) + (v.hairDx | 0);   // 横は、頭のまん中を合わせる
   // 重ねる順：後ろ髪 → 体・輪郭（服でかくす所をのぞく）→ 服 → 前髪 → ほお → 目 → まゆ → 鼻・口
   const wind = Math.max(-2, Math.min(2, +L.wind || 0)), hairOf = (k, n, f) => { const im = fitHair(P, L[k], n, L.rin, v.hairS | 0, col.hair); return wind ? blow(im, wind * f, R.headTop - hy(k, n) + 14, 110) : im; };   // 風：後ろ髪は大きく、前髪は少しだけ
-  bk.drawImage(hairOf('hairB', 'hair_back', 7), hx('hairB', 'hair_back'), hy('hairB', 'hair_back'));   // 後ろ髪は、向きでは動かさない（正面より外へはみ出さないように）   // 後ろ髪は、向く側と反対へ少し（奥にあるので）
+  bk.drawImage(hairOf('hairB', 'hair_back', 7), hx('hairB', 'hair_back'), hy('hairB', 'hair_back'));
+  drawItems(bk, 'back', true);   // 頭の物のうしろ側（帽子のつばのうしろなど）：後ろ髪のすぐ上   // 後ろ髪は、向きでは動かさない（正面より外へはみ出さないように）   // 後ろ髪は、向く側と反対へ少し（奥にあるので）
   if (sep) x.drawImage(tilt ? rotate(back, tilt, R.cx + .5, R.chin, H) : back, Math.round(tv * (turn ? turnOf(P, L.rin, turn > 0 ? 'R' : 'L').head : 0)), 0);
+  drawItems(x, 'back', false);   // 体の物のうしろ側（手にかくれた持ち手、うしろのひも）：頭・体より後ろ
   const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(tint(P, IM.body, 'skin', col.skin, 'body'), 0, 0); (sep ? rinC.getContext('2d') : bx).drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);   // かしげ・向きのときは、輪郭は頭の側に描く（体といっしょに動かさない）
   if (L.wear) { bx.globalCompositeOperation = 'destination-out'; bx.drawImage(IM[L.wear].wear_hide, 0, 0); }
   x.drawImage(b, 0, 0); if (L.wear) x.drawImage(tint(P, IM[L.wear].wear, 'skinIn', col.skin, `${L.wear}/wear`), 0, 0);
   else for (const k of J.wearOrder) if (L[k]) x.drawImage(tint(P, IM.w[L[k]][k], 'skinIn', col.skin, `w/${L[k]}/${k}`), 0, 0);   // 服（上下バラ）：ボトムス → 足もと → トップス
+  drawItems(x, 'front', false);   // 体の物（紙袋・ポーチなど）：服の上
   hfC.getContext('2d').drawImage(hairOf('hairF', 'hair_front', 3.5), hx('hairF', 'hair_front'), hy('hairF', 'hair_front'));
+  drawItems(hfC.getContext('2d'), 'front', true);   // 頭の物：前髪の上・顔の部品の下（前髪といっしょに、かしげ・向きで動く）
   // 顔の部品は、輪郭のまん中から左右に同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す
   // 向き：顔の部品を向いた側へ2ドット（左右の間はせまくしない＝目が寄って詰まらないように）。
   //   向いた側の目とまゆは、内がわ（鼻の側）から細くする（外がわのはしは輪郭に寄せたまま＝奥へ回りこんで見える）
