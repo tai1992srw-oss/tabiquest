@@ -36,7 +36,7 @@ export const FACES = [
   ['', 'ふだん', {}], ['smile', '笑顔', { brow: 'gentle', mouth: 'smile' }], ['grin', 'にっこり', { eye: 'smile', brow: 'gentle', mouth: 'grin' }],
   ['close', '目をとじる', { eye: 'close', mouth: 'smile' }], ['wink', 'ウインク', { eye: 'wink', mouth: 'smirk' }], ['wow', 'おどろき', { brow: 'up', mouth: 'o' }],
   ['komari', '困り', { brow: 'trouble', mouth: 'wave' }], ['shy', '照れ', { eye: 'smile', brow: 'trouble', mouth: 'shy' }], ['smug', 'ニヤリ', { eye: 'smug', mouth: 'nyari' }],
-  ['muu', 'むっ', { brow: 'angry', mouth: 'he' }],
+  ['muu', 'むっ', { brow: 'angry', mouth: 'he' }], ['jito', 'ジト目', { eye: 'jito', mouth: 'flat' }],   // ジト目：目は黒目・白目のある絵（2026-11-27）
 ];
 const FACE = Object.fromEntries(FACES.map(([id, , f]) => [id, f]));
 // 持ち物・かざり：look.items に、物の番号をならべる。同じ所（attach）に付く物は1つだけ（紙袋とぬいぐるみは、どちらも右手）
