@@ -4,7 +4,7 @@
 //   見た目（look）：{ rin, eye, brow, mouth, cheek, hairF, hairB, wear：部品の出どころの id（'c1' など。cheek・wear は '' ＝ なし）,
 //                    v：{ eyeGap 目のはば, eyeY 目の高さ, browDy 目からまゆまで, mouthY 口の高さ, cheekGap・cheekDy ほお, hairS・hairDy・hairDx 髪の大きさ（％）・高さ・横の位置 } }
 //                    colors：{ hair, skin }（色変え。'#rrggbb'。ないときは元の色） }
-//   v のはじめの値は、輪郭ごとのプリセット（parts.json の chars.<id>.preset）。単位はドット
+//   v は、キャラ1を ±0 とした差（ドット）。はじめの値は、輪郭ごとのプリセット（parts.json の preset を、キャラ1との差に直した物）
 //   前のキャラ（ななめ向き・6ポーズ・色変え）は archive/chara-v1/ と、git のタグ chara-v1
 import { settings } from './store.js';
 const THREE = window.THREE;
@@ -12,10 +12,13 @@ const BASE = 'assets/chara2/';
 export const SLOTS = [['rin', '輪郭'], ['eye', '目'], ['brow', 'まゆ'], ['mouth', '口'], ['cheek', 'ほお'], ['hairF', '前髪'], ['hairB', '後ろ髪'], ['wear', '服']];
 export const NONE = { cheek: 'なし', wear: 'インナー' };   // 「なし」をえらべる部品
 // 動かせる値：[名前, 画面の名前, 下限, 上限, 説明]
+// 値はどれも「キャラ1（1つめの輪郭）を ±0 とした差」で持つ（2026-11-26 くりた：キャラごとにすてきなバランスを作り、入れるときはキャラ1を ±0 の基準にする）
+//   絵から測った数字（parts.json の preset）は、読みこむときにキャラ1との差に直す（chars.<id>.rel）。組み立てるときに、キャラ1の数字を足して元にもどす
 export const VALS = [
-  ['eyeGap', '目のはば', 14, 44, '左右の目のまん中どうしの間'], ['eyeY', '目の高さ', 72, 98, '小さいほど上'], ['browDy', 'まゆの高さ', -26, -8, '目からまゆまで。小さいほど目からはなれる'],
-  ['mouthY', '口の高さ', 92, 112, '小さいほど上'], ['cheekGap', 'ほおのはば', 14, 56, '左右のほおの赤みの間'], ['cheekDy', 'ほおの高さ', 2, 20, '目からほおまで。大きいほど下'],
+  ['eyeGap', '目のはば', -12, 18, '左右の目の間。＋で広く'], ['eyeY', '目の高さ', -13, 13, '＋で下へ'], ['browDy', 'まゆの高さ', -11, 7, '＋で目に近く'],
+  ['mouthY', '口の高さ', -8, 12, '＋で下へ'], ['cheekGap', 'ほおのはば', -15, 27, '左右のほおの赤みの間。＋で広く'], ['cheekDy', 'ほおの高さ', -7, 11, '＋で下へ'],
 ];
+const FACE_KEYS = VALS.map(q => q[0]);
 // 髪の調整（お着替えの「髪」のタブに出す）。輪郭に合わせた大きさ・位置から、どれだけ変えるか。0 ＝ 合わせたまま
 export const HAIR_VALS = [
   ['hairS', '髪の大きさ', -12, 12, '％。輪郭に合わせた大きさから'], ['hairDy', '髪の高さ', -12, 12, 'ドット。小さいほど上'], ['hairDx', '髪の横の位置', -8, 8, 'ドット。小さいほど左'],
@@ -24,7 +27,7 @@ export const COLORS = { hair: { name: '髪の色', list: ['#a8643c', '#6b4226', 
   skin: { name: '肌の色', list: ['#ffe6d2', '#fbd9bf', '#f1c4a0', '#e4b088', '#d9a074', '#c08458', '#a86c48', '#8a5638', '#6b4330'] } };
 const HAIR0 = { hairS: 0, hairDy: 0, hairDx: 0 };
 // 輪郭のプリセット（顔のバランス）に替える。髪の調整は、そのまま残す
-export const presetOf = (P, rin, v = {}) => ({ ...P.J.chars[rin].preset, ...Object.fromEntries(Object.keys(HAIR0).map(k => [k, v[k] ?? 0])) });
+export const presetOf = (P, rin, v = {}) => ({ ...P.J.chars[rin].rel, ...Object.fromEntries(Object.keys(HAIR0).map(k => [k, v[k] ?? 0])) });
 // カードの中のコマ：前のキャラと同じ 272×376（足もとが下から1行め）。新しい絵（256×384・足もと 371 行）を、足もとをそろえて入れる
 export const FRAME = [272, 376], OFF = [8, 4];
 
@@ -34,7 +37,8 @@ export function loadParts() {
   return parts || (parts = (async () => {
     const J = await (await fetch(BASE + 'parts.json')).json(), IM = { body: await image(BASE + J.body) }, ids = Object.keys(J.chars);
     await Promise.all(ids.flatMap(c => { IM[c] = {}; return ['rinkaku', 'hair_front', 'hair_back', 'wear', 'wear_hide', ...Object.keys(J.chars[c].pieces)].map(async n => { IM[c][n] = await image(`${BASE}${c}/${n}.png`); }); }));
-    return { J, IM, ids, cache: new Map(), tex: new Map(), hair: new Map(), tint: new Map() };
+    const base = J.chars[ids[0]].preset; for (const c of ids) J.chars[c].rel = Object.fromEntries(FACE_KEYS.map(k => [k, (J.chars[c].preset[k] ?? base[k]) - base[k]]));   // キャラ1との差
+    return { J, IM, ids, base, cache: new Map(), tex: new Map(), hair: new Map(), tint: new Map() };
   })().catch(e => { parts = null; throw e; }));
 }
 // はじめの見た目：最初の子（1つめの id）の部品とバランス
@@ -42,7 +46,8 @@ export const firstLook = P => ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, P.
 // 見た目をととのえる（前のキャラの見た目や、欠けた項目は、はじめの見た目で埋める）
 export function fixLook(P, L) {
   const d = firstLook(P); if (!L || !P.J.chars[L.rin]) return d;
-  const o = { v: { ...HAIR0, ...P.J.chars[L.rin].preset, ...(L.v || {}) } };
+  const o = { v: { ...HAIR0, ...P.J.chars[L.rin].rel, ...(L.v || {}) } };
+  if (o.v.eyeY > 40) for (const k of FACE_KEYS) o.v[k] -= P.base[k];   // 前の形（絵の中の行・はばそのもの）で残した見た目は、キャラ1との差に直す
   for (const [k] of SLOTS) o[k] = P.J.chars[L[k]] ? L[k] : (NONE[k] && L[k] === '' ? '' : d[k]);
   if (o.cheek && !P.J.chars[o.cheek].pieces.cheekL) o.cheek = '';
   const col = Object.fromEntries(['hair', 'skin'].filter(k => /^#[0-9a-f]{6}$/i.test(L.colors?.[k] || '')).map(k => [k, L.colors[k]])); if (Object.keys(col).length) o.colors = col;
@@ -133,7 +138,8 @@ function fitHair(P, id, name, rin, adj = 0, hex = '') {
 export function compose(P, L) {
   const key = JSON.stringify(L); if (P.cache.has(key)) return P.cache.get(key);
   const { J, IM } = P, [W, H] = J.size, c = document.createElement('canvas'); c.width = W; c.height = H;
-  const x = c.getContext('2d', { willReadFrequently: true }), v = L.v, R = J.chars[L.rin], col = L.colors || {};
+  const x = c.getContext('2d', { willReadFrequently: true }), R = J.chars[L.rin], col = L.colors || {};
+  const v = { ...L.v }; for (const k of FACE_KEYS) v[k] = P.base[k] + (L.v[k] | 0);   // キャラ1の数字を足して、絵の中の行・はばにもどす
   const put = (im, p, tx, ty) => x.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay));   // 部品を、アンカーが (tx, ty) に来るように置く
   const mean = (Q, k) => (Q[k + 'L'].ay + Q[k + 'R'].ay) / 2;
   // 髪：輪郭の大きさに合わせて伸び縮みさせ（fitHair）、その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
