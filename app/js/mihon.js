@@ -179,9 +179,10 @@ function openFlip(view, placeId, vi = 0) {
 let cleanup = null;
 export function renderMihon(view) {
   cleanup?.(); token++; queue = [];
+  ui.tab = 'place';   // 「キャラの部品」「向きの調整」は前の版のキャラ用（2026-11-27 b版にしたので出さない）
   const newN = { place: DOTS.filter(p => isNew('place', p.id)).length };
   view.innerHTML = `<div class="mihon"><div class="phead"><h1>見本帳</h1><span class="prog">デバッグ版だけ</span></div>
-    <div class="chips-row"><button data-tab="place" aria-pressed="${ui.tab === 'place'}">名所の差分</button><button data-tab="chara" aria-pressed="${ui.tab === 'chara'}">キャラの部品</button><button data-tab="turn" aria-pressed="${ui.tab === 'turn'}">向きの調整</button>
+    <div class="chips-row"><button data-tab="place" aria-pressed="${ui.tab === 'place'}">名所の差分</button>
       <span class="sep"></span><button data-only="new" aria-pressed="${ui.only === 'new'}">まだ見ていない${ui.tab === 'place' ? `（${newN.place}）` : ''}</button><button data-only="all" aria-pressed="${ui.only === 'all'}">すべて${ui.tab === 'place' ? `（${DOTS.length}）` : ''}</button></div>
     <div class="mh-body"></div>
     <div class="mh-foot"><button data-a="allseen">いま出ている物を、ぜんぶ見たことにする</button><button data-a="unseen">「見た」をぜんぶ取り消す</button><a class="btn" href="#/settings">設定へもどる</a></div></div>`;

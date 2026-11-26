@@ -3,7 +3,7 @@
 //   見た目（look）と、絵の組み立ては chara2.js。絵は描き足さない
 //   輪郭を替えると、バランスはその輪郭のプリセットになる（そこから自由に動かせる）
 import { settings, saveSettings } from './store.js';
-import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf, bigWears, bigHairs } from './chara2.js';
+import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf, bigWears, bigHairs, bigWearParts } from './chara2.js';
 import { esc, toast } from './ui.js';
 
 const ICON = { rin: '◯', eye: '◉', brow: '⌒', mouth: '◡', cheek: '❀', hairF: '✂', hairB: '≋', wear: '♥' };
@@ -56,8 +56,11 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   function renderBody(full = true) {
     if (!P) return;
     if (tab.kind === 'w15') {   // 1.5倍のキャラの服
-      if (full) body.innerHTML = `<div class="du-grid body">${bigWears(P, L.big).map(([k, n]) => `<button class="du-item" data-w15="${k}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
-      body.querySelectorAll('[data-w15]').forEach(b => { b.setAttribute('aria-pressed', String(L.w15 === b.dataset.w15)); drawLook(b.querySelector('canvas'), P, { ...L, w15: b.dataset.w15 }, 'body'); });
+      // 制服などは、上下・くつをべつべつに着る・ぬぐ（押すたびに切りかえ）
+      const wps = bigWearParts(P, L), off = L.off15 || [];
+      if (full) body.innerHTML = `${wps.length ? `<div class="du-chips">${wps.map(([k, n]) => `<button data-wp15="${k}"></button>`).join('')}</div><p class="du-hint">押すと、その部分を着たり、ぬいだりできます</p>` : ''}<div class="du-grid body">${bigWears(P, L.big).map(([k, n]) => `<button class="du-item" data-w15="${k}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
+      body.querySelectorAll('[data-wp15]').forEach(b => { const on = !off.includes(b.dataset.wp15); b.setAttribute('aria-pressed', String(on)); const n = wps.find(q => q[0] === b.dataset.wp15)?.[1]; if (!n) return; b.textContent = on ? '✓ ' + n : n + '（ぬいでいる）'; });
+      body.querySelectorAll('[data-w15]').forEach(b => { b.setAttribute('aria-pressed', String(L.w15 === b.dataset.w15)); drawLook(b.querySelector('canvas'), P, fixLook(P, { ...L, w15: b.dataset.w15, off15: undefined }), 'body'); });
     } else if (tab.kind === 'h15') {   // 1.5倍のキャラの髪の色（プリセット）
       if (full) body.innerHTML = `<div class="du-grid face">${[['', '元の色'], ...bigHairs(P).map(([k]) => [k, k])].map(([k, n]) => `<button class="du-item" data-h15="${esc(k)}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
       body.querySelectorAll('[data-h15]').forEach(b => { b.setAttribute('aria-pressed', String((L.h15 || '') === b.dataset.h15)); drawLook(b.querySelector('canvas'), P, { ...L, h15: b.dataset.h15 }, 'face'); });
@@ -104,7 +107,8 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   root.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || !P) { if (b?.dataset.a === 'cancel') close(); return; } const a = b.dataset.a;
     if (b.dataset.tab) { tab = TABS.find(t => t.id === b.dataset.tab); root.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b))); paint(); renderBody(); }
-    else if (b.dataset.w15) { if (L.w15 !== b.dataset.w15) change(x => { x.w15 = b.dataset.w15; }); }
+    else if (b.dataset.w15) { if (L.w15 !== b.dataset.w15 || L.off15) { change(x => { x.w15 = b.dataset.w15; delete x.off15; }); renderBody(); } }   // 服をえらびなおすと、ぜんぶ着る
+    else if (b.dataset.wp15) { const k = b.dataset.wp15; change(x => { const o = new Set(x.off15 || []); if (o.has(k)) o.delete(k); else o.add(k); if (o.size) x.off15 = [...o]; else delete x.off15; }); }
     else if (b.dataset.h15 !== undefined) { if ((L.h15 || '') !== b.dataset.h15) change(x => { x.h15 = b.dataset.h15; }); }
     else if (b.dataset.chara) { const t = fixLook(P, charaLook(P, b.dataset.chara)); if (!same(t, fixLook(P, L))) change(x => { for (const k of Object.keys(x)) delete x[k]; Object.assign(x, t); }); }
     else if (b.dataset.c !== undefined) { const k = b.closest('.du-colors').dataset.k; if ((L.colors?.[k] || '') !== b.dataset.c) change(x => setColor(x, k, b.dataset.c)); }

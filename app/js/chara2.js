@@ -71,8 +71,15 @@ export const FRAME = [272, 376], OFF = [8, 4];
 
 let parts = null;
 const image = src => new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ng(new Error(src)); i.src = src; });
+// 2026-11-27 くりた：前の版のキャラ（256×384 の部品で組むキャラ1〜4）は外して、b版（1.5倍のキャラ1b・キャラ0）だけにする。
+//   前の版は git のタグ chara2-small（絵は dot/chara_parts/）。下の組み立ては残してあるが、SMALL が false のあいだは読みこまない
+const SMALL = false;
 export function loadParts() {
   return parts || (parts = (async () => {
+    if (!SMALL) {   // b版だけ：前の版の絵は読まない（大きさの目もり J.size だけ持つ）
+      const big = await loadBig(), J = { size: [256, 384], chars: {}, wears: [], items: [], shared: {}, wearOrder: WEAR_PARTS };
+      return { J, IM: {}, ids: [], base: {}, big, bigIds: big.ids, cache: new Map(), tex: new Map(), hair: new Map(), tint: new Map() };
+    }
     const J = await (await fetch(BASE + 'parts.json')).json(), IM = { body: await image(BASE + J.body), w: {} }, ids = Object.keys(J.chars);
     J.wears = J.wears || []; J.wearOrder = J.wearOrder || WEAR_PARTS;
     // 表情の差分：キャラごとの目（eyes）・まゆ（brows）、共有の口（shared.mouths）
@@ -96,10 +103,11 @@ export function loadParts() {
 export const charaLook = (P, id) => isBig(P, id) ? bigLook(P, id) : ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, k === 'cheek' && !P.J.chars[id].pieces.cheekL ? '' : id])), v: presetOf(P, id) });
 export const charaName = (P, id) => isBig(P, id) ? P.big.J.chars[id].name : `キャラ${P.ids.indexOf(id) + 1}`;
 // はじめの見た目：最初の子（1つめの id）の部品とバランス
-export const firstLook = P => ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, P.ids[0]])), v: presetOf(P, P.ids[0]) });
+export const firstLook = P => !SMALL ? bigLook(P, P.big.ids[0]) : ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, P.ids[0]])), v: presetOf(P, P.ids[0]) });
 // 見た目をととのえる（前のキャラの見た目や、欠けた項目は、はじめの見た目で埋める）
 export function fixLook(P, L) {
   if (L?.big) return isBig(P, L.big) ? fixBig(P, L) : firstLook(P);   // 1.5倍のキャラ
+  if (!SMALL) return firstLook(P);   // 前の版のキャラの見た目は、b版のはじめの見た目（キャラ1b）に
   const d = firstLook(P); if (!L || !P.J.chars[L.rin]) return d;
   const o = { v: { ...HAIR0, ...P.J.chars[L.rin].rel, ...(L.v || {}) } };
   if (o.v.eyeY > 40) for (const k of FACE_KEYS) o.v[k] -= P.base[k];   // 前の形（絵の中の行・はばそのもの）で残した見た目は、キャラ1との差に直す
@@ -420,13 +428,15 @@ export function applyParts(P, ch, st) {
 }
 
 // ---- 1.5倍のキャラ（2026-11-27。キャラ1b・キャラ0）：384×576・全身の枠の絵を、そのまま重ねる（dot/chara15/ → assets/chara15/。README のとおり） ----
-//   見た目（look）：{ big：キャラ（'c1b'・'c0'）, w15：服（'tshirt'・'uniform' など chars.<c>.wears の服・'sotai'＝素体）, h15：髪の色のプリセットの名前（'' ＝ 元の色）, face・blink }
+//   見た目（look）：{ big：キャラ（'c1b'・'c0'）, w15：服（'tshirt'・'uniform' など chars.<c>.wears の服・'sotai'＝素体）, off15：その服でぬいでいる部分（['top'・'bottom'・'shoes']）, h15：髪の色のプリセットの名前（'' ＝ 元の色）, face・blink }
 //   ふつうのキャラ（256×384）の部品（輪郭・バランス・服・小物・向き・かしげ・風）は、まだ合わない。返す絵は 384×576（使う側は、はばの比 1.5 で合わせる）
 //   重ねる順：後ろ髪 → 素体の体 → 頭 → 服 → 前髪 → ほお（全キャラ共通）→ 目 → まゆ → 口
 const BASE15 = 'assets/chara15/';
 const isBig = (P, id) => !!P.big?.J.chars[id];
 //   服：Tシャツ（みんな）・そのキャラの服（chars.<c>.wears。キャラ1b の制服＝2026-11-27 素体に合わせて作り直した物。前の「デザインの服」は使わない）・素体
 export const bigWears = (P, id) => [['tshirt', 'Tシャツ'], ...Object.entries(P.big.J.chars[id].wears || {}).map(([k, w]) => [k, w.name || k]), ['sotai', '素体']];
+export const WEAR15_PARTS = [['top', 'トップス'], ['bottom', 'スカート・ソックス'], ['shoes', 'くつ']];
+export const bigWearParts = (P, L) => { const wp = P.big.J.chars[L.big]?.wears?.[L.w15]?.parts; return wp ? WEAR15_PARTS.filter(([k]) => wp[k]) : []; };
 export const bigHairs = P => Object.entries(P.big.J.hairPresets).map(([k, h]) => [k, h.base]);
 // 表情（FACES の id）を、顔の部品ごとの表情（faceParts.exprs）にする。e：目、b：まゆ、m：口（ないときは ふだん）
 const EXPR15 = { smile: { m: 'smile' }, grin: { e: 'smile', b: 'smile', m: 'smile' }, close: { e: 'close', b: 'close', m: 'close' }, wink: { e: 'wink', b: 'wink', m: 'wink' },
@@ -449,6 +459,7 @@ async function loadBig() {
 const bigLook = (P, id) => ({ big: id, w15: Object.keys(P.big.J.chars[id].wears || {})[0] || 'tshirt', h15: '' });
 function fixBig(P, L) {   // 前の w15 'design'（デザインの服）は、そのキャラの服になる
   const o = { big: L.big, w15: bigWears(P, L.big).some(([k]) => k === L.w15) ? L.w15 : bigLook(P, L.big).w15, h15: P.big.J.hairPresets[L.h15] ? L.h15 : '' };
+  const wp = P.big.J.chars[L.big].wears?.[o.w15]?.parts, off = wp ? (L.off15 || []).filter(k => wp[k]) : []; if (off.length) o.off15 = WEAR15_PARTS.map(([k]) => k).filter(k => off.includes(k));   // 制服の上下・くつを、べつべつにぬぐ
   for (const k of ['face', 'blink']) if (L[k]) o[k] = L[k];
   return o;
 }
@@ -468,7 +479,7 @@ function composeBig(P, L) {
   const eye = L.blink ? 'close' : ex.e || 'normal', part = k => (k.startsWith('eye') ? eye : k.startsWith('brow') ? ex.b || 'normal' : k === 'mouth' ? ex.m || 'normal' : 'normal');
   const L1 = []; const put = (im, dx = 0, dy = 0) => im && L1.push([im, dx, dy]);
   put(hair15(P, Ly.hair_back, preset), ...o); put(B.IM[J.sotaiBody]); put(B.IM[Ly.head], ...o);
-  if (L.w15 === 'tshirt') put(B.IM[J.wear.tshirt]); else if (wr) for (const f of wr.layers) put(B.IM[f]);   // 服は offset なし。制服は スカート・ソックス → くつ → トップス（layers の順）
+  if (L.w15 === 'tshirt') put(B.IM[J.wear.tshirt]); else if (wr) { const off = new Set((L.off15 || []).map(k => wr.parts[k])); for (const f of wr.layers) if (!off.has(f)) put(B.IM[f]); }   // off15：ぬいでいる部分（top・bottom・shoes）   // 服は offset なし。制服は スカート・ソックス → くつ → トップス（layers の順）
   put(hair15(P, Ly.hair_front, preset), ...o);
   if (SC) { const a = C.cheekAnchor || SC.ref; put(B.IM[SC.path.replace('{kind}', L.face === 'shy' ? 'shy' : 'normal')], fo[0] + a[0] - SC.ref[0], fo[1] + a[1] - SC.ref[1]); }   // ほお（共通）は顔の部品のいちばん下
   if (F) for (const k of F.order) { if (k === 'cheek' && SC) continue; put(B.IM[F.path.replace('{part}', k).replace('{expr}', part(k))], ...fo); }
