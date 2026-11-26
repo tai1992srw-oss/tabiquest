@@ -44,17 +44,17 @@
   <textarea id="out" readonly aria-label="いまの値"></textarea>
 </main>
 <script>
-const KEY = 'tabiquest:lab:kyarakuri:2';
+const KEY = 'tabiquest:lab:kyarakuri:3';
 // えらべる部品。id は絵の出どころ（parts.json の chars）。画面では A・B と呼ぶ
 const SLOTS = [['rin', '輪郭'], ['eye', '目'], ['brow', 'まゆ'], ['mouth', '口'], ['cheek', 'ほお'], ['hairF', '前髪'], ['hairB', '後ろ髪'], ['wear', '服']];
 const NONE = { cheek: 'なし', wear: 'インナー' };
 // 動かせる値。単位はドット（360ドットの絵の中で）。はじめの値は、輪郭ごとのプリセット
 const VALS = [
-  ['eyeGap', '目のはば', 20, 46, '左右の目のまん中どうしの間'],
+  ['eyeGap', '目のはば', 14, 44, '左右の目のまん中どうしの間'],
   ['eyeY', '目の高さ', 72, 98, '小さいほど上'],
-  ['browDy', 'まゆの高さ', -24, -8, '目からまゆまで。小さいほど目からはなれる'],
+  ['browDy', 'まゆの高さ', -26, -8, '目からまゆまで。小さいほど目からはなれる'],
   ['mouthY', '口の高さ', 92, 112, '小さいほど上'],
-  ['cheekGap', 'ほおのはば', 20, 56, '左右のほおの赤みの間'],
+  ['cheekGap', 'ほおのはば', 14, 56, '左右のほおの赤みの間'],
   ['cheekDy', 'ほおの高さ', 2, 20, '目からほおまで。大きいほど下'],
   ['hairDy', '髪の高さ', -12, 12, '輪郭の頭のてっぺんに合わせた位置から。小さいほど上'],
 ];
@@ -87,7 +87,7 @@ const mean = (P, k) => (P[k + 'L'].ay + P[k + 'R'].ay) / 2;
 function draw() {
   const [W, H] = J.size, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'), v = S.v, marks = [], R = J.chars[S.rin];
   // 髪：その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
-  const hy = k => R.headTop - J.chars[S[k]].headTop + v.hairDy;
+  const hy = k => R.headTop - (J.chars[S[k]].hair?.[k === 'hairF' ? 'hair_front' : 'hair_back']?.ay ?? J.chars[S[k]].headTop) + v.hairDy;
   // 重ねる順：後ろ髪 → 体・輪郭（服でかくす所をのぞく）→ 服 → 前髪 → ほお → 目 → まゆ → 鼻・口
   x.drawImage(IM[S.hairB].hair_back, 0, hy('hairB'));
   const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(IM.body, 0, 0); bx.drawImage(IM[S.rin].rinkaku, 0, 0);
