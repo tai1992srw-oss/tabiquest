@@ -53,8 +53,9 @@ function loadChara() {
     let bot = 0; for (let y = 0; y < im.fh; y++) for (let i = 0; i < im.fw; i++) if (d.data[(y * c.width + i) * 4 + 3]) { bot = y; break; }
     let top = im.fh; for (let y = 0; y < im.fh && top === im.fh; y++) for (let i = 0; i < im.fw; i++) if (d.data[(y * c.width + i) * 4 + 3]) { top = y; break; }
     // 表情ごとの絵は、はじめて使うときに作る（get('grin') など。'blink' ＝ まばたき）
-    const L = homeLook(P), cache = new Map([['', c]]);
-    const get = f => { if (!cache.has(f)) cache.set(f, frameCanvas(P, f === 'blink' ? { ...L, blink: 1 } : { ...L, face: f })); return cache.get(f); };
+    const L = homeLook(P), cache = new Map([['|0', c]]);
+    // 表情 f と顔の向き t（−1〜1、1/8 ずつ）の絵。'blink' ＝ まばたき
+    const get = (f, t = 0) => { const k = f + '|' + t; if (!cache.has(k)) cache.set(k, frameCanvas(P, { ...(f === 'blink' ? { ...L, blink: 1 } : { ...L, face: f || undefined }), turn: t || undefined })); return cache.get(k); };
     return Object.assign(c, { poses: ['立ち'], top, bot: bot + 1, get });
   })().catch(e => { charaImg = null; throw e; }));
 }
@@ -120,12 +121,14 @@ export function renderHome(view, { header } = {}) {
   // 表情：押すとよろこぶ（にっこり・ウインク）、話すと笑顔、ときどき別の表情、数秒に1回まばたき（動きを減らす設定のときは、まばたきだけしない）
   let C = null, face = '', joyUntil = 0, moodUntil = 0, mood = '', nextMood = performance.now() + 6000, nextBlink = performance.now() + 2500, blinkUntil = 0, raf = 0, alive = true;
   const MOODS = ['smile', 'smile', 'close', 'smug', 'wow'];
+  // ときどき、ぬるっと横を向いて、しばらくしてもどる（きょろきょろ）。look：いまの向き、lookTo：向かう先
+  let look = 0, lookTo = 0, nextLook = performance.now() + 5000, lookBack = 0;
   const fit = () => {
     if (!C) return;
     const room = root.clientHeight - 96 - 110, s = Math.min(2, room / (C.bot - C.top));   // 上の札と、下のナビのぶんを空ける
     Object.assign(cv.style, { width: C.fw * s + 'px', height: C.fh * s + 'px', marginBottom: -(C.fh - C.bot) * s + 'px' });
   };
-  const draw = f => { const im = C.get(f), x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(im, 0, 0); };
+  const draw = (f, t) => { const im = C.get(f, t), x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); x.drawImage(im, 0, 0); };
   const tick = t => {
     if (!alive) return; raf = requestAnimationFrame(tick);
     const rm = reduceMotion();
@@ -133,7 +136,11 @@ export function renderHome(view, { header } = {}) {
     if (!rm && t > nextBlink) { blinkUntil = t + 140; nextBlink = t + 2600 + Math.random() * 3200; if (Math.random() < .2) nextBlink = t + 320; }   // ときどき2回つづけて
     const base = t < joyUntil ? face : t < moodUntil ? mood : '';
     const f = t < blinkUntil && !['close', 'grin', 'shy'].includes(base) ? 'blink' : base;
-    if (f !== cv.dataset.p) { cv.dataset.p = f; draw(f); }
+    if (!rm && t > nextLook) { lookTo = Math.random() < .5 ? -1 : 1; lookBack = t + 2200 + Math.random() * 1800; nextLook = t + 11000 + Math.random() * 9000; }
+    if (lookBack && t > lookBack) { lookTo = 0; lookBack = 0; }
+    if (look !== lookTo) look = Math.round((look + Math.sign(lookTo - look) / 8) * 8) / 8;   // 1コマに 1/8 ずつ（約 0.13 秒で向く）
+    const key = f + '|' + look;
+    if (key !== cv.dataset.p) { cv.dataset.p = key; draw(f, look); }
   };
   const showChara = () => loadChara().then(c => {
     if (!alive) return; C = c; cv.width = c.fw; cv.height = c.fh; fit(); cv.dataset.p = ''; meEl.classList.add('on');

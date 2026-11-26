@@ -6,7 +6,7 @@ const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さ
 import { loadParts as loadChara2, FACES, fixLook as fixLook2, drawLook } from './chara2.js';
 import { book, cardsOf, cardById, setPhoto, defaultLook, shown, setFav, settings } from './store.js';
 import { openDress } from './dress.js';
-import { engine, snapshot, clearSnaps, RS } from './card.js';
+import { engine, snapshot, clearSnaps, RS, reduceMotion } from './card.js';
 // 撮影でえらぶもの（下の列に出す。着替えは、お着替えの画面をひらく）
 const MODES = [['face', '表情'], ['turn', '向き'], ['tilt', 'かしげ'], ['wind', '風'], ['light', '光']];   // 腰（photo.lean）は、えらべなくした（前に残したカードは、そのまま出る）   // かしげ：首をかしげる（photo.tilt）。ポーズと表情は、新しいキャラではまだない
 const TURNS = [[-1, '左を向く', 'u-2'], [0, '正面', 'u0'], [1, '右を向く', 'u2']];   // 1段だけ
@@ -170,7 +170,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     <div class="cflash"></div>`;
   document.body.append(root);
   const stage = root.querySelector('.stage'), cam = root.querySelector('.cam'), camf = root.querySelector('.camf'), strip = cam.querySelector('.strip');
-  let mode = 'face', snap0 = '', env = null, coachT = 0;
+  let turnRaf = 0, mode = 'face', snap0 = '', env = null, coachT = 0;
   const look = () => (cur ? JSON.parse(JSON.stringify(cur)) : defaultLook());
   // 下の列：ポーズと表情は、いまの見た目のままの小さな絵。光は記号（光・グロー・明るさを1列に並べる）
   const opt = (attr, v, name, inner, cls = '') => `<button class="opt ${cls}" data-${attr}="${v}" aria-pressed="false"><i aria-hidden="true">${inner}</i>${name}</button>`;
@@ -295,6 +295,13 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     else if (b.dataset.rim) { ph.rim = +b.dataset.rim; sync(); }
     else if (b.dataset.glow) { ph.glow = +b.dataset.glow; sync(); }
     else if (b.dataset.face !== undefined) { if (b.dataset.face) ph.face = b.dataset.face; else delete ph.face; sync(); }
+    else if (b.dataset.turn !== undefined) {   // 顔の向き：パッと切りかえず、1/8 ずつ ぬるっと動かす（動きを減らす設定のときは、すぐ）
+      const to = +b.dataset.turn, from = +ph.turn || 0; cancelAnimationFrame(turnRaf); if (to === from) return;
+      if (reduceMotion()) { ph.turn = to; if (!to) delete ph.turn; sync(); paint(); return; }
+      const t0 = performance.now(), dur = 260 * Math.abs(to - from);
+      const step = t => { const k = Math.min(1, (t - t0) / dur), e = k * k * (3 - 2 * k); ph.turn = Math.round((from + (to - from) * e) * 8) / 8; if (!ph.turn) delete ph.turn; sync(); marks(); if (k < 1) turnRaf = requestAnimationFrame(step); else paint(); };
+      turnRaf = requestAnimationFrame(step);
+    }
     else if (['tilt', 'turn', 'lean', 'wind'].some(q => b.dataset[q] !== undefined)) { const k = ['tilt', 'turn', 'lean', 'wind'].find(q => b.dataset[q] !== undefined); ph[k] = +b.dataset[k]; if (!ph[k]) delete ph[k]; sync(); paint(); }
     else if (b.dataset.pose) { ph.pose = +b.dataset.pose; sync(); }
     else if (b.dataset.face !== undefined) { ph.face = b.dataset.face; sync(); }

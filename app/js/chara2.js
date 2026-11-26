@@ -266,7 +266,7 @@ function rotate(src, deg, px, py, y1) {
 }
 
 // 見た目 L の立ち絵（256×384 のキャンバス）。同じ見た目は使い回す
-//   L.tilt：首のかしげ（度。−12〜12）、L.turn：顔の向き（−2〜2）、L.lean：腰からかたむける（度。−10〜10。いまは撮影でえらべない）、L.wind：風（−2〜2。＋で右へなびく）。どれも撮影でえらぶ。0 ＝ なし
+//   L.tilt：首のかしげ（度。−12〜12）、L.turn：顔の向き（−1〜1。小数も可）、L.lean：腰からかたむける（度。−10〜10。いまは撮影でえらべない）、L.wind：風（−2〜2。＋で右へなびく）。どれも撮影でえらぶ。0 ＝ なし
 export function compose(P, L) {
   const key = JSON.stringify(L); if (P.cache.has(key)) return P.cache.get(key);
   const { J, IM } = P, [W, H] = J.size, c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -274,7 +274,8 @@ export function compose(P, L) {
   const v = { ...L.v }; for (const k of FACE_KEYS) v[k] = P.base[k] + (L.v[k] | 0);   // キャラ1の数字を足して、絵の中の行・はばにもどす
   // 首をかしげるときは、頭の部品を別のキャンバス（hd）に描いて、あとでまわして重ねる
   // 顔の向き（turn：−1・0・1。＋で見て右を向く）とかしげのときは、頭の部品（輪郭・前髪・顔）を別のキャンバスに描いて、ずらし・まわしてから重ねる
-  const tilt = Math.max(-12, Math.min(12, +L.tilt || 0)), turn = Math.sign(+L.turn || 0), sep = !!(tilt || turn);   // 顔の向きは1段だけ（2026-11-26 くりた「横向きは1段階でいい」）。前の ±2 も ±1 として出す
+  const tilt = Math.max(-12, Math.min(12, +L.tilt || 0)), tv = Math.round(Math.max(-1, Math.min(1, +L.turn || 0)) * 8) / 8, turn = Math.sign(tv), ta = Math.abs(tv), sep = !!(tilt || turn);
+  //   顔の向きは1段まで（くりた「横向きは1段階でいい」）。−1〜1 の間の小数もとれて、ぬるっと動かすときは 1/8 ずつ（tv）。前の ±2 は ±1 として出す
   const mk = () => { const q = document.createElement('canvas'); q.width = W; q.height = H; return q; };
   const back = sep ? mk() : c, rinC = sep ? mk() : null, hfC = sep ? mk() : c, head = sep ? mk() : c, bk = back.getContext('2d'), hd = head.getContext('2d');
   const put = (im, p, tx, ty) => hd.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay));   // 部品を、アンカーが (tx, ty) に来るように置く
@@ -285,7 +286,7 @@ export function compose(P, L) {
   // 重ねる順：後ろ髪 → 体・輪郭（服でかくす所をのぞく）→ 服 → 前髪 → ほお → 目 → まゆ → 鼻・口
   const wind = Math.max(-2, Math.min(2, +L.wind || 0)), hairOf = (k, n, f) => { const im = fitHair(P, L[k], n, L.rin, v.hairS | 0, col.hair); return wind ? blow(im, wind * f, R.headTop - hy(k, n) + 14, 110) : im; };   // 風：後ろ髪は大きく、前髪は少しだけ
   bk.drawImage(hairOf('hairB', 'hair_back', 7), hx('hairB', 'hair_back'), hy('hairB', 'hair_back'));   // 後ろ髪は、向きでは動かさない（正面より外へはみ出さないように）   // 後ろ髪は、向く側と反対へ少し（奥にあるので）
-  if (sep) x.drawImage(tilt ? rotate(back, tilt, R.cx + .5, R.chin, H) : back, turn * (turn ? turnOf(P, L.rin, turn > 0 ? 'R' : 'L').head : 0), 0);
+  if (sep) x.drawImage(tilt ? rotate(back, tilt, R.cx + .5, R.chin, H) : back, Math.round(tv * (turn ? turnOf(P, L.rin, turn > 0 ? 'R' : 'L').head : 0)), 0);
   const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(tint(P, IM.body, 'skin', col.skin, 'body'), 0, 0); (sep ? rinC.getContext('2d') : bx).drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);   // かしげ・向きのときは、輪郭は頭の側に描く（体といっしょに動かさない）
   if (L.wear) { bx.globalCompositeOperation = 'destination-out'; bx.drawImage(IM[L.wear].wear_hide, 0, 0); }
   x.drawImage(b, 0, 0); if (L.wear) x.drawImage(tint(P, IM[L.wear].wear, 'skinIn', col.skin, `${L.wear}/wear`), 0, 0);
@@ -295,7 +296,7 @@ export function compose(P, L) {
   // 向き：顔の部品を向いた側へ2ドット（左右の間はせまくしない＝目が寄って詰まらないように）。
   //   向いた側の目とまゆは、内がわ（鼻の側）から細くする（外がわのはしは輪郭に寄せたまま＝奥へ回りこんで見える）
   const T = turn ? turnOf(P, L.rin, turn > 0 ? 'R' : 'L') : TURN_DEF;
-  const cx = Math.round(R.cx) + turn * T.move, half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
+  const cx = Math.round(R.cx) + Math.round(tv * T.move), half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
   const far = s => (turn > 0 && s === 'R') || (turn < 0 && s === 'L');
   const putK = (im, p, tx, ty, n, dx = 0) => { if (!n) return put(im, p, tx + dx, ty); hd.drawImage(narrow(im, n), p.x + Math.round(tx + dx - p.ax) + (turn > 0 ? n : 0), p.y + Math.round(ty - p.ay)); };   // n 列ぬいて、外がわのはしをそろえて置く
   if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek'))); }
@@ -304,12 +305,12 @@ export function compose(P, L) {
   const F = FACE[L.face] || {}, eid = L.blink && !['close', 'smile'].includes(F.eye) ? 'close' : F.eye, ev = eid && (J.chars[L.eye].eyes || []).find(q => q.id === eid), bv = F.brow && (J.chars[L.brow].brows || []).find(q => q.id === F.brow);
   for (const s of ['L', 'R']) {
     const ep = ev?.[s] ? ev[s] : E['eye' + s], ei = ev?.[s] ? IM[L.eye][`eye${s}_${eid}`] : IM[L.eye]['eye' + s];
-    putK(tint(P, ei, 'eye', col.eye, `${L.eye}/eye${s}/${ev?.[s] ? eid : ''}`), ep, EX[s], v.eyeY + (ep.ay - mean(E, 'eye')), far(s) ? T.eyeCut : 0, turn * (far(s) ? T.far : T.near));
+    putK(tint(P, ei, 'eye', col.eye, `${L.eye}/eye${s}/${ev?.[s] ? eid : ''}`), ep, EX[s], v.eyeY + (ep.ay - mean(E, 'eye')), far(s) ? Math.round(T.eyeCut * ta) : 0, Math.round(tv * (far(s) ? T.far : T.near)));
     const bp = bv?.[s] ? bv[s] : B['brow' + s], bi = bv?.[s] ? IM[L.brow][`brow${s}_${F.brow}`] : IM[L.brow]['brow' + s];
-    putK(bi, bp, EX[s] + (B['brow' + s].ax - B['eye' + s].ax), v.eyeY + v.browDy + (bp.ay - mean(B, 'brow')), far(s) ? T.browCut : 0, turn * (far(s) ? T.far : T.near));
+    putK(bi, bp, EX[s] + (B['brow' + s].ax - B['eye' + s].ax), v.eyeY + v.browDy + (bp.ay - mean(B, 'brow')), far(s) ? Math.round(T.browCut * ta) : 0, Math.round(tv * (far(s) ? T.far : T.near)));
   }
   const M = J.chars[L.mouth], MP = M.pieces;
-  const mx = cx + turn * T.mouth;
+  const mx = cx + Math.round(tv * T.mouth);
   if (MP.nose) put(IM[L.mouth].nose, MP.nose, mx + (MP.nose.ax - M.cx), MP.nose.ay + ((v.eyeY - M.preset.eyeY) + (v.mouthY - M.preset.mouthY)) / 2);   // 鼻は、目と口のあいだに付いて動く
   const mv = F.mouth && (J.shared.mouths || []).find(q => q.id === F.mouth);   // 共有の口：キャラ1の絵での位置。キャラ1のふだんの口からのずれを保って置く
   if (mv) put(IM.mouths[mv.id], mv, mx + (mv.ax - J.shared.cx), v.mouthY + (mv.ay - J.chars[P.ids[0]].pieces.mouth.ay));
@@ -318,10 +319,10 @@ export function compose(P, L) {
     const all = mk(), ax = all.getContext('2d');
     // 向き：輪郭は、目の高さから下を、あごに向かって向いた側へ（あごで2ドット）。前髪は、てっぺんで2ドット、目の少し下で 0（横の毛は、あごのあたりで後ろ髪とずれないように）
     const ramp = (y, y0, y1) => Math.max(0, Math.min(1, (y - y0) / (y1 - y0)));
-    const cheek = y => { const w = ramp(y, v.eyeY - 14, v.eyeY) * (1 - .5 * ramp(y, R.chin - 6, R.chin + 2)); const n = T.cheekNear * w, f = T.cheekFar * w; return turn > 0 ? [-n, -f] : [f, n]; };   // 目の少し上から下で、あごの先では半分
-    ax.drawImage(turn ? rowShift(splitRows(rinC, Math.round(R.cx), cheek), y => turn * T.jaw * ramp(y, v.eyeY, R.chin + 2) ** 2) : rinC, 0, 0);
-    ax.drawImage(turn ? rowShift(hfC, y => turn * T.hair * (1 - ramp(y, v.eyeY - 10, v.eyeY + 12))) : hfC, 0, 0); ax.drawImage(head, 0, 0);
-    x.drawImage(tilt ? rotate(all, tilt, R.cx + .5, R.chin, R.chin + 40) : all, turn * T.head, 0);   // 頭ぜんたい（輪郭・前髪・顔）を、向いた側へ
+    const cheek = y => { const w = ramp(y, v.eyeY - 14, v.eyeY) * (1 - .5 * ramp(y, R.chin - 6, R.chin + 2)); const n = T.cheekNear * w * ta, f = T.cheekFar * w * ta; return turn > 0 ? [-n, -f] : [f, n]; };   // 目の少し上から下で、あごの先では半分
+    ax.drawImage(turn ? rowShift(splitRows(rinC, Math.round(R.cx), cheek), y => tv * T.jaw * ramp(y, v.eyeY, R.chin + 2) ** 2) : rinC, 0, 0);
+    ax.drawImage(turn ? rowShift(hfC, y => tv * T.hair * (1 - ramp(y, v.eyeY - 10, v.eyeY + 12))) : hfC, 0, 0); ax.drawImage(head, 0, 0);
+    x.drawImage(tilt ? rotate(all, tilt, R.cx + .5, R.chin, R.chin + 40) : all, Math.round(tv * T.head), 0);   // 頭ぜんたい（輪郭・前髪・顔）を、向いた側へ
   }
   const lean = Math.max(-10, Math.min(10, +L.lean || 0));
   if (lean) { const o = bend(c, lean, 128, 214, 40); x.clearRect(0, 0, W, H); x.drawImage(o, 0, 0); }   // 腰（214 行・体のまん中）から上を、かたむける
