@@ -1,5 +1,5 @@
 // お着替え（キャラクリ）の画面（2026-11-26 作り替え）。ホームと撮影で同じ部品を使う。ちがうのは保存先だけ（ホーム＝ふだんの見た目、撮影＝そのカードだけ）
-//   上＝キャラ（いつも見える）／下＝部品のタブ（輪郭・目・まゆ・口・ほお・前髪・後ろ髪・服）→ 絵つきの一覧、「バランス」→ 1ドットずつ動かすスライダー、「コーデ」→ 残した組み合わせ
+//   上＝キャラ（いつも見える）／下＝ふだんは「服・髪・コーデ」のタブ → 絵つきの一覧。「顔をつくる」で、輪郭・目・まゆ・口・ほおと、「バランス」→ 1ドットずつ動かすスライダー、「コーデ」→ 残した組み合わせ
 //   見た目（look）と、絵の組み立ては chara2.js。絵は描き足さない
 //   輪郭を替えると、バランスはその輪郭のプリセットになる（そこから自由に動かせる）
 import { settings, saveSettings } from './store.js';
@@ -9,7 +9,8 @@ import { esc, toast } from './ui.js';
 const ICON = { rin: '◯', eye: '◉', brow: '⌒', mouth: '◡', cheek: '❀', hairF: '✂', hairB: '≋', wear: '♥' };
 const slot = id => ({ id, name: SLOTS.find(q => q[0] === id)[1], icon: ICON[id], kind: 'slot', focus: id === 'wear' ? 'body' : 'face' });
 // ふだんのお着替え：服・髪・コーデ。顔（輪郭・目・まゆ・口・ほお・バランス）は、ふだんはさわらないので、「顔をつくる」を押したときだけ出す
-const DRESS = [slot('wear'), slot('hairF'), slot('hairB'), { id: 'coord', name: 'コーデ', icon: '★', kind: 'coord', focus: 'body' }];
+// 髪は、前髪と後ろ髪をセットでえらぶ（look の hairF と hairB に、同じ物を入れる）
+const DRESS = [slot('wear'), { id: 'hair', name: '髪', icon: ICON.hairF, kind: 'slot', focus: 'face' }, { id: 'coord', name: 'コーデ', icon: '★', kind: 'coord', focus: 'body' }];
 const FACE = [slot('rin'), slot('eye'), slot('brow'), slot('mouth'), slot('cheek'), { id: 'bal', name: 'バランス', icon: '⇔', kind: 'bal', focus: 'face' }];
 const clone = L => JSON.parse(JSON.stringify(L));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -50,7 +51,7 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
     if (tab.kind === 'slot') {
       const ids = P.ids.filter(c => has(P, tab.id, c)).concat(NONE[tab.id] ? [''] : []);
       if (full) body.innerHTML = `<div class="du-grid ${tab.focus}">${ids.map(c => `<button class="du-item" data-v="${c}"><canvas></canvas><span class="du-nm">${esc(itemName(P, tab.id, c))}</span></button>`).join('')}</div>${tab.id === 'rin' ? '<p class="du-hint">輪郭を替えると、顔のバランスは、その輪郭に合う値になります</p>' : ''}`;
-      body.querySelectorAll('.du-item').forEach(b => { b.setAttribute('aria-pressed', String(L[tab.id] === b.dataset.v)); const t = clone(L); pick(t, tab.id, b.dataset.v); drawLook(b.querySelector('canvas'), P, t, tab.focus); });
+      body.querySelectorAll('.du-item').forEach(b => { b.setAttribute('aria-pressed', String(cur(L, tab.id) === b.dataset.v)); const t = clone(L); pick(t, tab.id, b.dataset.v); drawLook(b.querySelector('canvas'), P, t, tab.focus); });
     } else if (tab.kind === 'bal') {
       if (full) body.innerHTML = `<p class="du-hint">1ドットずつ動かせます。「もどす」で、いまの輪郭に合う値にもどります</p>` + VALS.map(([k, nm, mn, mx, hint]) => `<div class="du-sl" data-k="${k}"><b>${nm}</b><button data-d="-1" aria-label="${nm}を1へらす">−</button><input type="range" min="${mn}" max="${mx}" step="1" aria-label="${nm}"><button data-d="1" aria-label="${nm}を1ふやす">＋</button><output></output><small>${hint}</small></div>`).join('') + '<div class="du-shape"><button data-a="preset">輪郭に合う値にもどす</button></div>';
       body.querySelectorAll('.du-sl').forEach(s => { s.querySelector('input').value = L.v[s.dataset.k]; s.querySelector('output').textContent = L.v[s.dataset.k]; });
@@ -61,13 +62,14 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
     }
   }
   // 部品を替える。輪郭を替えたら、バランスをその輪郭のプリセットにする
-  const pick = (t, k, c) => { t[k] = c; if (k === 'rin') t.v = { ...P.J.chars[c].preset }; };
+  const pick = (t, k, c) => { if (k === 'hair') { t.hairF = c; t.hairB = c; } else t[k] = c; if (k === 'rin') t.v = { ...P.J.chars[c].preset }; };
+  const cur = (t, k) => (k === 'hair' ? (t.hairF === t.hairB ? t.hairF : null) : t[k]);   // 前髪と後ろ髪がちがう見た目（前に残した物）は、どれにも印を付けない
   const close = () => { root.remove(); document.body.classList.remove('du-open'); removeEventListener('resize', paint); document.removeEventListener('keydown', onKey); onClose?.(); };
   const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); root.querySelector('[data-a=cancel]').click(); } };
   root.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || !P) { if (b?.dataset.a === 'cancel') close(); return; } const a = b.dataset.a;
     if (b.dataset.tab) { tab = TABS.find(t => t.id === b.dataset.tab); root.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b))); paint(); renderBody(); }
-    else if (b.dataset.v !== undefined) { if (L[tab.id] !== b.dataset.v) change(x => pick(x, tab.id, b.dataset.v)); }
+    else if (b.dataset.v !== undefined) { if (cur(L, tab.id) !== b.dataset.v) change(x => pick(x, tab.id, b.dataset.v)); }
     else if (b.dataset.d) { const s = b.closest('.du-sl'), r = s.querySelector('input'), nv = Math.max(+r.min, Math.min(+r.max, L.v[s.dataset.k] + +b.dataset.d)); if (nv !== L.v[s.dataset.k]) change(x => { x.v[s.dataset.k] = nv; }); }
     else if (a === 'preset') { const pv = { ...P.J.chars[L.rin].preset }; if (!same(pv, L.v)) change(x => { x.v = pv; }); }
     else if (b.dataset.coord !== undefined) { const c = coords()[+b.dataset.coord]; if (c) { change(x => Object.assign(x, fixLook(P, c.look))); renderBody(); } }

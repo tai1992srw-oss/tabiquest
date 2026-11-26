@@ -86,11 +86,12 @@ function renderChara(box) {
   const my = token;
   loadParts().then(P => {
     if (my !== token) return; const base = homeLook(P), key = (k, c) => `${k}/${c || 'none'}`;
-    const groups = SLOTS.map(([k, name]) => { const all = P.ids.filter(c => has(P, k, c)).concat(NONE[k] ? [''] : []); return { k, name, total: all.length, items: all.filter(c => ui.only === 'all' || isNew('wear', key(k, c))) }; });
-    const look = (k, c) => { const t = JSON.parse(JSON.stringify(base)); t[k] = c; if (k === 'rin') t.v = { ...P.J.chars[c].preset }; return t; };
+    const groups = SLOTS.filter(([k]) => k !== 'hairB').map(([k, name]) => { if (k === 'hairF') name = '髪'; const all = P.ids.filter(c => has(P, k, c)).concat(NONE[k] ? [''] : []); return { k, name, total: all.length, items: all.filter(c => ui.only === 'all' || isNew('wear', key(k, c))) }; });
+    const look = (k, c) => { const t = JSON.parse(JSON.stringify(base)); t[k] = c; if (k === 'hairF') t.hairB = c;   // 髪は、前髪と後ろ髪のセット
+      if (k === 'rin') t.v = { ...P.J.chars[c].preset }; return t; };
     box.innerHTML = '<p class="note pad">ほかの部品は、いまのホームのお着替えのままです。絵を押すと、全身を大きく見られます。</p>' + groups.map(g => `<h3 class="gh">${g.name}（${g.items.length}${ui.only === 'all' ? '' : ` / ${g.total}`}）</h3>
       ${g.items.length ? `<div class="mh-grid">${g.items.map(c => `<div class="mh-c"><button class="mh-cv" data-open="${g.k}:${c}" aria-label="${esc(itemName(P, g.k, c))}を大きく見る"><canvas></canvas></button><b>${esc(itemName(P, g.k, c))}</b><button data-seen="wear:${key(g.k, c)}" aria-pressed="${!isNew('wear', key(g.k, c))}">${isNew('wear', key(g.k, c)) ? '見た' : '見た ✓'}</button></div>`).join('')}</div>` : '<p class="note pad">まだ見ていない物はありません。</p>'}`).join('');
-    box._open = id => { const i = id.indexOf(':'), k = id.slice(0, i), c = id.slice(i + 1); openBig(P, `${SLOTS.find(q => q[0] === k)[1]}：${itemName(P, k, c)}`, look(k, c)); };
+    box._open = id => { const i = id.indexOf(':'), k = id.slice(0, i), c = id.slice(i + 1); openBig(P, `${k === 'hairF' ? '髪' : SLOTS.find(q => q[0] === k)[1]}：${itemName(P, k, c)}`, look(k, c)); };
     for (const g of groups) for (const c of g.items) { const cv = box.querySelector(`[data-open="${g.k}:${c}"] canvas`); if (cv) drawLook(cv, P, look(g.k, c), g.k === 'wear' ? 'body' : 'face'); }
   }).catch(() => { if (my === token) box.innerHTML = '<p class="note pad">キャラの絵を読み込めませんでした。</p>'; });
   return () => {};
