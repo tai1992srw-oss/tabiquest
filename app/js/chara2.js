@@ -25,7 +25,7 @@ export function loadParts() {
   return parts || (parts = (async () => {
     const J = await (await fetch(BASE + 'parts.json')).json(), IM = { body: await image(BASE + J.body) }, ids = Object.keys(J.chars);
     await Promise.all(ids.flatMap(c => { IM[c] = {}; return ['rinkaku', 'hair_front', 'hair_back', 'wear', 'wear_hide', ...Object.keys(J.chars[c].pieces)].map(async n => { IM[c][n] = await image(`${BASE}${c}/${n}.png`); }); }));
-    return { J, IM, ids, cache: new Map(), tex: new Map() };
+    return { J, IM, ids, cache: new Map(), tex: new Map(), hair: new Map() };
   })().catch(e => { parts = null; throw e; }));
 }
 // はじめの見た目：最初の子（1つめの id）の部品とバランス
@@ -44,6 +44,28 @@ export const lookOf = (P, st) => (st?.look?.rin ? fixLook(P, st.look) : homeLook
 export const has = (P, k, c) => k !== 'cheek' || !!P.J.chars[c].pieces.cheekL;
 export const itemName = (P, k, c) => (c === '' ? NONE[k] : k === 'wear' ? P.J.chars[c].wear : k === 'rin' ? `${P.J.chars[c].name}（${P.J.chars[c].rin}）` : P.J.chars[c].name);
 
+// 髪を、輪郭の大きさに合わせる：その髪が描かれたときの頭（横はば headW・てっぺん〜あご）と、えらんだ輪郭の頭をくらべて、
+//   頭のてっぺんのまん中（アンカー）を軸に、横とたてを伸び縮みさせる。ドット絵なので、1マスを 3×3 に見て、多い色を取る（こい線は 4つ以上あれば優先）
+//   同じ大きさ（同じ輪郭用の髪）のときは、元の絵のまま。返り値：256×384 のキャンバス（アンカーの位置は元のまま）
+function fitHair(P, id, name, rin) {
+  const C = P.J.chars[id], R = P.J.chars[rin], a = C.hair?.[name] || { ax: C.cx, ay: C.headTop, headW: C.headW }, im = P.IM[id][name];
+  const sx = R.headW / (a.headW || C.headW), sy = (R.chin - R.headTop) / (C.chin - C.headTop);
+  if (Math.abs(sx - 1) < .02 && Math.abs(sy - 1) < .02) return im;
+  const key = `${id}/${name}/${rin}`; if (P.hair.has(key)) return P.hair.get(key);
+  const [W, H] = P.J.size, t = document.createElement('canvas'); t.width = W; t.height = H; const tx = t.getContext('2d', { willReadFrequently: true }); tx.drawImage(im, 0, 0);
+  const src = new Uint32Array(tx.getImageData(0, 0, W, H).data.buffer), out = new ImageData(W, H), dst = new Uint32Array(out.data.buffer), OF = [1 / 6, .5, 5 / 6], cnt = new Map();
+  const dark = v => (v & 255) + ((v >> 8) & 255) + ((v >> 16) & 255) < 300;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    cnt.clear(); let solid = 0;
+    for (const oy of OF) { const yy = Math.floor((y + oy - a.ay) / sy + a.ay); if (yy < 0 || yy >= H) continue;
+      for (const ox of OF) { const xx = Math.floor((x + ox - a.ax - .5) / sx + a.ax + .5); if (xx < 0 || xx >= W) continue; const v = src[yy * W + xx]; if ((v >>> 24) < 128) continue; solid++; cnt.set(v, (cnt.get(v) || 0) + 1); } }
+    if (solid < 5) continue;
+    let best = 0, bn = 0, bd = 0, dn = 0; for (const [v, n] of cnt) { if (n > bn) { bn = n; best = v; } if (n >= 4 && dark(v) && n > dn) { dn = n; bd = v; } }
+    dst[y * W + x] = dn ? bd : best;
+  }
+  tx.putImageData(out, 0, 0); P.hair.set(key, t); return t;
+}
+
 // 見た目 L の立ち絵（256×384 のキャンバス）。同じ見た目は使い回す
 export function compose(P, L) {
   const key = JSON.stringify(L); if (P.cache.has(key)) return P.cache.get(key);
@@ -51,14 +73,14 @@ export function compose(P, L) {
   const x = c.getContext('2d', { willReadFrequently: true }), v = L.v, R = J.chars[L.rin];
   const put = (im, p, tx, ty) => x.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay));   // 部品を、アンカーが (tx, ty) に来るように置く
   const mean = (Q, k) => (Q[k + 'L'].ay + Q[k + 'R'].ay) / 2;
-  // 髪：その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
+  // 髪：輪郭の大きさに合わせて伸び縮みさせ（fitHair）、その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
   const hy = (k, n) => R.headTop - (J.chars[L[k]].hair?.[n]?.ay ?? J.chars[L[k]].headTop) + v.hairDy;
   // 重ねる順：後ろ髪 → 体・輪郭（服でかくす所をのぞく）→ 服 → 前髪 → ほお → 目 → まゆ → 鼻・口
-  x.drawImage(IM[L.hairB].hair_back, 0, hy('hairB', 'hair_back'));
+  x.drawImage(fitHair(P, L.hairB, 'hair_back', L.rin), 0, hy('hairB', 'hair_back'));
   const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(IM.body, 0, 0); bx.drawImage(IM[L.rin].rinkaku, 0, 0);
   if (L.wear) { bx.globalCompositeOperation = 'destination-out'; bx.drawImage(IM[L.wear].wear_hide, 0, 0); }
   x.drawImage(b, 0, 0); if (L.wear) x.drawImage(IM[L.wear].wear, 0, 0);
-  x.drawImage(IM[L.hairF].hair_front, 0, hy('hairF', 'hair_front'));
+  x.drawImage(fitHair(P, L.hairF, 'hair_front', L.rin), 0, hy('hairF', 'hair_front'));
   // 顔の部品は、輪郭のまん中から左右に同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す
   const cx = Math.round(R.cx), half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
   if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek'))); }
