@@ -16,7 +16,7 @@ export function renderDebug(box, refresh) {
   box.className = 'group dbg';
   box.innerHTML = `<h2>デバッグモード</h2>
     <p class="note">デバッグ版です（アドレスの最後に ?debug）。ここで手に入れたものやお着替えは、デバッグ用の記録に入ります。通常版の旅の記録には入りません。</p>
-    <div class="row"><button data-a="normal">通常版をひらく</button></div>
+    <div class="row"><a class="btn" href="#/mihon">見本帳（足した名所の差分・服をまとめて見る）</a><button data-a="normal">通常版をひらく</button></div>
     ${on ? `
     <span class="lab">いる場所（位置の上書き）</span>
     <select class="sel" data-sel="loc"><option value="none">上書きしない（どの名所もタップで到着できる）</option>${PLACES.map(p => `<option value="${p.id}" ${settings.loc === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}<option value="nowhere" ${settings.loc === 'nowhere' ? 'selected' : ''}>どこでもない</option></select>

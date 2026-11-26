@@ -1,9 +1,9 @@
 // オフライン対応：アプリ本体と絵を端末に保存して、電波がなくても開けるようにする
 // 版を上げるときは VERSION を変える（古い保存は消える）
-const VERSION = 'tabiquest-v0.10.61';
+const VERSION = 'tabiquest-v0.10.62';
 const CORE = [
   './', 'index.html', 'manifest.json', 'css/app.css', 'vendor/three.r128.min.js',
-  'js/main.js', 'js/card.js', 'js/places.js', 'js/photo_places.js', 'js/plain_places.js', 'js/store.js', 'js/geo.js', 'js/conditions.js', 'js/ui.js', 'js/arrival.js', 'js/zukan.js', 'js/debug.js',
+  'js/main.js', 'js/card.js', 'js/places.js', 'js/photo_places.js', 'js/plain_places.js', 'js/store.js', 'js/geo.js', 'js/conditions.js', 'js/ui.js', 'js/arrival.js', 'js/zukan.js', 'js/debug.js', 'js/mihon.js',
   'js/map.js', 'js/goals.js', 'js/calendar.js', 'js/home.js', 'js/serifu.js', 'serifu/futsuu.json', 'js/characolor.js', 'js/charaparts.js', 'js/dress.js', 'js/camthumb.js', 'assets/chara/parts.json', 'assets/chara/body_close.png', 'assets/chara/body_normal.png', 'assets/chara/arms_close.png', 'assets/chara/arms_normal.png', 'assets/chara/hair_close.png', 'assets/chara/hair_normal.png', 'assets/chara/face_close.png', 'assets/chara/face_normal.png', 'assets/chara/zone_close.png', 'assets/chara/zone_normal.png',
   'assets/map/dot/levels.json', 'assets/map/dot/jp8.png', 'assets/map/dot/jp2.png', 'assets/map/dot/jp1.png', 'assets/map/dot/kt1000.png', 'assets/map/dot/kt250.png', 'assets/map/dot/kt100.png', 'assets/map/dot/kt50.png', 'assets/map/dot/near0.png', 'assets/map/dot/near1.png', 'assets/map/dot/near2.png',
   'js/scenes/minatomirai.js', 'js/scenes/chukagai.js', 'js/scenes/kamakura.js', 'js/scenes/photo.js', 'js/scenes/look.js', 'js/scenes/dotscene.js',

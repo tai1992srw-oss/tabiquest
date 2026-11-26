@@ -9,6 +9,7 @@ import { esc, img, toast, fmtDate, prefCity, icon } from './ui.js';
 import { playArrival } from './arrival.js';
 import { renderZukan, renderPlace, openViewer } from './zukan.js';
 import { renderDebug } from './debug.js';
+import { renderMihon } from './mihon.js';
 import { renderMap } from './map.js';
 import { renderGoals, checkGoals, goalList } from './goals.js';
 import { renderTimeline } from './calendar.js';
@@ -45,7 +46,7 @@ import * as kawasakidaishi from './scenes/kawasakidaishi.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.61';
+export const VERSION = '0.10.62';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);
@@ -80,7 +81,7 @@ for (const p of PLACES) if (p.kind === 'photo') engine.register(p.scene, () => p
 for (const p of PLACES) if (p.kind === 'plain') engine.register(p.scene, () => photo.build({ ...p, photo: { src: PLAIN_BG } }));
 
 const view = document.getElementById('view');
-let closeViewer = null;
+let closeViewer = null, lastName = '';
 const ui = (() => { try { return Object.assign({ cat: 'all', seen: 'all', sort: 'near' }, JSON.parse(localStorage.getItem('tabiquest:ui') || '{}')); } catch (e) { return { cat: 'all', seen: 'all' }; } })();
 const saveUi = () => { try { localStorage.setItem('tabiquest:ui', JSON.stringify(ui)); } catch (e) {} };
 
@@ -98,11 +99,13 @@ function route() {
     closeViewer = renderHome(view, { header });
     window.scrollTo(0, 0); return;
   }
-  const tab = ['zukan', 'place', 'card', 'preview', 'goals', 'calendar', 'timeline'].includes(name) ? 'zukan' : ['settings', 'map'].includes(name) ? name : 'list';
+  const tab = ['zukan', 'place', 'card', 'preview', 'goals', 'calendar', 'timeline'].includes(name) ? 'zukan' : ['settings', 'map'].includes(name) ? name : name === 'mihon' && DEBUG ? 'settings' : 'list';
   document.querySelectorAll('nav.tabs a').forEach(a => { if (a.dataset.tab === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   header();
   view.classList.toggle('mapmode', tab === 'map');
-  if (tab === 'map') renderMap(view);
+  const from = lastName; lastName = name;
+  if (name === 'mihon' && DEBUG) renderMihon(view);   // 見本帳（デバッグ版だけ）
+  else if (tab === 'map') renderMap(view);
   else if (tab === 'list') renderList();
   else if (tab === 'settings') renderSettings();
   else if (name === 'goals') renderGoals(view);
@@ -115,9 +118,9 @@ function route() {
     closeViewer = openViewer({ cardId: args[0], posing, onClose: () => { try { sessionStorage.removeItem('tabiquest:posing'); } catch (e) {} closeViewer = null; history.length > 1 ? history.back() : (location.hash = '#/zukan'); } });
   } else if (name === 'preview') {
     renderZukan(view);
-    closeViewer = openViewer({ preview: { placeId: args[0], time: args[1], weather: args[2], season: args[3] }, onClose: () => { closeViewer = null; location.hash = '#/settings'; } });
+    closeViewer = openViewer({ preview: { placeId: args[0], time: args[1], weather: args[2], season: args[3] }, onClose: () => { closeViewer = null; location.hash = from === 'mihon' ? '#/mihon' : '#/settings'; } });
   } else renderZukan(view);
-  if (!['card', 'preview'].includes(name)) window.scrollTo(0, 0);
+  if (!['card', 'preview', 'mihon'].includes(name)) window.scrollTo(0, 0);
 }
 addEventListener('hashchange', route);
 
