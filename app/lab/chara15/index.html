@@ -51,7 +51,7 @@ const BASE = './parts/';
 const J = await (await fetch(BASE + 'parts15.json', { cache: 'no-cache' })).json();
 const [W, H] = J.size, IM = {};
 const img = src => IM[src] || (IM[src] = new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ng(new Error(src)); i.src = BASE + src; }));
-const S = { fp: {}, split: false, c: Object.keys(J.chars).includes('c1b') ? 'c1b' : Object.keys(J.chars)[0], wear: 'tshirt', face: 'normal', hair: '', view: 'body', blink: true };
+const S = { fp: {}, cheek: {}, split: false, c: Object.keys(J.chars).includes('c1b') ? 'c1b' : Object.keys(J.chars)[0], wear: 'tshirt', face: 'normal', hair: '', view: 'body', blink: true };
 const WEARS = [['tshirt', 'Tシャツ'], ['design', '制服（デザイン）'], ['sotai', '素体']];
 const VIEWS = [['body', '全身'], ['face', '顔の寄り'], ['all', '表情をぜんぶ並べる']];
 const faceName = (C, f) => f === 'normal' ? 'ふだん' : (C.faceNames?.[f] || f);
@@ -73,15 +73,23 @@ async function hairImg(src, preset) {
   x.putImageData(d, 0, 0); tinted.set(key, c); return c;
 }
 // 重ねる（README の順）
-async function compose(cv, c, wear, face) {
-  const C = J.chars[c], L = C.layers, o = C.offset || [0, 0], preset = S.hair || C.hairPreset || '';
-  const F = C.faceParts, fs = F ? F.order.map(k => F.path.replace('{part}', k).replace('{expr}', (typeof face === 'object' ? face[k] : face) || 'normal')) : [C.faces[face] || C.faces.normal], design = wear === 'design' && C.design;
+// cheek：共通のほお（shared.cheek）の種類（normal・shy・none）。ないときは、表情が「照れ」なら shy、ほかは normal
+async function compose(cv, c, wear, face, cheek) {
+  const C = J.chars[c], L = C.layers, o = C.offset || [0, 0], preset = S.hair || C.hairPreset || '', design = wear === 'design' && C.design;
+  const fo = design ? [0, 0] : o, expr = k => (typeof face === 'object' ? face[k] : face) || 'normal';
+  // 共通のほお：絵は ref の位置で描いてある → そのキャラの cheekAnchor − ref ＋ offset だけずらす。顔の部品のいちばん下（目より下）
+  const SC = J.shared?.cheek, ck = cheek || (face === 'shy' ? 'shy' : 'normal');
+  const cheekStep = SC ? [[img(SC.path.replace('{kind}', ck)), fo[0] + (C.cheekAnchor || SC.ref)[0] - SC.ref[0], fo[1] + (C.cheekAnchor || SC.ref)[1] - SC.ref[1]]] : [];
+  const F = C.faceParts;
+  const fs = F ? [...cheekStep, ...F.order.filter(k => !(SC && k === 'cheek')).map(k => [img(F.path.replace('{part}', k).replace('{expr}', expr(k))), ...fo])]   // ほお→目→まゆ→鼻→口
+    : SC && C.faces.normal ? [...cheekStep, [img(C.faces.normal.replace(/face\.png$/, 'face_nocheek.png')), ...fo]]   // 部品分けのないキャラ（キャラ0）：ほおを抜いた顔の下に共通のほお
+    : [[img(C.faces[face] || C.faces.normal), ...fo]];
   const steps = design
-    ? [[hairImg(L.hair_back, preset), 0], [img(C.design.body), 0], [img(C.design.wear), 0], [hairImg(L.hair_front, preset), 0], ...fs.map(f => [img(f), 0])]
-    : [[hairImg(L.hair_back, preset), 1], [img(J.sotaiBody), 0], [img(L.head), 1], ...(wear === 'tshirt' ? [[img(J.wear.tshirt), 0]] : []), [hairImg(L.hair_front, preset), 1], ...fs.map(f => [img(f), 1])];   // 顔の部品の順：ほお→目→まゆ→鼻→口（faceParts.order）
+    ? [[hairImg(L.hair_back, preset), 0, 0], [img(C.design.body), 0, 0], [img(C.design.wear), 0, 0], [hairImg(L.hair_front, preset), 0, 0], ...fs]
+    : [[hairImg(L.hair_back, preset), ...o], [img(J.sotaiBody), 0, 0], [img(L.head), ...o], ...(wear === 'tshirt' ? [[img(J.wear.tshirt), 0, 0]] : []), [hairImg(L.hair_front, preset), ...o], ...fs];
   const ims = await Promise.all(steps.map(s => s[0]));
   const x = cv.getContext('2d'); cv.width = W; cv.height = H; x.imageSmoothingEnabled = false; x.clearRect(0, 0, W, H);
-  ims.forEach((im, i) => x.drawImage(im, steps[i][1] ? o[0] : 0, steps[i][1] ? o[1] : 0));
+  ims.forEach((im, i) => x.drawImage(im, steps[i][1], steps[i][2]));
   return o;
 }
 // 顔の寄り：頭のあたりを切りぬく（素体のあご sotaiChinY ＋ offset から上）
@@ -94,7 +102,7 @@ let blinkT = 0, blinking = false;
 async function draw() {
   let face = blinking ? 'close' : S.face;
   if (FP(S.c)) { face = { ...fpOf(S.c) }; if (blinking) face.eyeL = face.eyeR = 'close'; }
-  const o = await compose(buf, S.c, S.wear, face);
+  const o = await compose(buf, S.c, S.wear, face, S.cheek[S.c] || (S.face === 'shy' ? 'shy' : 'normal'));
   if (S.view === 'face') crop(buf, o, cv); else { cv.width = W; cv.height = H; cv.getContext('2d').drawImage(buf, 0, 0); }
   document.getElementById('stage').className = 'stage' + (S.view === 'face' ? ' face' : '');
 }
@@ -114,13 +122,13 @@ function ui() {
   if (!C.faces[S.face]) S.face = 'normal'; if (S.wear === 'design' && !C.design) S.wear = 'tshirt';
   chips('chars', Object.entries(J.chars).map(([k, c]) => [k, c.name]), 'c', () => { S.hair = ''; });
   chips('wears', WEARS.map(([k, n]) => [k, n, k === 'design' && !C.design]), 'wear');
-  chips('faces', Object.keys(C.faces).map(f => [f, faceName(C, f)]), 'face', () => { if (FP(S.c)) for (const k of FP(S.c).order) fpOf(S.c)[k] = S.face; });
+  chips('faces', Object.keys(C.faces).map(f => [f, faceName(C, f)]), 'face', () => { if (FP(S.c)) for (const k of FP(S.c).order) fpOf(S.c)[k] = S.face; if (J.shared?.cheek) S.cheek[S.c] = S.face === 'shy' ? 'shy' : 'normal'; });
   // 部品ごと：目・まゆは、ふだんは左右いっしょ（「左右べつ」で分ける）
   const fpb = document.getElementById('fparts'); fpb.innerHTML = '';
   if (FP(S.c)) {
     const F = FP(S.c), fp = fpOf(S.c), mixed = F.order.some(k => fp[k] !== fp[F.order[0]]);
     if (mixed) for (const b of document.getElementById('faces').children) b.className = '';
-    const rows = S.split ? F.order.map(k => [k, [k]]) : [['eye', ['eyeL', 'eyeR']], ['brow', ['browL', 'browR']], ['cheek', ['cheek']], ['nose', ['nose']], ['mouth', ['mouth']]];
+    const rows = S.split ? F.order.filter(k => !(J.shared?.cheek && k === 'cheek')).map(k => [k, [k]]) : [['eye', ['eyeL', 'eyeR']], ['brow', ['browL', 'browR']], ['nose', ['nose']], ['mouth', ['mouth']]];
     const RN = { eye: '目', brow: 'まゆ', cheek: 'ほお', nose: '鼻', mouth: '口' };
     const head = document.createElement('div'); head.className = 'grp'; head.innerHTML = '<b>部品ごとにえらぶ</b>';
     const sp = document.createElement('button'); sp.textContent = S.split ? '目・まゆ：左右べつ' : '目・まゆ：左右いっしょ'; sp.onclick = () => { S.split = !S.split; ui(); };
@@ -130,6 +138,13 @@ function ui() {
       for (const e of F.exprs) { const b = document.createElement('button'); b.textContent = faceName(C, e); if (ks.every(k => fp[k] === e)) b.className = 'on'; b.onclick = () => { for (const k of ks) fp[k] = e; ui(); }; ch.append(b); }
       g.append(ch); fpb.append(g);
     }
+  }
+  // ほお：全キャラ共通の部品（ふだん・照れ・なし）
+  if (J.shared?.cheek) {
+    const SC = J.shared.cheek, cur = S.cheek[S.c] || (S.face === 'shy' ? 'shy' : 'normal'), g = document.createElement('div'); g.className = 'grp'; g.innerHTML = '<b>ほお（みんな共通）</b>';
+    const ch = document.createElement('div'); ch.className = 'chips';
+    for (const [k, n] of Object.entries(SC.kinds)) { const b = document.createElement('button'); b.textContent = n; if (cur === k) b.className = 'on'; b.onclick = () => { S.cheek[S.c] = k; ui(); }; ch.append(b); }
+    g.append(ch); fpb.append(g);
   }
   const hl = document.getElementById('hairs'); hl.innerHTML = '';
   for (const [k, p] of [['', null], ...Object.entries(J.hairPresets)]) {

@@ -126,12 +126,36 @@
    "highlight": "#BAEBB5"
   }
  },
+ "shared": {
+  "cheek": {
+   "path": "shared/cheek_{kind}.png",
+   "kinds": {
+    "normal": "ふだん",
+    "shy": "照れ",
+    "none": "なし"
+   },
+   "ref": [
+    191,
+    135
+   ],
+   "colors": {
+    "normal": "#FEAEAF",
+    "shy_blush": "#FEC5B5",
+    "shy_hatch": "#F4949B"
+   },
+   "note": "ほおは全キャラ共通（くりた決定）。絵は ref（キャラ0の [頭のまん中 x, 目のいちばん下の行]）の位置で描いてある。キャラの cheekAnchor − ref だけずらし、さらにそのキャラの offset をかける。重ねる順は顔の部品のいちばん下（目より下）"
+  }
+ },
  "chars": {
   "c0": {
    "name": "キャラ0",
    "offset": [
     0,
     0
+   ],
+   "cheekAnchor": [
+    191,
+    135
    ],
    "layers": {
     "hair_back": "c0/hair_back.png",
@@ -140,13 +164,18 @@
    },
    "faces": {
     "normal": "c0/face.png"
-   }
+   },
+   "faceNoCheek": "c0/face_nocheek.png"
   },
   "c1b": {
    "name": "キャラ1b",
    "offset": [
     0,
     12
+   ],
+   "cheekAnchor": [
+    191,
+    133
    ],
    "hairPreset": "キャラ1のデザイン",
    "layers": {
@@ -202,6 +231,7 @@
      "trouble",
      "wink"
     ],
+    "sharedCheek": "ほおは shared.cheek を使う（ここの cheek_* はキャラ1b の表情から分けた前のもの。使わない）",
     "note": "顔まるごと（faces）の代わりに、部品ごとに表情をえらんで重ねる。順は order（ほお→目→まゆ→鼻→口）。どれも 384×576 の同じ枠・offset は顔と同じ。部品をぜんぶ同じ表情にすると faces と0ドット"
    }
   }
