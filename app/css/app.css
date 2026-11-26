@@ -22,6 +22,7 @@ header.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:
 .logo{font:400 18px var(--dot);text-decoration:none;color:var(--ink);letter-spacing:.06em}
 .pts{margin-left:auto;font:400 13px var(--dot);padding:4px 12px;background:var(--paper);border-radius:999px;box-shadow:0 2px 8px rgba(40,30,90,.08)}
 .debug-badge{font:400 12px var(--dot);padding:1px 8px;background:var(--coral);color:#fff;border-radius:6px}
+.debug-reload{font:400 12px var(--dot);padding:1px 8px;margin-left:6px;background:#fff;color:var(--coral);border:1px solid var(--coral);border-radius:6px;cursor:pointer}
 main{max-width:560px;margin:0 auto;padding:8px 16px calc(var(--nav) + env(safe-area-inset-bottom) + 40px);outline:none}
 /* 下のナビ：浮いた墨の帯。いまの画面だけ名前つき */
 nav.tabs{position:fixed;left:50%;transform:translateX(-50%);width:min(528px,calc(100% - 32px));bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:20;height:var(--nav);display:flex;align-items:center;justify-content:space-around;padding:0 6px;background:var(--ink);border-radius:22px;box-shadow:0 10px 24px rgba(40,30,90,.28)}

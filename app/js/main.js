@@ -45,7 +45,7 @@ import * as kawasakidaishi from './scenes/kawasakidaishi.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.107';
+export const VERSION = '0.10.108';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);
@@ -87,7 +87,16 @@ const saveUi = () => { try { localStorage.setItem('tabiquest:ui', JSON.stringify
 function header() {
   document.getElementById('pts').textContent = `${book().points}pt`;
   document.getElementById('debugBadge').hidden = mode() !== 'debug';
+  document.getElementById('debugReload').hidden = !DEBUG;
 }
+// デバッグ版：「最新を読む」＝オフライン用の保存（Service Worker とキャッシュ）を消して、読み込み直す。記録（localStorage）は消さない
+export async function reloadLatest() {
+  toast('最新の版を読み込みます…');
+  try { for (const r of await navigator.serviceWorker?.getRegistrations?.() || []) await r.unregister(); } catch (e) {}
+  try { for (const k of await caches.keys()) await caches.delete(k); } catch (e) {}
+  const u = new URL(location.href); u.searchParams.set('v', Date.now().toString(36)); location.replace(u.toString());   // アドレスを変えて、ブラウザの保存も通らないように
+}
+document.getElementById('debugReload').onclick = reloadLatest;
 
 function route() {
   closeViewer?.(); closeViewer = null;
