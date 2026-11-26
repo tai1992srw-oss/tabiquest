@@ -189,14 +189,14 @@ export function frameCanvas(P, L) {
 function indexed(P, L, frames) {
   const key = JSON.stringify(L) + '|' + frames; if (P.tex.has(key)) return P.tex.get(key);
   const src = frameCanvas(P, L), [fw, fh] = FRAME, d = src.getContext('2d').getImageData(0, 0, fw, fh).data;
-  const out = new ImageData(fw * frames, fh), o = out.data, pal = [], ids = new Map();
+  // 色の表は 256 色まで。色が多いとき（髪の色を変えた・キャラ3のように色の多い絵）は、多く使われている色から 256 色をえらび、残りはいちばん近い色にまとめる
+  //   （前は、上から見つかった順に 256 色を取っていたので、髪の色ばかりで表が埋まり、肌や服が髪の色に寄って青くなった）
+  const n = new Map(); for (let q = 0; q < d.length; q += 4) if (d[q + 3] >= 128) { const k = (d[q] << 16) | (d[q + 1] << 8) | d[q + 2]; n.set(k, (n.get(k) || 0) + 1); }
+  const keys = [...n.keys()].sort((a, b) => n.get(b) - n.get(a)), pal = keys.slice(0, 256).map(k => [k >> 16, (k >> 8) & 255, k & 255]), ids = new Map(keys.slice(0, 256).map((k, i) => [k, i]));
+  for (const k of keys.slice(256)) { const r = k >> 16, g = (k >> 8) & 255, b = k & 255; let best = 0, bd = 1e9; pal.forEach((c, j) => { const e = 2 * (c[0] - r) ** 2 + 4 * (c[1] - g) ** 2 + 3 * (c[2] - b) ** 2; if (e < bd) { bd = e; best = j; } }); ids.set(k, best); }
+  const out = new ImageData(fw * frames, fh), o = out.data;
   for (let y = 0; y < fh; y++) for (let x = 0; x < fw; x++) {
-    const q = (y * fw + x) * 4; if (d[q + 3] < 128) continue;
-    const k = (d[q] << 16) | (d[q + 1] << 8) | d[q + 2]; let i = ids.get(k);
-    if (i === undefined) {
-      if (pal.length < 256) { i = pal.length; pal.push([d[q], d[q + 1], d[q + 2]]); ids.set(k, i); }
-      else { let best = 0, bd = 1e9; pal.forEach((c, j) => { const e = (c[0] - d[q]) ** 2 + (c[1] - d[q + 1]) ** 2 + (c[2] - d[q + 2]) ** 2; if (e < bd) { bd = e; best = j; } }); i = best; ids.set(k, i); }   // 色が多すぎたら、近い色にまとめる
-    }
+    const q = (y * fw + x) * 4; if (d[q + 3] < 128) continue; const i = ids.get((d[q] << 16) | (d[q + 1] << 8) | d[q + 2]);
     for (let f = 0; f < frames; f++) { const t = (y * fw * frames + f * fw + x) * 4; o[t] = i; o[t + 3] = 255; }
   }
   const c = document.createElement('canvas'); c.width = fw * frames; c.height = fh; c.getContext('2d').putImageData(out, 0, 0);
