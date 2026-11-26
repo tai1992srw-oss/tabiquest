@@ -217,7 +217,7 @@ function blow(src, f, top, span) {
 export const TURN_KEYS = [['head', '頭ぜんたい', 0, 4], ['cheekNear', '手前のほお（外へ）', 0, 5], ['cheekFar', '奥のほお（内へ）', 0, 5], ['move', '顔の部品', 0, 5], ['near', '手前の目', -3, 3], ['far', '奥の目', -3, 4], ['eyeCut', '奥の目を細く（列）', 0, 6], ['browCut', '奥のまゆを細く（列）', 0, 5], ['mouth', '口・鼻', -3, 3], ['hair', '前髪', 0, 5], ['jaw', 'あご', 0, 5]];
 // 初めの値は、Codex の「少しだけ横向き」の見本（research/style/turn/）と正面をくらべて測った動きから（頭ぜんたいからの差で：目・まゆ +2、口 +1、前髪のまん中 +2・横 0、
 //   手前のほおは外へ、奥のほおは内へ、あご +1〜4）
-export const TURN_DEF = { head: 1, cheekNear: 2, cheekFar: 2, move: 2, near: 2, far: 0, eyeCut: 3, browCut: 2, mouth: 1, hair: 2, jaw: 2 };
+export const TURN_DEF = { head: 0, cheekNear: 0, cheekFar: 0, move: 2, near: 2, far: 0, eyeCut: 3, browCut: 2, mouth: 0, hair: 2, jaw: 2 };   // 頭ぜんたい・ほおは 0（2026-11-26 くりた「さっきより悪い。輪郭と髪の動きが下手」で、前の形にもどした）
 export const turnTune = () => { try { return JSON.parse(localStorage.getItem('tabiquest:turnTune') || '{}') || {}; } catch (e) { return {}; } };
 export function turnOf(P, rin, dir) { return { ...TURN_DEF, ...(P.J.chars[rin]?.turn?.[dir] || {}), ...(turnTune()[rin]?.[dir] || {}) }; }
 // 行ごとに、まるごと横へずらす（線の太さは変わらない）。f(y)：その行のずらし量（ドット）
