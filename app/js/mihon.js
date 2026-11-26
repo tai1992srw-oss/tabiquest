@@ -1,5 +1,5 @@
 // 見本帳（デバッグ版だけ。#/mihon）。足した名所の差分と、服・髪型・表情を、まとめて見るためのページ
-//   名所：ドット絵の名所ごとに1行。時間帯・天気・季節の小さな絵を横に並べる。押すと、その条件の「試し見」が開く
+//   名所：ドット絵の名所ごとに、時間帯・天気・季節の小さな絵を並べる。押すと、全画面の「パラパラ見る」が始まる（openFlip）
 //   キャラ：服（セット）・髪型・表情の一覧。押すと、6つのポーズを大きく見る
 //   「まだ見ていない」：この端末で「見た」を押していない物だけ。名所や服を足すと、何もしなくてもここに出る
 //   絵は、アプリの本物の描き方（card.js の engine.snapshot、charaparts.js の sheet）で、その場で作る。描き足しはしない
@@ -62,6 +62,7 @@ function renderPlaces(box) {
   const fixed = { main: ['season'], time: ['weather', 'season'], weather: ['time', 'season'], season: ['time', 'weather'], all: ['season'] }[ui.axis];
   box.innerHTML = `
     <div class="chips-row sub">${AXES.map(([v, l]) => `<button data-axis="${v}" aria-pressed="${ui.axis === v}">${l}</button>`).join('')}</div>
+    ${list.length ? '<div class="mh-go"><button data-a="flip">▶ パラパラ見る（全画面）</button><small>絵を押しても始まります</small></div>' : ''}
     <div class="mh-fix">${fixed.map(k => sel(k, k === 'time' ? TIMES : k === 'weather' ? WEATHERS : SEASONS, k === 'time' ? '時間帯' : k === 'weather' ? '天気' : ui.axis === 'main' ? '季節（朝・夕暮れ・夜・曇り・雨の絵）' : '季節')).join('')}</div>
     ${list.length ? '' : '<p class="note pad">まだ見ていない名所はありません。「すべて」に切り替えると、ぜんぶ見られます。</p>'}
     ${list.map(p => `<section class="mh-p" data-place="${p.id}">
@@ -135,6 +136,49 @@ function openPoses(env, name, L) {
   (async () => { const cvs = root.querySelectorAll('canvas'); for (let f = 0; f < n; f++) { if (!root.isConnected) return; try { paint(cvs[f], env, L, 'close', f); } catch (e) {} await new Promise(r => setTimeout(r, 0)); } })();
 }
 
+// ---- パラパラ見る（全画面。ストーリーズのように、押して次の差分、上下にはらって次の名所） ----
+//   出すのは、動く本物のカード（題字なし）。右を押す＝次の差分、左＝前の差分、上にはらう＝次の名所、下にはらう＝前の名所
+//   その名所の差分を最後まで見たら、「見た」のしるしを付ける
+function openFlip(view, placeId, vi = 0) {
+  const list = DOTS.filter(p => ui.only === 'all' || isNew('place', p.id)); let pi = Math.max(0, list.findIndex(p => p.id === placeId)); if (!list.length) return;
+  document.querySelector('.mh-flip')?.remove();
+  const root = document.createElement('div'); root.className = 'viewer story mh-flip'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'パラパラ見る');
+  root.innerHTML = `<div class="frame"><div class="stage"><div class="card"></div></div>
+    <div class="top"><div class="bars"></div><div class="who"><b></b><span class="when"></span><button class="x" data-a="close" aria-label="とじる">×</button></div></div>
+    <div class="mh-fb"><span class="pos"></span><a class="shoot" href="#">撮影でひらく</a></div></div>`;
+  document.body.append(root);
+  const card = root.querySelector('.card'), bars = root.querySelector('.bars'); let shown = null, vs = [], my = 0; const looked = {};   // looked：名所ごとの、見た差分の番号
+  const draw = () => {
+    const p = list[pi]; if (shown !== p) { vs = variants(p); vi = Math.min(vi, vs.length - 1); }
+    const v = vs[vi], st = { ...v, at: new Date().toISOString() }; (looked[p.id] ||= new Set()).add(vi);
+    if (shown !== p) { shown = p; const k = ++my; engine.show(card, p.scene, st).then(() => { if (k !== my) return; const n = list[pi + 1]; if (n) engine.get(n.scene); }).catch(() => {}); }
+    else engine.setState(st);
+    if (looked[p.id].size === vs.length && isNew('place', p.id)) { seen.place.push(p.id); saveSeen(); }
+    bars.innerHTML = vs.map((_, i) => `<i class="${i < vi ? 'seen' : i === vi ? 'now' : ''}"></i>`).join('');
+    root.querySelector('.who b').textContent = p.name;
+    root.querySelector('.when').textContent = `${LABEL.time[v.time]}・${LABEL.weather[v.weather]}・${LABEL.season[v.season]}`;
+    root.querySelector('.pos').textContent = `${pi + 1} / ${list.length}　${isNew('place', p.id) ? '' : '見た ✓'}`;
+    root.querySelector(".shoot").href = `#/preview/${p.id}/${v.time}/${v.weather}/${v.season}`;
+  };
+  const close = () => { document.removeEventListener('keydown', onKey); engine.stop(); root.remove(); if (location.hash.startsWith('#/mihon')) renderMihon(view); };
+  const place = d => { const n = pi + d; if (n < 0) return; if (n >= list.length) { toast('さいごの名所です'); return; } pi = n; vi = 0; draw(); };
+  const step = d => { const n = vi + d; if (n < 0) { if (pi > 0) { pi--; vi = 99; draw(); } return; } if (n >= vs.length) return place(1); vi = n; draw(); };
+  const onKey = e => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowRight' || e.key === ' ') step(1); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowDown') place(1); else if (e.key === 'ArrowUp') place(-1); else return; e.preventDefault(); };
+  document.addEventListener('keydown', onKey);
+  let down = null;
+  root.addEventListener('pointerdown', e => { down = e.target.closest('button,a') ? null : [e.clientX, e.clientY]; });
+  root.addEventListener('pointerup', e => {
+    if (!down) return; const dx = e.clientX - down[0], dy = e.clientY - down[1]; down = null;
+    if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx)) return place(dy < 0 ? 1 : -1);
+    if (Math.abs(dx) > 50) return step(dx < 0 ? 1 : -1);
+    const r = root.querySelector('.frame').getBoundingClientRect(); step(e.clientX < r.left + r.width * .33 ? -1 : 1);
+  });
+  root.addEventListener('wheel', e => { e.preventDefault(); if (Math.abs(e.deltaY) > 20 && !root._w) { root._w = setTimeout(() => { root._w = 0; }, 350); place(e.deltaY > 0 ? 1 : -1); } }, { passive: false });
+  root.querySelector('[data-a=close]').onclick = close;
+  root.querySelector(".shoot").onclick = () => { document.removeEventListener('keydown', onKey); engine.stop(); root.remove(); };   // 撮影（試し見）へ。とじると見本帳にもどる
+  draw();
+}
+
 // ---- ページ ----
 let cleanup = null;
 export function renderMihon(view) {
@@ -150,12 +194,14 @@ export function renderMihon(view) {
   const again = () => { saveUi(); scrollKeep = 0; renderMihon(view); };
   view.querySelector('.mihon').onchange = e => { const k = e.target.dataset.ui; if (k) { ui[k] = e.target.value; again(); } };
   view.querySelector('.mihon').onclick = e => {
-    if (e.target.closest('.mh-t')) { scrollKeep = scrollY; return; }
+    const t = e.target.closest('.mh-t');
+    if (t) { e.preventDefault(); scrollKeep = scrollY; const sec = t.closest('.mh-p'); return openFlip(view, sec.dataset.place, [...sec.querySelectorAll('.mh-t')].indexOf(t)); }
     const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
     if (d.tab) { ui.tab = d.tab; return again(); }
     if (d.only) { ui.only = d.only; return again(); }
     if (d.axis) { ui.axis = d.axis; return again(); }
     if (d.open) return body._open?.(d.open);
+    if (d.a === 'flip') { scrollKeep = scrollY; return openFlip(view, view.querySelector('.mh-p')?.dataset.place, 0); }
     if (d.seen) {   // 「見た」の入り切り。押してもすぐには消さない（つづけて見られるように。開き直すと消える）
       const [kind, id] = d.seen.split(':'), on = isNew(kind, id);
       seen[kind] = on ? [...seen[kind], id] : seen[kind].filter(x => x !== id); saveSeen();

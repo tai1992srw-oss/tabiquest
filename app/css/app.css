@@ -730,3 +730,9 @@ body.du-open{overflow:hidden}
 .mh-popin [data-x]{min-height:36px;padding:4px 14px;border-radius:999px;background:var(--paper);font:700 13px var(--sans)}
 .mh-poses{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
 .mh-poses canvas{width:100%;height:auto;image-rendering:pixelated;background:var(--paper);border-radius:8px}
+.mh-go{display:flex;align-items:center;gap:10px;padding:2px 2px 8px}
+.mh-go button{min-height:42px;padding:6px 18px;border-radius:999px;background:var(--ink);color:var(--paper);font:700 14px var(--sans)}
+.mh-go small{font-size:11px;opacity:.65}
+.mh-flip{z-index:55;user-select:none;-webkit-user-select:none}
+.mh-flip .mh-fb{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:26px 12px calc(env(safe-area-inset-bottom) + 12px);font:700 12px var(--sans);color:#fff;text-shadow:0 1px 2px #000;background:linear-gradient(transparent,rgba(0,0,0,.5));pointer-events:none}
+.mh-flip .mh-fb .shoot{pointer-events:auto;padding:8px 14px;border-radius:999px;background:rgba(10,12,30,.55);color:#fff;text-decoration:none;font:700 12px var(--sans)}
