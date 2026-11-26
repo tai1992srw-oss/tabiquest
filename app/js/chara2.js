@@ -3,7 +3,7 @@
 //   絵は描き足さない。部品を、アンカーが決まった位置に来るように置いて重ねるだけ
 //   見た目（look）：{ rin, eye, brow, mouth, cheek, hairF, hairB, wear：部品の出どころの id（'c1' など。cheek・wear は '' ＝ なし）,
 //                    v：{ eyeGap 目のはば, eyeY 目の高さ, browDy 目からまゆまで, mouthY 口の高さ, cheekGap・cheekDy ほお, hairS・hairDy・hairDx 髪の大きさ（％）・高さ・横の位置 } }
-//                    colors：{ hair, skin }（色変え。'#rrggbb'。ないときは元の色） }
+//                    colors：{ hair, skin, eye }（色変え。'#rrggbb'。ないときは元の色） }
 //   v は、キャラ1を ±0 とした差（ドット）。はじめの値は、輪郭ごとのプリセット（parts.json の preset を、キャラ1との差に直した物）
 //   前のキャラ（ななめ向き・6ポーズ・色変え）は archive/chara-v1/ と、git のタグ chara-v1
 import { settings } from './store.js';
@@ -24,6 +24,7 @@ export const HAIR_VALS = [
   ['hairS', '髪の大きさ', -12, 12, '％。輪郭に合わせた大きさから'], ['hairDy', '髪の高さ', -12, 12, 'ドット。小さいほど上'], ['hairDx', '髪の横の位置', -8, 8, 'ドット。小さいほど左'],
 ];
 export const COLORS = { hair: { name: '髪の色', list: ['#a8643c', '#6b4226', '#2b2224', '#e6c070', '#f4e2a8', '#b8a898', '#f09ab8', '#e2667a', '#c8ccd8', '#8a6ce0', '#3b5fb8', '#5fb8c8', '#6fbf8a'] },
+  eye: { name: '目の色', list: ['#3a6fd8', '#5fb8e8', '#2f8c5a', '#8a4cbc', '#c23a52', '#e08a2a', '#d4a22a', '#7a4a2a', '#e2667a', '#3ed6c4', '#6a7088'] },
   skin: { name: '肌の色', list: ['#ffe6d2', '#fbd9bf', '#f1c4a0', '#e4b088', '#d9a074', '#c08458', '#a86c48', '#8a5638', '#6b4330'] } };
 const HAIR0 = { hairS: 0, hairDy: 0, hairDx: 0 };
 // 輪郭のプリセット（顔のバランス）に替える。髪の調整は、そのまま残す
@@ -41,6 +42,9 @@ export function loadParts() {
     return { J, IM, ids, base, cache: new Map(), tex: new Map(), hair: new Map(), tint: new Map() };
   })().catch(e => { parts = null; throw e; }));
 }
+// キャラのプリセット：そのキャラの部品とバランスを、ひとそろい（色は元の色、髪の調整は 0）。名前は、ならび順に「キャラ1」「キャラ2」…
+export const charaLook = (P, id) => ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, k === 'cheek' && !P.J.chars[id].pieces.cheekL ? '' : id])), v: presetOf(P, id) });
+export const charaName = (P, id) => `キャラ${P.ids.indexOf(id) + 1}`;
 // はじめの見た目：最初の子（1つめの id）の部品とバランス
 export const firstLook = P => ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, P.ids[0]])), v: presetOf(P, P.ids[0]) });
 // 見た目をととのえる（前のキャラの見た目や、欠けた項目は、はじめの見た目で埋める）
@@ -50,7 +54,7 @@ export function fixLook(P, L) {
   if (o.v.eyeY > 40) for (const k of FACE_KEYS) o.v[k] -= P.base[k];   // 前の形（絵の中の行・はばそのもの）で残した見た目は、キャラ1との差に直す
   for (const [k] of SLOTS) o[k] = P.J.chars[L[k]] ? L[k] : (NONE[k] && L[k] === '' ? '' : d[k]);
   if (o.cheek && !P.J.chars[o.cheek].pieces.cheekL) o.cheek = '';
-  const col = Object.fromEntries(['hair', 'skin'].filter(k => /^#[0-9a-f]{6}$/i.test(L.colors?.[k] || '')).map(k => [k, L.colors[k]])); if (Object.keys(col).length) o.colors = col;
+  const col = Object.fromEntries(['hair', 'skin', 'eye'].filter(k => /^#[0-9a-f]{6}$/i.test(L.colors?.[k] || '')).map(k => [k, L.colors[k]])); if (Object.keys(col).length) o.colors = col;
   return o;
 }
 // ふだんの見た目（ホームのお着替え）と、そのカードの見た目（カードに残してあればそれ）
@@ -60,7 +64,7 @@ export const has = (P, k, c) => k !== 'cheek' || !!P.J.chars[c].pieces.cheekL;
 export const itemName = (P, k, c) => (c === '' ? NONE[k] : k === 'wear' ? P.J.chars[c].wear : k === 'rin' ? `${P.J.chars[c].name}（${P.J.chars[c].rin}）` : P.J.chars[c].name);
 
 // ---- 色変え（髪・肌）：絵の色を、えらんだ色に置きかえる。明るさの段（影・光）と、色あいの小さな差は、元の絵のまま残す ----
-//   look.colors：{ hair:'#rrggbb', skin:'#rrggbb' }（ない部位は、元の色のまま）
+//   look.colors：{ hair:'#rrggbb', skin:'#rrggbb', eye:'#rrggbb' }（ない部位は、元の色のまま）
 //   髪：その髪の絵で、いちばん多い色を「基準の色」とする。基準と色あいが大きくちがう所（リボンなどの飾り）は変えない
 //   肌：輪郭の絵で、いちばん多い色が基準。体・輪郭の中の肌の色と、服の絵にまざっている「まったく同じ肌の色」だけを変える（インナーの白は変えない）
 const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -101,11 +105,16 @@ function tint(P, im, kind, hex, key) {
   const [c, x, D] = pixels(im), d = D.data, cache = new Map();
   if (!P.skin) { const [, , B] = pixels(P.IM[P.ids[0]].rinkaku); P.skin = { ref: mainColor(B.data, skinLike), set: new Set() };   // 肌の基準の色と、体・輪郭に出てくる肌の色の一覧
     for (const src of [P.IM.body, ...P.ids.map(i => P.IM[i].rinkaku)]) { const q = pixels(src)[2].data; for (let i = 0; i < q.length; i += 4) if (q[i + 3] > 127 && skinLike(q[i], q[i + 1], q[i + 2])) P.skin.set.add((q[i] << 16) | (q[i + 1] << 8) | q[i + 2]); } }
-  const ref = kind === 'hair' ? mainColor(d) : P.skin.ref, rh = rgb2hsl(...ref)[0];
-  const use = kind === 'hair' ? (r, g, b) => { const [h, s] = rgb2hsl(r, g, b); return s < .22 || hueGap(h, rh) < .14; }      // 髪：色あいが近い所と、色みのうすい所（線・白っぽい光）。リボンなどは変えない
+  // 目：色のついた所（黒目）だけ。白目・光・まつ毛・まぶたの線は変えない。基準は、黒目の色のうち、明るさがまん中に近い色
+  const vivid = (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) >= 40;
+  const eyeRef = () => { const n = new Map(); for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 127 && Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]) >= 60) { const k = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2]; n.set(k, (n.get(k) || 0) + 1); }
+    let best = [128, 128, 128], bd = 9; for (const [k, v] of n) { if (v < 3) continue; const c = [k >> 16, (k >> 8) & 255, k & 255], e = Math.abs(rgb2hsl(...c)[2] - .5); if (e < bd) { bd = e; best = c; } } return best; };
+  const ref = kind === 'hair' ? mainColor(d) : kind === 'eye' ? eyeRef() : P.skin.ref, rh = rgb2hsl(...ref)[0];
+  const use = kind === 'eye' ? (r, g, b) => vivid(r, g, b) && hueGap(rgb2hsl(r, g, b)[0], rh) < .15
+    : kind === 'hair' ? (r, g, b) => { const [h, s] = rgb2hsl(r, g, b); return s < .22 || hueGap(h, rh) < .14; }      // 髪：色あいが近い所と、色みのうすい所（線・白っぽい光）。リボンなどは変えない
     : (r, g, b) => P.skin.set.has((r << 16) | (g << 8) | b) || (kind === 'skin' && (() => { const [h, s, l] = rgb2hsl(r, g, b); return hueGap(h, rh) < .08 && s > .2 && l < .93; })());   // 肌：肌の色と、同じ色あいのこい線（輪郭の線）
   let hi = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 127 && use(d[i], d[i + 1], d[i + 2])) hi = Math.max(hi, rgb2hsl(d[i], d[i + 1], d[i + 2])[2]);
-  const f = mapper(ref, hex, kind === 'hair' ? hi : rgb2hsl(...ref)[2] + .04);
+  const f = mapper(ref, hex, kind === 'skin' || kind === 'skinIn' ? rgb2hsl(...ref)[2] + .04 : hi);
   for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 128) continue; const k = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2]; let v = cache.get(k);
     if (v === undefined) { v = use(d[i], d[i + 1], d[i + 2]) ? f(d[i], d[i + 1], d[i + 2]).map(Math.round) : null; cache.set(k, v); }
     if (v) { d[i] = v[0]; d[i + 1] = v[1]; d[i + 2] = v[2]; } }
@@ -156,7 +165,7 @@ export function compose(P, L) {
   if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek'))); }
   const E = J.chars[L.eye].pieces, EX = half(v.eyeGap), B = J.chars[L.brow].pieces;
   for (const s of ['L', 'R']) {
-    put(IM[L.eye]['eye' + s], E['eye' + s], EX[s], v.eyeY + (E['eye' + s].ay - mean(E, 'eye')));
+    put(tint(P, IM[L.eye]['eye' + s], 'eye', col.eye, `${L.eye}/eye${s}`), E['eye' + s], EX[s], v.eyeY + (E['eye' + s].ay - mean(E, 'eye')));
     put(IM[L.brow]['brow' + s], B['brow' + s], EX[s] + (B['brow' + s].ax - B['eye' + s].ax), v.eyeY + v.browDy + (B['brow' + s].ay - mean(B, 'brow')));
   }
   const M = J.chars[L.mouth], MP = M.pieces;

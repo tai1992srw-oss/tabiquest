@@ -3,7 +3,7 @@
 //   見た目（look）と、絵の組み立ては chara2.js。絵は描き足さない
 //   輪郭を替えると、バランスはその輪郭のプリセットになる（そこから自由に動かせる）
 import { settings, saveSettings } from './store.js';
-import { loadParts, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, fixLook, has, itemName, drawLook, cropOf } from './chara2.js';
+import { loadParts, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf } from './chara2.js';
 import { esc, toast } from './ui.js';
 
 const ICON = { rin: '◯', eye: '◉', brow: '⌒', mouth: '◡', cheek: '❀', hairF: '✂', hairB: '≋', wear: '♥' };
@@ -11,7 +11,7 @@ const slot = id => ({ id, name: SLOTS.find(q => q[0] === id)[1], icon: ICON[id],
 // ふだんのお着替え：服・髪・コーデ。顔（輪郭・目・まゆ・口・ほお・バランス）は、ふだんはさわらないので、「顔をつくる」を押したときだけ出す
 // 髪は、前髪と後ろ髪をセットでえらぶ（look の hairF と hairB に、同じ物を入れる）
 const DRESS = [slot('wear'), { id: 'hair', name: '髪', icon: ICON.hairF, kind: 'slot', focus: 'face' }, { id: 'coord', name: 'コーデ', icon: '★', kind: 'coord', focus: 'body' }];
-const FACE = [slot('rin'), slot('eye'), slot('brow'), slot('mouth'), slot('cheek'), { id: 'bal', name: 'バランス', icon: '⇔', kind: 'bal', focus: 'face' }];
+const FACE = [{ id: 'chara', name: 'キャラ', icon: '☻', kind: 'chara', focus: 'body' }, slot('rin'), slot('eye'), slot('brow'), slot('mouth'), slot('cheek'), { id: 'bal', name: 'バランス', icon: '⇔', kind: 'bal', focus: 'face' }];
 const clone = L => JSON.parse(JSON.stringify(L));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -52,10 +52,13 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
       const ids = P.ids.filter(c => has(P, tab.id, c)).concat(NONE[tab.id] ? [''] : []);
       // 髪のタブには、髪の大きさ・位置の調整も出す（輪郭に合わせた所から、どれだけ変えるか）
       const adj = tab.id === 'hair' ? `<p class="du-hint">髪は、輪郭の大きさに合わせて置きます。合わないときは、ここで直せます</p>${sliders(HAIR_VALS)}<div class="du-shape"><button data-a="hair0">髪の大きさと位置をもどす</button></div>` : '';
-      const ck = tab.id === 'hair' ? 'hair' : tab.id === 'rin' ? 'skin' : '';   // 色をえらべるタブ：髪＝髪の色、輪郭＝肌の色
+      const ck = { hair: 'hair', rin: 'skin', eye: 'eye' }[tab.id] || '';   // 色をえらべるタブ：髪＝髪の色、輪郭＝肌の色、目＝目の色
       if (full) body.innerHTML = `${ck ? swatches(ck) : ''}<div class="du-grid ${tab.focus}">${ids.map(c => `<button class="du-item" data-v="${c}"><canvas></canvas><span class="du-nm">${esc(itemName(P, tab.id, c))}</span></button>`).join('')}</div>${tab.id === 'rin' ? '<p class="du-hint">輪郭を替えると、顔のバランスは、その輪郭に合う値になります</p>' : ''}${adj}`;
       setSliders(); if (ck) markColors(ck);
       body.querySelectorAll('.du-item').forEach(b => { b.setAttribute('aria-pressed', String(cur(L, tab.id) === b.dataset.v)); const t = clone(L); pick(t, tab.id, b.dataset.v); drawLook(b.querySelector('canvas'), P, t, tab.focus); });
+    } else if (tab.kind === 'chara') {   // キャラのプリセット：部品とバランスを、そのキャラのひとそろいにする
+      if (full) body.innerHTML = `<p class="du-hint">キャラをえらぶと、顔・髪・服・バランスが、そのキャラのひとそろいになります。そこから自由に変えられます</p><div class="du-grid coord">${P.ids.map(c => `<button class="du-item" data-chara="${c}"><canvas></canvas><span class="du-nm">${esc(charaName(P, c))}</span></button>`).join('')}</div>`;
+      body.querySelectorAll('[data-chara]').forEach(b => { const t = fixLook(P, charaLook(P, b.dataset.chara)); b.setAttribute('aria-pressed', String(same(t, fixLook(P, L)))); drawLook(b.querySelector('canvas'), P, t, 'body'); });
     } else if (tab.kind === 'bal') {
       if (full) body.innerHTML = `<p class="du-hint">1ドットずつ動かせます。数字は、キャラ1の顔を ±0 とした差です。「もどす」で、いまの輪郭に合う値にもどります</p>${sliders(VALS)}<div class="du-shape"><button data-a="preset">輪郭に合う値にもどす</button></div>`;
       setSliders();
@@ -82,6 +85,7 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   root.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || !P) { if (b?.dataset.a === 'cancel') close(); return; } const a = b.dataset.a;
     if (b.dataset.tab) { tab = TABS.find(t => t.id === b.dataset.tab); root.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b))); paint(); renderBody(); }
+    else if (b.dataset.chara) { const t = fixLook(P, charaLook(P, b.dataset.chara)); if (!same(t, fixLook(P, L))) change(x => { for (const k of Object.keys(x)) delete x[k]; Object.assign(x, t); }); }
     else if (b.dataset.c !== undefined) { const k = b.closest('.du-colors').dataset.k; if ((L.colors?.[k] || '') !== b.dataset.c) change(x => setColor(x, k, b.dataset.c)); }
     else if (b.dataset.v !== undefined) { if (cur(L, tab.id) !== b.dataset.v) change(x => pick(x, tab.id, b.dataset.v)); }
     else if (b.dataset.d) { const s = b.closest('.du-sl'), r = s.querySelector('input'), nv = Math.max(+r.min, Math.min(+r.max, L.v[s.dataset.k] + +b.dataset.d)); if (nv !== L.v[s.dataset.k]) change(x => { x.v[s.dataset.k] = nv; }); }
