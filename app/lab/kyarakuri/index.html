@@ -29,30 +29,34 @@
 <body>
 <main>
   <h1>キャラクリの試し</h1>
-  <p class="note">新しいキャラの層（素体・顔・前髪・後ろ髪・服）を重ねて、顔のバランスを動かす試しです。アプリ本体には、まだ入っていません。</p>
+  <p class="note">新しいキャラの絵を、輪郭・目・まゆ・口・ほお・髪・服に分けて重ね、顔のバランスを動かす試しです。アプリ本体には、まだ入っていません。</p>
   <div class="stage"><canvas id="cv" width="160" height="384"></canvas>
     <div class="tools"><button id="zoom" aria-pressed="false">顔に寄る</button><button id="guide" aria-pressed="false">アンカーを見る</button></div></div>
 
-  <h2>パーツ（どのキャラの絵を使うか）</h2>
+  <h2>パーツ</h2>
   <div id="parts"></div>
 
   <h2>顔のバランス</h2>
-  <p class="note">はじめの値は、キャラごとのプリセットです。そこから1ドットずつ動かせます。</p>
+  <p class="note">はじめの値は、輪郭ごとのプリセットです。輪郭を替えると、その輪郭の値になります。そこから1ドットずつ動かせます。</p>
   <div class="row" id="presets"><span>プリセット</span></div>
   <div id="sliders"></div>
   <div class="row"><button id="copy">いまの値をコピー</button></div>
   <textarea id="out" readonly aria-label="いまの値"></textarea>
 </main>
 <script>
-const KEY = 'tabiquest:lab:kyarakuri';
-const SLOTS = [['face', '顔'], ['hairF', '前髪'], ['hairB', '後ろ髪'], ['wear', '服']];
-// 動かせる値。単位はドット（360ドットの絵の中で）。ay ＝ 上からの行
+const KEY = 'tabiquest:lab:kyarakuri:2';
+// えらべる部品。id は絵の出どころ（parts.json の chars）。画面では A・B と呼ぶ
+const SLOTS = [['rin', '輪郭'], ['eye', '目'], ['brow', 'まゆ'], ['mouth', '口'], ['cheek', 'ほお'], ['hairF', '前髪'], ['hairB', '後ろ髪'], ['wear', '服']];
+const NONE = { cheek: 'なし', wear: 'インナー' };
+// 動かせる値。単位はドット（360ドットの絵の中で）。はじめの値は、輪郭ごとのプリセット
 const VALS = [
   ['eyeGap', '目のはば', 20, 46, '左右の目のまん中どうしの間'],
   ['eyeY', '目の高さ', 72, 98, '小さいほど上'],
   ['browDy', 'まゆの高さ', -24, -8, '目からまゆまで。小さいほど目からはなれる'],
   ['mouthY', '口の高さ', 92, 112, '小さいほど上'],
-  ['hairY', '髪の高さ', 22, 46, '前髪と後ろ髪。小さいほど上'],
+  ['cheekGap', 'ほおのはば', 20, 56, '左右のほおの赤みの間'],
+  ['cheekDy', 'ほおの高さ', 2, 20, '目からほおまで。大きいほど下'],
+  ['hairDy', '髪の高さ', -12, 12, '輪郭の頭のてっぺんに合わせた位置から。小さいほど上'],
 ];
 let J, IM = {}, S, zoom = false, guide = false;
 const img = src => new Promise((ok, ng) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ng; i.src = src; });
@@ -60,43 +64,48 @@ const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch
 
 async function init() {
   J = await (await fetch('parts/parts.json')).json();
-  const ids = Object.keys(J.chars); IM.base = await img('parts/' + J.base);
-  for (const c of ids) { IM[c] = {}; for (const n of ['hair_front', 'hair_back', 'wear', 'wear_hide', 'eyeL', 'eyeR', 'browL', 'browR', 'mouth']) IM[c][n] = await img(`parts/${c}/${n}.png`); }
+  const ids = Object.keys(J.chars); IM.body = await img('parts/' + J.body);
+  for (const c of ids) { IM[c] = {}; for (const n of ['rinkaku', 'hair_front', 'hair_back', 'wear', 'wear_hide', ...Object.keys(J.chars[c].pieces)]) IM[c][n] = await img(`parts/${c}/${n}.png`); }
   const first = ids[ids.length - 1];
-  S = { face: first, hairF: first, hairB: first, wear: first, v: { ...J.chars[first].preset } };
-  try { const old = JSON.parse(localStorage.getItem(KEY)); if (old && J.chars[old.face]) S = { ...S, ...old, v: { ...S.v, ...old.v } }; } catch (e) {}
+  S = { ...Object.fromEntries(SLOTS.map(([k]) => [k, first])), v: { ...J.chars[first].preset } };
+  try { const old = JSON.parse(localStorage.getItem(KEY)); if (old && J.chars[old.rin]) S = { ...S, ...old, v: { ...S.v, ...old.v } }; } catch (e) {}
   ui(); draw();
 }
 
 function ui() {
-  const ids = Object.keys(J.chars);
-  document.getElementById('parts').innerHTML = SLOTS.map(([k, nm]) => `<div class="row" data-slot="${k}"><span>${nm}</span>${ids.map(c => `<button data-c="${c}" aria-pressed="${S[k] === c}">${k === 'wear' ? J.chars[c].wear : J.chars[c].name}</button>`).join('')}${k === 'wear' ? `<button data-c="" aria-pressed="${!S.wear}">インナー</button>` : ''}</div>`).join('');
-  document.getElementById('presets').innerHTML = '<span>プリセット</span>' + ids.map(c => `<button data-preset="${c}">${J.chars[c].name}のバランス</button>`).join('');
+  const ids = Object.keys(J.chars), has = (k, c) => k !== 'cheek' || J.chars[c].pieces.cheekL;
+  document.getElementById('parts').innerHTML = SLOTS.map(([k, nm]) => `<div class="row" data-slot="${k}"><span>${nm}</span>${ids.filter(c => has(k, c)).map(c => `<button data-c="${c}" aria-pressed="${S[k] === c}">${k === 'wear' ? J.chars[c].wear : k === 'rin' ? `${J.chars[c].name}（${J.chars[c].rin}）` : J.chars[c].name}</button>`).join('')}${NONE[k] ? `<button data-c="" aria-pressed="${!S[k]}">${NONE[k]}</button>` : ''}</div>`).join('');
+  document.getElementById('presets').innerHTML = `<span>プリセット</span><button data-preset="${S.rin}">輪郭${J.chars[S.rin].name}のバランスにもどす</button>`;
   document.getElementById('sliders').innerHTML = VALS.map(([k, nm, mn, mx, hint]) => `<div class="sl" data-k="${k}"><b>${nm}</b><button data-d="-1" aria-label="${nm}を1へらす">−</button><input type="range" min="${mn}" max="${mx}" step="1" value="${S.v[k]}" aria-label="${nm}"><button data-d="1" aria-label="${nm}を1ふやす">＋</button><output>${S.v[k]}</output><small>${hint}</small></div>`).join('');
   document.getElementById('out').value = JSON.stringify(S);
 }
 
 // 部品 p（切り出した絵）を、アンカーが (tx, ty) に来るように置く
 function put(x, im, p, tx, ty) { x.drawImage(im, p.x + Math.round(tx - p.ax), p.y + Math.round(ty - p.ay)); return [Math.round(tx), Math.round(ty)]; }
+const mean = (P, k) => (P[k + 'L'].ay + P[k + 'R'].ay) / 2;
 
 function draw() {
-  const [W, H] = J.size, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'), v = S.v, marks = [];
-  const hy = v.hairY - J.hairAnchorY;
-  // 重ねる順：後ろ髪 → 素体（服でかくす所をのぞく）→ 服 → 前髪 → 顔
-  x.drawImage(IM[S.hairB].hair_back, 0, hy);
-  const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(IM.base, 0, 0);
+  const [W, H] = J.size, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'), v = S.v, marks = [], R = J.chars[S.rin];
+  // 髪：その髪が描かれたときの頭のてっぺんを、えらんだ輪郭のてっぺんに合わせる
+  const hy = k => R.headTop - J.chars[S[k]].headTop + v.hairDy;
+  // 重ねる順：後ろ髪 → 体・輪郭（服でかくす所をのぞく）→ 服 → 前髪 → ほお → 目 → まゆ → 鼻・口
+  x.drawImage(IM[S.hairB].hair_back, 0, hy('hairB'));
+  const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(IM.body, 0, 0); bx.drawImage(IM[S.rin].rinkaku, 0, 0);
   if (S.wear) { bx.globalCompositeOperation = 'destination-out'; bx.drawImage(IM[S.wear].wear_hide, 0, 0); }
   x.drawImage(b, 0, 0); if (S.wear) x.drawImage(IM[S.wear].wear, 0, 0);
-  x.drawImage(IM[S.hairF].hair_front, 0, hy);
-  // 顔：左右の目は、顔のまん中から同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す。まゆは目について動く
-  const F = J.chars[S.face], P = F.pieces, cx = Math.round(F.cx), ey0 = (P.eyeL.ay + P.eyeR.ay) / 2, xl = cx - Math.floor(v.eyeGap / 2), xr = xl + v.eyeGap;
-  for (const [s, ex] of [['L', xl], ['R', xr]]) {
-    const e = P['eye' + s], br = P['brow' + s], ty = v.eyeY + (e.ay - ey0);
-    marks.push(put(x, IM[S.face]['eye' + s], e, ex, ty));
-    marks.push(put(x, IM[S.face]['brow' + s], br, ex + (br.ax - e.ax), ty + (br.ay - e.ay) + (v.browDy - F.preset.browDy)));
+  x.drawImage(IM[S.hairF].hair_front, 0, hy('hairF'));
+  // 顔の部品は、輪郭のまん中から左右に同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す
+  const cx = Math.round(R.cx), half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
+  if (S.cheek) { const P = J.chars[S.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) marks.push(put(x, IM[S.cheek]['cheek' + s], P['cheek' + s], X[s], v.eyeY + v.cheekDy + (P['cheek' + s].ay - mean(P, 'cheek')))); }
+  const E = J.chars[S.eye].pieces, EX = half(v.eyeGap), B = J.chars[S.brow].pieces;
+  for (const s of ['L', 'R']) {
+    marks.push(put(x, IM[S.eye]['eye' + s], E['eye' + s], EX[s], v.eyeY + (E['eye' + s].ay - mean(E, 'eye'))));
+    marks.push(put(x, IM[S.brow]['brow' + s], B['brow' + s], EX[s] + (B['brow' + s].ax - B['eye' + s].ax), v.eyeY + v.browDy + (B['brow' + s].ay - mean(B, 'brow'))));
   }
-  marks.push(put(x, IM[S.face].mouth, P.mouth, cx + (P.mouth.ax - F.cx), v.mouthY));
-  marks.push([cx, v.hairY]);
+  const M = J.chars[S.mouth], MP = M.pieces;
+  if (MP.nose) put(x, IM[S.mouth].nose, MP.nose, cx + (MP.nose.ax - M.cx), MP.nose.ay + ((v.eyeY - M.preset.eyeY) + (v.mouthY - M.preset.mouthY)) / 2);   // 鼻は、目と口のあいだに付いて動く
+  marks.push(put(x, IM[S.mouth].mouth, MP.mouth, cx + (MP.mouth.ax - M.cx), v.mouthY));
+  marks.push([cx, R.headTop + v.hairDy]);
   const cv = document.getElementById('cv'), box = zoom ? [78, 8, 100, 116, 3] : [48, 0, 160, 384, Math.min(2, Math.max(1, Math.floor((innerWidth - 150) / 160)))];
   cv.width = box[2]; cv.height = box[3]; cv.style.width = box[2] * box[4] + 'px'; cv.style.height = box[3] * box[4] + 'px';
   const g = cv.getContext('2d'); g.drawImage(c, -box[0], -box[1]);
@@ -110,7 +119,8 @@ document.addEventListener('click', e => {
   if (b.id === 'guide') { guide = !guide; b.setAttribute('aria-pressed', guide); return draw(); }
   if (b.id === 'copy') { navigator.clipboard?.writeText(document.getElementById('out').value); b.textContent = 'コピーしました'; setTimeout(() => { b.textContent = 'いまの値をコピー'; }, 1200); return; }
   if (b.dataset.preset) { S.v = { ...J.chars[b.dataset.preset].preset }; save(); ui(); return draw(); }
-  const slot = b.closest('[data-slot]'); if (slot) { S[slot.dataset.slot] = b.dataset.c; save(); ui(); return draw(); }
+  const slot = b.closest('[data-slot]'); if (slot) { const k = slot.dataset.slot; S[k] = b.dataset.c; if (k === 'rin') S.v = { ...J.chars[S.rin].preset };   // 輪郭を替えたら、その輪郭のプリセットにする
+    save(); ui(); return draw(); }
   const sl = b.closest('.sl'); if (sl && b.dataset.d) { const r = sl.querySelector('input'); r.value = +r.value + +b.dataset.d; r.dispatchEvent(new Event('input', { bubbles: true })); }
 });
 document.addEventListener('input', e => { const sl = e.target.closest('.sl'); if (!sl) return; S.v[sl.dataset.k] = +e.target.value; sl.querySelector('output').textContent = e.target.value; save(); draw(); });
