@@ -761,3 +761,7 @@ body.du-open{overflow:hidden}
 .viewer .cam .orb.wind::before{content:"";position:absolute;inset:7px 5px;border-top:2px solid #FFFDF8;border-bottom:2px solid #FFFDF8;border-radius:40%}
 .viewer .cam .orb.wind.w0::before{display:none}
 .viewer .cam .orb.wind.w-2,.viewer .cam .orb.wind.w2{background:#8A6CE0}
+.viewer .cam .orb.turn{border-radius:50%;background:#FFE3C8;box-shadow:inset 0 5px 0 #7a5a8e}
+.viewer .cam .orb.turn::before,.viewer .cam .orb.turn::after{content:"";position:absolute;top:12px;width:3px;height:4px;border-radius:2px;background:#2B2A4C;left:calc(50% - 6px + var(--t,0px))}
+.viewer .cam .orb.turn::after{left:calc(50% + 3px + var(--t,0px))}
+.viewer .cam .orb.u-2{--t:-5px} .viewer .cam .orb.u-1{--t:-2px} .viewer .cam .orb.u1{--t:2px} .viewer .cam .orb.u2{--t:5px}

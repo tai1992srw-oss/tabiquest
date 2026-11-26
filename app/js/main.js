@@ -45,7 +45,7 @@ import * as kawasakidaishi from './scenes/kawasakidaishi.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.83';
+export const VERSION = '0.10.84';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);

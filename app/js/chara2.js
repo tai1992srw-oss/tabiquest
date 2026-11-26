@@ -59,7 +59,7 @@ export function fixLook(P, L) {
 }
 // ふだんの見た目（ホームのお着替え）と、そのカードの見た目（カードに残してあればそれ）
 export const homeLook = P => fixLook(P, settings.chara2);
-export const lookOf = (P, st) => { const L = st?.look?.rin ? fixLook(P, st.look) : homeLook(P), o = {}; for (const k of ['tilt', 'lean', 'wind']) if (+st?.photo?.[k]) o[k] = +st.photo[k]; return Object.keys(o).length ? { ...L, ...o } : L; };   // 首のかしげ・腰・風は、撮影の設定（photo）から
+export const lookOf = (P, st) => { const L = st?.look?.rin ? fixLook(P, st.look) : homeLook(P), o = {}; for (const k of ['tilt', 'turn', 'lean', 'wind']) if (+st?.photo?.[k]) o[k] = +st.photo[k]; return Object.keys(o).length ? { ...L, ...o } : L; };   // 首のかしげ・腰・風は、撮影の設定（photo）から
 export const has = (P, k, c) => k !== 'cheek' || !!P.J.chars[c].pieces.cheekL;
 export const itemName = (P, k, c) => (c === '' ? NONE[k] : k === 'wear' ? P.J.chars[c].wear : k === 'rin' ? `${P.J.chars[c].name}（${P.J.chars[c].rin}）` : P.J.chars[c].name);
 
@@ -191,7 +191,7 @@ function rotate(src, deg, px, py, y1) {
 }
 
 // 見た目 L の立ち絵（256×384 のキャンバス）。同じ見た目は使い回す
-//   L.tilt：首のかしげ（度。−12〜12）、L.lean：腰からかたむける（度。−10〜10）、L.wind：風（−2〜2。＋で右へなびく）。どれも撮影でえらぶ。0 ＝ なし
+//   L.tilt：首のかしげ（度。−12〜12）、L.turn：顔の向き（−2〜2）、L.lean：腰からかたむける（度。−10〜10。いまは撮影でえらべない）、L.wind：風（−2〜2。＋で右へなびく）。どれも撮影でえらぶ。0 ＝ なし
 export function compose(P, L) {
   const key = JSON.stringify(L); if (P.cache.has(key)) return P.cache.get(key);
   const { J, IM } = P, [W, H] = J.size, c = document.createElement('canvas'); c.width = W; c.height = H;
@@ -206,16 +206,19 @@ export function compose(P, L) {
   const hy = (k, n) => R.headTop - (J.chars[L[k]].hair?.[n]?.ay ?? J.chars[L[k]].headTop) + (v.hairDy | 0);
   const hx = (k, n) => Math.round(R.cx - (J.chars[L[k]].hair?.[n]?.ax ?? J.chars[L[k]].cx)) + (v.hairDx | 0);   // 横は、頭のまん中を合わせる
   // 重ねる順：後ろ髪 → 体・輪郭（服でかくす所をのぞく）→ 服 → 前髪 → ほお → 目 → まゆ → 鼻・口
+  // 顔の向き（疑似3D）：顔の部品（目・まゆ・鼻・口・ほお）を向く側へずらし、目の間を少しせまく（奥の目が近づいて見える）。
+  //   前髪は顔より少なく、後ろ髪は反対へ少しずらす（手前と奥のずれ＝視差）。turn：−2〜2（＋で、見て右を向く）
+  const turn = Math.max(-2, Math.min(2, +L.turn || 0)), td = turn * 3;
   const wind = Math.max(-2, Math.min(2, +L.wind || 0)), hairOf = (k, n, f) => { const im = fitHair(P, L[k], n, L.rin, v.hairS | 0, col.hair); return wind ? blow(im, wind * f, R.headTop - hy(k, n) + 14, 110) : im; };   // 風：後ろ髪は大きく、前髪は少しだけ
-  bk.drawImage(hairOf('hairB', 'hair_back', 7), hx('hairB', 'hair_back'), hy('hairB', 'hair_back'));
+  bk.drawImage(hairOf('hairB', 'hair_back', 7), hx('hairB', 'hair_back') - Math.round(td * .4), hy('hairB', 'hair_back'));
   if (tilt) x.drawImage(rotate(back, tilt, R.cx + .5, R.chin, H), 0, 0);
   const b = document.createElement('canvas'); b.width = W; b.height = H; const bx = b.getContext('2d'); bx.drawImage(tint(P, IM.body, 'skin', col.skin, 'body'), 0, 0); if (!tilt) bx.drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);
   if (tilt) hd.drawImage(tint(P, IM[L.rin].rinkaku, 'skin', col.skin, `${L.rin}/rin`), 0, 0);   // かしげるときは、輪郭は頭の側に描く（体といっしょにまわさない）
   if (L.wear) { bx.globalCompositeOperation = 'destination-out'; bx.drawImage(IM[L.wear].wear_hide, 0, 0); }
   x.drawImage(b, 0, 0); if (L.wear) x.drawImage(tint(P, IM[L.wear].wear, 'skinIn', col.skin, `${L.wear}/wear`), 0, 0);
-  hd.drawImage(hairOf('hairF', 'hair_front', 3.5), hx('hairF', 'hair_front'), hy('hairF', 'hair_front'));
+  hd.drawImage(hairOf('hairF', 'hair_front', 3.5), hx('hairF', 'hair_front') + Math.round(td * .5), hy('hairF', 'hair_front'));
   // 顔の部品は、輪郭のまん中から左右に同じだけはなす。左右の高さのちがい（元の絵のかたむき）は残す
-  const cx = Math.round(R.cx), half = g => { const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };
+  const cx = Math.round(R.cx) + td, half = g => { g -= Math.abs(turn) * 2; const l = cx - Math.floor(g / 2); return { L: l, R: l + g }; };   // td：顔の向きのずれ。横を向くほど、左右の間をせまく
   if (L.cheek) { const Q = J.chars[L.cheek].pieces, X = half(v.cheekGap); for (const s of ['L', 'R']) put(IM[L.cheek]['cheek' + s], Q['cheek' + s], X[s], v.eyeY + v.cheekDy + (Q['cheek' + s].ay - mean(Q, 'cheek'))); }
   const E = J.chars[L.eye].pieces, EX = half(v.eyeGap), B = J.chars[L.brow].pieces;
   for (const s of ['L', 'R']) {
