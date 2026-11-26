@@ -103,7 +103,7 @@ function sheetShape(P, hair, lod, outfit, face, sh, kao) {
   const af = W.acc ? P.W[W.acc + '_' + lod] : null, afc = cols.indexOf('acc'), zone = P.L['zone_' + lod];
   const body = P.L['body_' + lod].data, arms = P.L['arms_' + lod].data, hairs = P.L['hair_' + lod], hw = hairs.width;
   const { img: faces, fi, bi, by, swap } = faceSel(P, lod, face, kao), src = arms.length / 4 / fh;
-  // 頭の絵を先に作る（どのポーズでも同じ）。1マスを 3×3 に見て、多い色を取る。線の色は 3つ以上あれば優先
+  // 頭の絵を先に作る（どのポーズでも同じ）。1マスを 3×3 に見て、多い色を取る。線の色は 4つ以上あれば優先（3つだと線が太って、がたがたに見えた）
   const top0 = NECK - jr.length, cnt = new Int16Array(256), OFF = [1 / 6, .5, 5 / 6];
   const headImg = get => {
     const o = new Int16Array(fw * FH2).fill(-1);
@@ -111,30 +111,41 @@ function sheetShape(P, hair, lod, outfit, face, sh, kao) {
       const seen = []; let solid = 0;
       for (const oy of OFF) { const yy = Math.floor((y + oy - neckP) / G.h + neckP) - dy, sy = yy >= NECK ? yy : (yy - top0 >= 0 ? jr[yy - top0] : -1); if (sy < 0 || sy >= fh) continue;
         for (const ox of OFF) { const sx = Math.floor((x + ox - G.CX) / G.h + G.CX); if (sx < 0 || sx >= fw) continue; const v = get(sx, sy); if (v < 0) continue; solid++; if (!cnt[v]) seen.push(v); cnt[v]++; } }
-      if (solid >= 5) { let best = seen[0], bd = -1; for (const v of seen) { if (cnt[v] > cnt[best]) best = v; if (P.dark[v] && cnt[v] >= 3 && (bd < 0 || cnt[v] > cnt[bd])) bd = v; } o[y * fw + x] = bd >= 0 ? bd : best; }
+      if (solid >= 5) { let best = seen[0], bd = -1; for (const v of seen) { if (cnt[v] > cnt[best]) best = v; if (P.dark[v] && cnt[v] >= 4 && (bd < 0 || cnt[v] > cnt[bd])) bd = v; } o[y * fw + x] = bd >= 0 ? bd : best; }
       for (const v of seen) cnt[v] = 0;
     }
     return o;
   };
-  const skin = headImg((x, y) => (y < NECK && body[(y * fw + x) * 4 + 3] > 127 ? body[(y * fw + x) * 4] : -1));
-  const feat = blink => headImg((x, y) => {
-    let v = -1;
-    const bl = blink && bi >= 0 && y < by;
-    if (fi >= 0 && !(bl && swap)) { const q = (y * faces.width + fi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
-    if (bl) { const q = (y * faces.width + bi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
-    if (hi >= 0) { const h = (y * hw + hi * fw + x) * 4; if (hairs.data[h + 3] > 127) v = hairs.data[h]; }
+  // 顔（肌・目・まゆ・口。表情の層も入れる）と、髪を、別々に作る
+  const faceAt = blink => (x, y) => {
+    let v = y < NECK && body[(y * fw + x) * 4 + 3] > 127 ? body[(y * fw + x) * 4] : -1;
+    if (fi >= 0) { const q = (y * faces.width + fi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
+    if (blink && bi >= 0 && y < by) { const q = (y * faces.width + bi * fw + x) * 4; if (faces.data[q + 3] > 127) v = faces.data[q]; }
     return v;
-  });
-  const F0 = feat(false), F1 = bi >= 0 ? feat(true) : F0;
+  };
+  // 頭を小さくするとき（とあごだけ変えるとき）：目・まゆ・口は、大きさを変えずに、動いた先へそのまま置く（ちぢめると、目がつぶれて見えるため）
+  //   FEATS：[中心x, 中心y, 半径x, 半径y]（寄りの絵で。左目・右目・左まゆ・右まゆ・口）
+  const K = lod === 'close' ? 1 : .5, JAW = Math.round(73 * K), FEATS = [[120.5, 67, 10, 9], [146, 63.5, 10, 9], [117, 52, 9, 4], [143.5, 47.5, 10, 4], [137.5, 81, 8, 5]];
+  const skinImg = blink => {
+    const get = faceAt(blink), o = headImg(get); if (G.h > 1) return o;
+    for (const f of FEATS) { const cx = f[0] * K, cy = f[1] * K, rx = f[2] * K, ry = f[3] * K, cyj = cy < JAW ? cy - G.jd : JAW - G.jd + (cy - JAW) * sh.j;
+      const ox = Math.round((cx - G.CX) * (G.h - 1)), oy = Math.round(neckP + (cyj - NECK) * G.h - cy);
+      for (let y = Math.floor(cy + oy - ry); y <= cy + oy + ry; y++) for (let x = Math.floor(cx + ox - rx); x <= cx + ox + rx; x++) {
+        if (x < 0 || y < 0 || x >= fw || y >= FH2 || ((x + .5 - cx - ox) / rx) ** 2 + ((y + .5 - cy - oy) / ry) ** 2 > 1) continue;
+        const sx = x - ox, sy = y - oy; if (sx < 0 || sy < 0 || sx >= fw || sy >= fh || o[y * fw + x] < 0) continue; const v = get(sx, sy); if (v >= 0) o[y * fw + x] = v; } }
+    return o;
+  };
+  const S0 = skinImg(false), S1 = bi >= 0 ? skinImg(true) : S0;
+  const F0 = hi >= 0 ? headImg((x, y) => { const h = (y * hw + hi * fw + x) * 4; return hairs.data[h + 3] > 127 ? hairs.data[h] : -1; }) : null;
   const out = new ImageData(fw * n * 2, FH2), o = out.data, aw = fw * n * 2;
-  for (let f = 0; f < n * 2; f++) { const pf = f % n, F = f >= n ? F1 : F0;
+  for (let f = 0; f < n * 2; f++) { const pf = f % n, skin = f >= n ? S1 : S0, F = F0;
     for (let y = 0; y < FH2; y++) { const yb = y >= neckP ? r[y - neckP] : y - dy;   // 体・服・腕は、この行の元の行
       for (let x = 0; x < fw; x++) {
         let v = -1; const hk = y * fw + x;
         if (yb >= NECK) { const b = (yb * fw + x) * 4; if (body[b + 3] > 127) v = body[b]; }
         if (skin[hk] >= 0) v = skin[hk];
         if (yb >= 0) for (const [wl, i] of under) { const q = wl.d[yb * wl.w + i * fw + x]; if (q !== 255) v = q; }
-        if (F[hk] >= 0) v = F[hk];
+        if (F && F[hk] >= 0) v = F[hk];
         if (yb >= 0) {
           const a = (yb * src + pf * fw + x) * 4, front = af && af.d[yb * af.w + afc * fw + x] !== 255 && zone.data[(yb * zone.width + pf * fw + x) * 4 + 3] > 127;
           if (!front && arms[a + 3] > 127) v = arms[a];
