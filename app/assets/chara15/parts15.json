@@ -204,6 +204,14 @@
    "base": "#BC97BE",
    "light": "#C49FC8",
    "highlight": "#E4C1E1"
+  },
+  "31番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#1E1A1B",
+   "shadow1": "#201B1D",
+   "base": "#342D30",
+   "light": "#3E3639",
+   "highlight": "#473F42"
   }
  },
  "shared": {
@@ -2049,6 +2057,90 @@
      }
     }
    }
+  },
+  "c31n": {
+   "name": "31番",
+   "number": 31,
+   "offset": [
+    0,
+    4
+   ],
+   "cheekAnchor": [
+    192,
+    136
+   ],
+   "layers": {
+    "hair_back": "c31n/hair_back.png",
+    "head": "c31n/head.png",
+    "hair_front": "c31n/hair_front.png"
+   },
+   "items": [
+    "c31n_AF"
+   ],
+   "design": {
+    "body": "c31n/body_design.png",
+    "wear": "c31n/wear_design.png",
+    "tucked": false,
+    "note": "デザインの服（そのキャラの絵の体ごと）。手首の小物もこの中。offset はかけない"
+   },
+   "faces": {
+    "normal": "c31n/face.png",
+    "smile": "c31n/face_smile.png",
+    "close": "c31n/face_close.png",
+    "wink": "c31n/face_wink.png",
+    "surprise": "c31n/face_surprise.png",
+    "trouble": "c31n/face_trouble.png",
+    "shy": "c31n/face_shy.png",
+    "angry": "c31n/face_angry.png",
+    "jito": "c31n/face_jito.png",
+    "fufu": "c31n/face_fufu.png"
+   },
+   "faceNames": {
+    "normal": "ふだん",
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "fufu": "ふふっ"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c31n/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "smile",
+     "close",
+     "wink",
+     "surprise",
+     "trouble",
+     "shy",
+     "angry",
+     "jito",
+     "fufu"
+    ],
+    "uniqueExprs": [
+     "fufu"
+    ],
+    "noNose": "鼻はなし（絵では描かせるが、ドットでは外す）",
+    "note": "ほおは shared.cheek ではなく、このキャラの cheeks を使う（顔の部品のいちばん下）"
+   },
+   "cheeks": {
+    "normal": "c31n/cheek_normal.png",
+    "shy": "c31n/cheek_shy.png",
+    "none": null,
+    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
+   },
+   "hairPreset": "31番のデザイン"
   }
  },
  "items": [
@@ -2212,6 +2304,15 @@
    "back": null,
    "head": true,
    "headOf": "c12n",
+   "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
+  },
+  {
+   "id": "c31n_AF",
+   "name": "黒レースのミニハット",
+   "front": "c31n/acc_AF.png",
+   "back": null,
+   "head": true,
+   "headOf": "c31n",
    "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
   }
  ],
