@@ -2330,7 +2330,74 @@
     "none": null,
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
-   "hairPreset": "32番のデザイン"
+   "hairPreset": "32番のデザイン",
+   "uniquePose": {
+    "img": "c32n/pose_unique.png",
+    "name": "くまをぎゅっとだきしめる"
+   },
+   "wears": {
+    "uniform": {
+     "name": "32番の服",
+     "tuckDefault": false,
+     "parts": {
+      "top": "c32n/uniform_top.png",
+      "bottom": "c32n/uniform_bottom.png",
+      "shoes": "c32n/uniform_shoes.png",
+      "legs": "c32n/uniform_legs.png"
+     },
+     "partNames": {
+      "top": "黒ゴスのワンピース（上）",
+      "bottom": "黒ゴスのワンピース（スカート）",
+      "shoes": "ストラップシューズ",
+      "legs": "フリルのひざ下くつ下"
+     },
+     "note": "うでのポーズつきの服（research/style/pose_r/SI/c32n、SI/export_app.py）。top＝胴＋立ちのうで、bottom＝立ち姿の絵のドットから、shoes＝デザインの服から。上げるの手は handOffset だけ下げて焼きこみ",
+     "arms": {
+      "torso": "c32n/arms/torso.png",
+      "down_R": "c32n/arms/down_R.png",
+      "down_L": "c32n/arms/down_L.png",
+      "up_R": "c32n/arms/up_R.png",
+      "up_R_fore": "c32n/arms/up_R_fore.png",
+      "up_L": "c32n/arms/up_L.png",
+      "up_L_fore": "c32n/arms/up_L_fore.png",
+      "front_R": "c32n/arms/front_R.png",
+      "front_R_fore": "c32n/arms/front_R_fore.png",
+      "front_L": "c32n/arms/front_L.png",
+      "front_L_fore": "c32n/arms/front_L_fore.png",
+      "back_R": "c32n/arms/back_R.png",
+      "back_L": "c32n/arms/back_L.png",
+      "wrist": {
+       "up_R": "c32n/arms/up_R_wrist.png",
+       "up_R_fore": "c32n/arms/up_R_fore_wrist.png",
+       "up_L": "c32n/arms/up_L_wrist.png",
+       "up_L_fore": "c32n/arms/up_L_fore_wrist.png",
+       "front_R": "c32n/arms/front_R_wrist.png",
+       "front_R_fore": "c32n/arms/front_R_fore_wrist.png",
+       "front_L": "c32n/arms/front_L_wrist.png",
+       "front_L_fore": "c32n/arms/front_L_fore_wrist.png"
+      },
+      "sleeveOverHand": true,
+      "handOffset": {
+       "up_R": [
+        0,
+        0
+       ],
+       "up_L": [
+        0,
+        0
+       ],
+       "front_R": [
+        0,
+        0
+       ],
+       "front_L": [
+        0,
+        0
+       ]
+      }
+     }
+    }
+   }
   },
   "c33n": {
    "name": "33番",
