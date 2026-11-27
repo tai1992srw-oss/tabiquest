@@ -445,12 +445,11 @@ function wearCatalog(J) {
   const parts = [], sets = [];
   for (const [c, C] of Object.entries(J.chars)) for (const [w, W] of Object.entries(C.wears || {})) {
     const ps = {}; for (const [k, f] of Object.entries(W.parts || {})) { const id = `${c}.${w}.${k}`; ps[k] = id; parts.push({ id, kind: k, file: f, name: `${W.name || w}の${W.partNames?.[k] || WEAR15_PARTS.find(q => q[0] === k)?.[1] || k}`, owner: c, poses: k === 'top' ? W.poses || {} : null }); }   // poses：ポーズごとのトップス（top・topFront）
-    sets.push({ id: `${c}.${w}`, name: W.name || w, parts: ps, owner: c, tuck: W.tuckDefault ?? TUCK_DEFAULT.includes(`${c}.${w}`) });   // tuck：もとのデザインはトップスを中に入れる服
+    sets.push({ id: `${c}.${w}`, name: W.name || w, parts: ps, owner: c, tuck: !!W.tuckDefault });   // tuck：もとのデザインはトップスを中に入れる服
   }
   return { parts, sets };
 }
 // 服のひとそろいの一覧（お着替えの「セット」）：[番号, 名前]。'tshirt'・そのキャラのデザインの服・みんなの服・'sotai'（素体＝なにも着ない）
-const TUCK_DEFAULT = ['c4b.uniform', 'c6b.uniform'];   // もとのデザインがトップスを中に入れる服（parts15.json の wears.<w>.tuckDefault があれば、そちら）。セットでえらぶと、中に入れた形になる
 const TSHIRT_SET = 'c0.tshirt';   // 分けたTシャツ（2026-11-27）。あれば、前の1枚の Tシャツ（wear/tshirt.png）のかわりに使う
 export const bigWears = (P, id) => { const C = P.big.J.chars[id]; return [...(P.big.wears.sets.some(q => q.id === TSHIRT_SET) ? [] : [['tshirt', 'Tシャツ']]), ...P.big.wears.sets.map(s => [s.id, s.name]), ...(C.design && !C.wears ? [['design', 'デザインの服']] : []), ['sotai', '素体']]; };
 export const bigParts = (P, kind) => P.big.wears.parts.filter(q => q.kind === kind).map(q => [q.id, q.name]);   // 部分ごとの一覧

@@ -558,6 +558,7 @@
       "c4b/uniform_bottom.png",
       "c4b/uniform_shoes.png"
      ],
+     "tuckDefault": true,
      "parts": {
       "top": "c4b/uniform_top.png",
       "bottom": "c4b/uniform_bottom.png",
@@ -661,6 +662,7 @@
       "c6b/uniform_bottom.png",
       "c6b/uniform_shoes.png"
      ],
+     "tuckDefault": true,
      "parts": {
       "top": "c6b/uniform_top.png",
       "bottom": "c6b/uniform_bottom.png",
