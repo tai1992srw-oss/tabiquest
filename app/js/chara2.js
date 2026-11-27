@@ -121,7 +121,7 @@ export function fixLook(P, L) {
 }
 // ふだんの見た目（ホームのお着替え）と、そのカードの見た目（カードに残してあればそれ）
 export const homeLook = P => fixLook(P, settings.chara2);
-export const lookOf = (P, st) => { const L = st?.look?.rin || st?.look?.big ? fixLook(P, st.look) : homeLook(P), o = {}; for (const k of ['tilt', 'turn', 'lean', 'wind']) if (+st?.photo?.[k]) o[k] = +st.photo[k]; if (FACE[st?.photo?.face] && st.photo.face) o.face = st.photo.face; return Object.keys(o).length ? { ...L, ...o } : L; };   // 首のかしげ・腰・風は、撮影の設定（photo）から
+export const lookOf = (P, st) => { const L = st?.look?.rin || st?.look?.big ? fixLook(P, st.look) : homeLook(P), o = {}; for (const k of ['tilt', 'turn', 'lean', 'wind']) if (+st?.photo?.[k]) o[k] = +st.photo[k]; if (FACE[st?.photo?.face] && st.photo.face) o.face = st.photo.face; if (L.big && typeof st?.photo?.pose15 === 'string' && st.photo.pose15) o.pose15 = st.photo.pose15; return Object.keys(o).length ? { ...L, ...o } : L; };   // 首のかしげ・腰・風は、撮影の設定（photo）から
 export const has = (P, k, c) => k !== 'cheek' || !!P.J.chars[c].pieces.cheekL;
 export const itemName = (P, k, c) => (c === '' ? NONE[k] : k === 'wear' ? P.J.chars[c].wear : k === 'rin' ? `${P.J.chars[c].name}（${P.J.chars[c].rin}）` : P.J.chars[c].name);
 
@@ -386,7 +386,7 @@ export function compose(P, L) {
   P.cache.set(key, out); return out;   // 顔の部品が2倍のときは 512×768（それ以外は 256×384）。使う側は、幅÷256 を倍率として使う
 }
 // 切り出す場所：顔（輪郭のまわり）と全身。[x, y, w, h]（立ち絵の中で）
-export const cropOf = (P, L, kind) => { if (L.big && isBig(P, L.big)) { const B = P.big.chars[L.big]; return kind === 'face' ? [B.cx - 48, Math.max(0, B.headTop - 26), 96, 108] : [56, 0, 144, 376]; }
+export const cropOf = (P, L, kind) => { if (L.big && isBig(P, L.big)) { const B = P.big.chars[L.big]; return kind === 'face' ? [B.cx - 48, Math.max(0, B.headTop - 26), 96, 108] : kind === 'bust' ? [B.cx - 64, Math.max(0, B.headTop - 30), 128, 128] : [56, 0, 144, 376]; }   // bust：顔と上げた手（撮影のポーズの列）
   const R = P.J.chars[L.rin]; return kind === 'face' ? [R.cx - 48, Math.max(0, R.headTop - 26), 96, 108] : [56, 0, 144, 376]; };
 // 立ち絵を cv に描く（kind：'face'／'body'）
 export function drawLook(cv, P, L, kind = 'body') {
@@ -441,7 +441,7 @@ const DRAW15 = ['bottom', 'shoes', 'top'], DRAW15_TUCK = ['top', 'bottom', 'shoe
 function wearCatalog(J) {
   const parts = [], sets = [];
   for (const [c, C] of Object.entries(J.chars)) for (const [w, W] of Object.entries(C.wears || {})) {
-    const ps = {}; for (const [k, f] of Object.entries(W.parts || {})) { const id = `${c}.${w}.${k}`; ps[k] = id; parts.push({ id, kind: k, file: f, name: `${W.name || w}の${W.partNames?.[k] || WEAR15_PARTS.find(q => q[0] === k)?.[1] || k}`, owner: c }); }
+    const ps = {}; for (const [k, f] of Object.entries(W.parts || {})) { const id = `${c}.${w}.${k}`; ps[k] = id; parts.push({ id, kind: k, file: f, name: `${W.name || w}の${W.partNames?.[k] || WEAR15_PARTS.find(q => q[0] === k)?.[1] || k}`, owner: c, poses: k === 'top' ? W.poses || {} : null }); }   // poses：ポーズごとのトップス（top・topFront）
     sets.push({ id: `${c}.${w}`, name: W.name || w, parts: ps, owner: c });
   }
   return { parts, sets };
@@ -467,6 +467,20 @@ export const bigHairStyles = P => P.big.ids.map(c => [c, P.big.J.chars[c].name +
 export const bigItems = P => P.big.J.items.map(it => [it.id, it.name || it.id]);
 export function toggleItem15(P, L, id) { const s = new Set(L.items15 || []); if (s.has(id)) s.delete(id); else s.add(id); if (s.size) L.items15 = [...s]; else L.items15 = []; }   // [] ＝ ぜんぶはずした（ふだんの装飾品も付けない）
 export const bigHairs = P => Object.entries(P.big.J.hairPresets).map(([k, h]) => [k, h.base]);
+// ポーズ（2026-11-27 くりた「ポーズ機能実装しよう」）：look.pose15 ＝ '<ポーズ>.<手>'（例 'r_up.peace'）。撮影の設定（photo.pose15）から入る
+//   素体の体をポーズの体にかえ、トップスをそのポーズの版にかえ、ひじから先（手）とそで（topFront）を前髪・顔より前に重ねる
+//   ポーズの版がないトップスを着ているとき・デザインの服のときは、立ちのまま
+function poseOf(P, L) {
+  const B = P.big, J = B.J, [id, hand] = String(L.pose15 || '').split('.'), D = J.poses?.[id];
+  if (!D || !(D.hands || []).some(h => h.id === hand) || L.w15 === 'design' || L.w15 === 'tshirt') return null;
+  const top = L.w15 === 'parts' && L.p15?.top ? B.wears.parts.find(q => q.id === L.p15.top) : null;
+  if (top && !top.poses?.[id]?.top) return null;
+  return { id, hand, D, top: top ? top.poses[id] : null };
+}
+// えらべるポーズ：[番号, 名前]（いまの服で着られる物だけ）。はじめは「立ち」（''）
+export const bigPoses = (P, L) => { const J = P.big?.J; if (!J?.poses) return []; const out = [];
+  for (const id of J.poses.order || []) for (const h of J.poses[id]?.hands || []) { const v = `${id}.${h.id}`; if (poseOf(P, { ...L, pose15: v })) out.push([v, h.name]); }
+  return out.length ? [['', '立ち'], ...out] : []; };
 // 表情（FACES の id）を、顔の部品ごとの表情（faceParts.exprs）にする。e：目、b：まゆ、m：口（ないときは ふだん）
 const EXPR15 = { smile: { m: 'smile' }, grin: { e: 'smile', b: 'smile', m: 'smile' }, close: { e: 'close', b: 'close', m: 'close' }, wink: { e: 'wink', b: 'wink', m: 'wink' },
   wow: { e: 'surprise', b: 'surprise', m: 'surprise' }, komari: { e: 'trouble', b: 'trouble', m: 'trouble' }, shy: { e: 'shy', b: 'shy', m: 'shy' }, smug: { e: 'jito', m: 'wink' },
@@ -475,9 +489,10 @@ async function loadBig() {
   const J = await (await fetch(BASE15 + 'parts15.json')).json(), IM = {}, files = new Set([J.sotaiBody, ...Object.values(J.wear)]);
   const SC = J.shared?.cheek; if (SC) for (const k of Object.keys(SC.kinds)) files.add(SC.path.replace('{kind}', k));
   J.items = J.items || []; for (const it of J.items) for (const k of ['front', 'back']) if (it[k]) files.add(it[k]);   // 小物・装飾品
+  for (const id of J.poses?.order || []) { const D = J.poses[id]; if (!D) continue; files.add(D.body); for (const h of D.hands || []) files.add(D.front.replace('{hand}', h.id)); }   // ポーズ：素体の体と、手（ひじから先）
   const chars = {};
   for (const [c, C] of Object.entries(J.chars)) {
-    Object.values(C.layers).forEach(f => files.add(f)); for (const w of Object.values(C.wears || {})) Object.values(w.parts).forEach(f => files.add(f));
+    Object.values(C.layers).forEach(f => files.add(f)); for (const w of Object.values(C.wears || {})) { Object.values(w.parts).forEach(f => files.add(f)); for (const p of Object.values(w.poses || {})) Object.values(p).forEach(f => typeof f === 'string' && files.add(f)); }
     if (C.design && !C.wears) { files.add(C.design.body); files.add(C.design.wear); }
     const F = C.faceParts; if (F) { for (const k of F.order) if (k !== 'cheek' || !SC) for (const e of F.exprs) files.add(F.path.replace('{part}', k).replace('{expr}', e)); }
     else files.add(C.faceNoCheek || C.faces.normal.replace('face.png', 'face_nocheek.png'));
@@ -592,12 +607,12 @@ function composeBig(P, L) {
   const adj = hairAdj(L), hairIm = (n, at) => { const [im, xy] = fitHair15(P, hair15(P, Hy[n], preset), hid, L.big, [0, 0], at, adj, `${hid}/${n}/${L.big}/${preset}/${at}/${adj.s},${adj.dy},${adj.dx}`); return [im, xy]; };   // 髪：頭の大きさに合わせる
   const hairTo = (g, n, at, f) => { const [im, xy] = hairIm(n, at); if (!im) return; if (!wind) return g.drawImage(im, ...xy);
     const [q, qg] = mk(); qg.drawImage(im, ...xy); g.drawImage(blow(q, wind * f * K15, (HD ? HD.y0 : 57) + hb[1] + 21, 165), 0, 0); };   // 風：後ろ髪は大きく、前髪は少しだけ
-  const sk = L.colors?.skin;
+  const sk = L.colors?.skin, PZ = design ? null : poseOf(P, L);
   if (design) { hairTo(bk, 'hair_back', [0, 0], 7); body.push([B.IM[C.design.body], 0, 0]); wear.push([B.IM[C.design.wear], 0, 0]); }   // デザインの服：そのキャラの絵の体ごと、offset なし
   else {
-    hairTo(bk, 'hair_back', o, 7); body.push([skin15(P, J.sotaiBody, sk), 0, 0]); hg.drawImage(skin15(P, C.layers.head, sk), ...o);   // 肌の色（look.colors.skin）
+    hairTo(bk, 'hair_back', o, 7); body.push([skin15(P, PZ ? PZ.D.body : J.sotaiBody, sk), 0, 0]); hg.drawImage(skin15(P, C.layers.head, sk), ...o);   // 肌の色（look.colors.skin）。ポーズのときは、ポーズの体
     if (L.w15 === 'tshirt') wear.push([B.IM[J.wear.tshirt], 0, 0]);
-    else for (const k of L.tuck15 ? DRAW15_TUCK : DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (it) wear.push([B.IM[it.file], 0, 0]); }   // 服は offset なし
+    else for (const k of L.tuck15 ? DRAW15_TUCK : DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (it) wear.push([B.IM[k === 'top' && PZ?.top ? PZ.top.top : it.file], 0, 0]); }   // 服は offset なし。ポーズのときは、トップスをそのポーズの版に
   }
   // 小物・装飾品（look.items15）：頭に付く物は headOf のキャラの頭の位置（offset）に置いて、頭といっしょにかしげる。後ろの層は後ろ髪のあと、前の層は前髪のあと
   const its = (L.items15 || []).map(id => J.items.find(q => q.id === id)).filter(Boolean), itAt = it => (design ? [0, 0] : it.head ? (J.chars[it.headOf]?.offset || o) : [0, 0]);
@@ -631,5 +646,6 @@ function composeBig(P, L) {
   x.drawImage(rot(backC), 0, 0); for (const [im, dx, dy] of body) im && x.drawImage(im, dx, dy); if (!design) x.drawImage(rot(headF), 0, 0);
   for (const [im, dx, dy] of wear) im && x.drawImage(im, dx, dy);
   x.drawImage(rot(topC), 0, 0);
+  if (PZ) { const a = skin15(P, PZ.D.front.replace('{hand}', PZ.hand), sk); a && x.drawImage(a, 0, 0); const f = PZ.top?.topFront && B.IM[PZ.top.topFront]; f && x.drawImage(f, 0, 0); }   // ポーズ：ひじから先（手）と、そで。前髪・顔より前
   return c;
 }

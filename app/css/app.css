@@ -304,7 +304,7 @@ dl.rec dd{margin:0}
 .cam .opt[aria-pressed="true"] i{box-shadow:0 0 0 2.5px #FFD66B}
 .cam .opt.pose[aria-pressed="true"] i,.cam .opt.face[aria-pressed="true"] i{background:rgba(255,253,248,.92)}
 .cam .opt canvas{position:absolute;display:block}
-.cam .opt.pose canvas{left:50%;top:-1px;height:92px;transform:translateX(-50%)}
+.cam .opt.pose canvas{left:0;top:0;width:52px;height:52px}
 .cam .opt.face canvas{left:0;top:0;width:52px;height:52px}
 .cam .gl{flex:none;align-self:flex-start;height:52px;writing-mode:vertical-rl;text-align:center;font-size:10px;font-weight:700;line-height:1;color:rgba(255,253,248,.6);letter-spacing:1px;margin:0 -4px 0 2px}
 .cam .gl:first-child{margin-left:-6px}
