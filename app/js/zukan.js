@@ -3,7 +3,7 @@ import { PLACES, placeById, LABEL, TIMES, WEATHERS, PLAIN_BG } from './places.js
 // キャラのポーズ（コマの順。assets の data.json の charaPoses と同じ）
 //   体は1つで、腕を差し替える（2026-11-26）。番号は前の13ポーズのまま。なくなったポーズ（ジャンプ・撮る・ながめる・歩く・ハート・地図・自撮り）のカードは、立ちで出る
 const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さし'], [4, '手をふる'], [7, '持つ']];
-import { loadParts as loadChara2, FACES, facesOf, fixLook as fixLook2, drawLook, bigPoses, bigArmAngles, armsOfPose, handsOfPose, poseStr, bigHands } from './chara2.js';
+import { loadParts as loadChara2, FACES, facesOf, fixLook as fixLook2, drawLook, bigPoses, bigArmAngles, armsOfPose, handsOfPose, poseStr, bigHands, UNIQUE_POSE } from './chara2.js';
 import { book, cardsOf, cardById, setPhoto, defaultLook, shown, setFav, settings } from './store.js';
 import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS, reduceMotion } from './card.js';
@@ -188,8 +188,10 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
         // プリセットの欄（名前のついたポーズ）と、細かくいじれる欄（右うで・左うでの角度を、それぞれえらぶ）。2026-11-27 くりた
         const ang = bigArmAngles(P, base), [r, l] = armsOfPose(ph.pose15), [hr, hl] = handsOfPose(ph.pose15), pv = (rr, ll, h1 = '', h2 = '') => poseStr(rr, ll, h1, h2) || undefined;
         const cur = { ...base, pose15: ph.pose15 }, hR = bigHands(P, cur, 'R'), hL = bigHands(P, cur, 'L');   // 手（グー・ピース・はーい）：手をかえられる服と角度のときだけ
-        strip.innerHTML = list.length ? `<span class="gl">ポーズ</span>${list.map(([v, n]) => opt('pose15', v, n, '<canvas></canvas>', 'pose')).join('')}`
-          + `<span class="gl">右うで</span>${ang.map(([a, n]) => opt('armr', a, n, '<canvas></canvas>', 'pose arm')).join('')}<span class="gl">左うで</span>${ang.map(([a, n]) => opt('arml', a, n, '<canvas></canvas>', 'pose arm')).join('')}`
+        const uq = list.filter(([v]) => v === UNIQUE_POSE), ls = list.filter(([v]) => v !== UNIQUE_POSE);   // そのキャラだけのポーズは「固有」の欄に（2026-11-28 くりた）
+        strip.innerHTML = list.length ? `<span class="gl">ポーズ</span>${ls.map(([v, n]) => opt('pose15', v, n, '<canvas></canvas>', 'pose')).join('')}`
+          + (uq.length ? `<span class="gl">固有</span>${uq.map(([v, n]) => opt('pose15', v, n, '<canvas></canvas>', 'pose')).join('')}` : '')
+          + (ang.length ? `<span class="gl">右うで</span>${ang.map(([a, n]) => opt('armr', a, n, '<canvas></canvas>', 'pose arm')).join('')}<span class="gl">左うで</span>${ang.map(([a, n]) => opt('arml', a, n, '<canvas></canvas>', 'pose arm')).join('')}` : '')
           + (hR.length ? `<span class="gl">右手</span>${hR.map(([h, n]) => opt('handr', h, n, '<canvas></canvas>', 'pose arm')).join('')}` : '')
           + (hL.length ? `<span class="gl">左手</span>${hL.map(([h, n]) => opt('handl', h, n, '<canvas></canvas>', 'pose arm')).join('')}` : '')
           : '<span class="gl">この服では、ポーズはまだえらべません</span>';
@@ -198,8 +200,9 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     }
     if (mode !== 'face') return;
     loadChara2().then(P => { const base = fixLook2(P, look());
-      if (mode !== 'face') return; strip.querySelectorAll('.opt.face.uniq').forEach(b => b.remove());   // そのキャラだけの表情（6番の「ぷいっ」など）を、列の終わりに足す
-      strip.insertAdjacentHTML('beforeend', facesOf(P, base).filter(([id]) => id.startsWith('u:')).map(([id, n]) => opt('face', id, n, '<canvas></canvas>', 'face uniq')).join('')); marks();
+      if (mode !== 'face') return; strip.querySelectorAll('.opt.face.uniq, .gl.uniq').forEach(b => b.remove());   // そのキャラだけの表情（6番の「ぷいっ」など）を、列の終わりの「固有」の欄に足す
+      const uf = facesOf(P, base).filter(([id]) => id.startsWith('u:'));
+      if (uf.length) strip.insertAdjacentHTML('beforeend', `<span class="gl uniq">固有</span>${uf.map(([id, n]) => opt('face', id, n, '<canvas></canvas>', 'face uniq')).join('')}`); marks();
       strip.querySelectorAll('.opt.face').forEach(b => { const c = b.querySelector('canvas'); if (c) drawLook(c, P, { ...base, face: b.dataset.face || undefined, turn: +ph.turn || undefined, tilt: +ph.tilt || undefined }, 'face'); }); }).catch(() => {});
   }
   const marks = () => {   // えらんでいるものに印
