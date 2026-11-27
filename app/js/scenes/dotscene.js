@@ -44,6 +44,7 @@ export async function buildDot(cfg) {
   const names = ['sky', 'scene', 'front', 'chara', ...skyNames];
   if (D.pal.main_night) names.push('scene_night', 'front_night');
   if (D.snowScene) names.push('scene_snow', 'front_snow');
+  if (D.pal.main_nightw) names.push('scene_nightw', 'front_nightw');   // 冬の夜の絵（表参道のイルミネーションなど）
   if (D.sprites?.boat) names.push('boat');
   if (D.sprites?.gull) names.push('gulls');
   const tex = await loadTextures(base, names);
@@ -77,12 +78,12 @@ export async function buildDot(cfg) {
     apply(st) {
       const gray = ['cloudy', 'rain', 'snow'].includes(st.weather);
       const t = (st.time === 'evening' && !gray ? EVENING : (gray ? TIME_GRAY : TIME)[st.time]) || TIME.day, w = WEATHER[st.weather] || WEATHER.clear, tw = both(t, w);
-      // 景色：雪の日は雪の絵、夜は夜の絵、それ以外は昼の絵（季節の色を差し替える）
-      const v = st.weather === 'snow' && D.snowScene ? 'snow' : st.time === 'night' && D.pal.main_night ? 'night' : 'day';
-      const pkey = { day: 'main', night: 'main_night', snow: 'main_snow' }[v];
+      // 景色：雪の日は雪の絵、夜は夜の絵（冬の夜の絵があれば冬はそちら）、それ以外は昼の絵（季節の色を差し替える）
+      const v = st.weather === 'snow' && D.snowScene ? 'snow' : st.time === 'night' && D.pal.main_night ? (st.season === 'winter' && D.pal.main_nightw ? 'nightw' : 'night') : 'day';
+      const pkey = { day: 'main', night: 'main_night', nightw: 'main_nightw', snow: 'main_snow' }[v];
       scn.material.uniforms.tIdx.value = tex[v === 'day' ? 'scene' : 'scene_' + v];
       front.material.uniforms.tIdx.value = tex[v === 'day' ? 'front' : 'front_' + v];
-      const g = v === 'night' ? (gray ? both({ mul: [.85, .86, .92], add: [0, 0, 0], desat: .25 }, w) : w) : v === 'snow' ? both(t, WEATHER.cloudy) : tw;
+      const g = v === 'night' || v === 'nightw' ? (gray ? both({ mul: [.85, .86, .92], add: [0, 0, 0], desat: .25 }, w) : w) : v === 'snow' ? both(t, WEATHER.cloudy) : tw;
       const sc = c => tint(v === 'day' ? season(c, kinds[D.pal.main.indexOf(c)], st.season) : c, g);
       setPal(scn, palTex(D.pal[pkey], sc)); setPal(front, palTex(D.pal[pkey], sc));
       // 空
@@ -92,7 +93,7 @@ export async function buildDot(cfg) {
       setPal(sky, palTex(sname ? D.pal[sname] : D.pal.main, c => tint(c, own ? w : tw)));
       // 海に空を映すのは、昼の絵・雪の絵で空を差し替えたとき（夜の絵は海の明かりがもう描かれている）
       for (const m of [scn, front]) { m.material.uniforms.tSky.value = sky.material.uniforms.tIdx.value; m.material.uniforms.tSkyPal.value = sky.material.uniforms.tPal.value; const eve = sn === 'evening' && v === 'day' ? D.WATER_EVE || D.WATER || 0 : 0;   // 夕焼けの日は、水に夕焼けを映す（WATER_EVE：夕焼けだけ映す名所）
-        m.material.uniforms.uReflE.value = eve; m.material.uniforms.uRefl.value = !eve && sname && v !== 'night' && D.WATER ? D.WATER : 0; }
+        m.material.uniforms.uReflE.value = eve; m.material.uniforms.uRefl.value = !eve && sname && v !== 'night' && v !== 'nightw' && D.WATER ? D.WATER : 0; }
       const night = st.time === 'night' ? 1 : st.time === 'evening' ? .5 : 0;
       for (const m of [scn, front]) {
         m.material.uniforms.uNight.value = night;
