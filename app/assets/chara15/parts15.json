@@ -636,6 +636,76 @@
    "headOf": "c4b",
    "overFace": true,
    "note": "4番の頭に合わせて描いたメガネ（ステップ2で別の部品にした）。頭に付くので headOf の offset で頭といっしょに動かす。目の上にかけるので、重ねる順は 前髪 → 顔 → メガネ（overFace＝true は顔の部品より上）"
+  },
+  {
+   "id": "glasses_g01",
+   "name": "細い金のまるメガネ",
+   "front": "glasses/g01.png",
+   "back": null,
+   "head": true,
+   "headOf": "c4b",
+   "overFace": true,
+   "note": "4番の顔に合わせて描いたメガネ（まるメガネと同じ場所）。重ね方は c4b_glasses と同じ。ほかの子の顔に合うかはまだ見ていない"
+  },
+  {
+   "id": "glasses_g02",
+   "name": "黒ぶちの四角メガネ",
+   "front": "glasses/g02.png",
+   "back": null,
+   "head": true,
+   "headOf": "c4b",
+   "overFace": true,
+   "note": "4番の顔に合わせて描いたメガネ（まるメガネと同じ場所）。重ね方は c4b_glasses と同じ。ほかの子の顔に合うかはまだ見ていない"
+  },
+  {
+   "id": "glasses_g03",
+   "name": "べっこうのボストンメガネ",
+   "front": "glasses/g03.png",
+   "back": null,
+   "head": true,
+   "headOf": "c4b",
+   "overFace": true,
+   "note": "4番の顔に合わせて描いたメガネ（まるメガネと同じ場所）。重ね方は c4b_glasses と同じ。ほかの子の顔に合うかはまだ見ていない"
+  },
+  {
+   "id": "glasses_g04",
+   "name": "赤いウェリントンメガネ",
+   "front": "glasses/g04.png",
+   "back": null,
+   "head": true,
+   "headOf": "c4b",
+   "overFace": true,
+   "note": "4番の顔に合わせて描いたメガネ（まるメガネと同じ場所）。重ね方は c4b_glasses と同じ。ほかの子の顔に合うかはまだ見ていない"
+  },
+  {
+   "id": "glasses_g05",
+   "name": "銀のオーバルメガネ",
+   "front": "glasses/g05.png",
+   "back": null,
+   "head": true,
+   "headOf": "c4b",
+   "overFace": true,
+   "note": "4番の顔に合わせて描いたメガネ（まるメガネと同じ場所）。重ね方は c4b_glasses と同じ。ほかの子の顔に合うかはまだ見ていない"
+  },
+  {
+   "id": "glasses_g06",
+   "name": "上だけふちのメガネ",
+   "front": "glasses/g06.png",
+   "back": null,
+   "head": true,
+   "headOf": "c4b",
+   "overFace": true,
+   "note": "4番の顔に合わせて描いたメガネ（まるメガネと同じ場所）。重ね方は c4b_glasses と同じ。ほかの子の顔に合うかはまだ見ていない"
+  },
+  {
+   "id": "glasses_g07",
+   "name": "ふちなしメガネ",
+   "front": "glasses/g07.png",
+   "back": null,
+   "head": true,
+   "headOf": "c4b",
+   "overFace": true,
+   "note": "4番の顔に合わせて描いたメガネ（まるメガネと同じ場所）。重ね方は c4b_glasses と同じ。ほかの子の顔に合うかはまだ見ていない"
   }
  ],
  "poses": {

@@ -465,7 +465,7 @@ export function bigPickWear(P, L, kind, v) {
 // 髪型の一覧：みんなの髪（[キャラ, 名前]）と、髪の色のプリセット
 export const bigHairStyles = P => P.big.ids.map(c => [c, P.big.J.chars[c].name + 'の髪']);
 export const bigItems = P => P.big.J.items.map(it => [it.id, it.name || it.id]);
-export function toggleItem15(P, L, id) { const s = new Set(L.items15 || []); if (s.has(id)) s.delete(id); else s.add(id); if (s.size) L.items15 = [...s]; else L.items15 = []; }   // [] ＝ ぜんぶはずした（ふだんの装飾品も付けない）
+export function toggleItem15(P, L, id) { const s = new Set(L.items15 || []), I = P.big.J.items, it = I.find(q => q.id === id); if (s.has(id)) s.delete(id); else { if (it?.overFace) for (const q of I) if (q.overFace) s.delete(q.id); s.add(id); } if (s.size) L.items15 = [...s]; else L.items15 = []; }   // [] ＝ ぜんぶはずした（ふだんの装飾品も付けない）。メガネ（overFace）は1つだけ：ほかのをかけたら、前のは外す
 export const bigHairs = P => Object.entries(P.big.J.hairPresets).map(([k, h]) => [k, h.base]);
 // ポーズ（2026-11-27 くりた「ポーズ機能実装しよう」）：look.pose15 ＝ '<ポーズ>.<手>'（例 'r_up.peace'）。撮影の設定（photo.pose15）から入る
 //   素体の体をポーズの体にかえ、トップスをそのポーズの版にかえ、ひじから先（手）とそで（topFront）を前髪・顔より前に重ねる
