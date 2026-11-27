@@ -931,6 +931,7 @@
        "front_L": "c3n/arms/front_L_wrist.png",
        "front_L_fore": "c3n/arms/front_L_fore_wrist.png"
       },
+      "sleeveOverHand": true,
       "handOffset": {
        "up_R": [
         0,
