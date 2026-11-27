@@ -180,6 +180,14 @@
    "base": "#75452F",
    "light": "#88563C",
    "highlight": "#AB7355"
+  },
+  "1番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#4C2E22",
+   "shadow1": "#6F4533",
+   "base": "#AD6F52",
+   "light": "#BE8263",
+   "highlight": "#CF9574"
   }
  },
  "shared": {
@@ -1179,6 +1187,90 @@
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
    "hairPreset": "0番のデザイン"
+  },
+  "c1n": {
+   "name": "1番",
+   "number": 1,
+   "offset": [
+    0,
+    13
+   ],
+   "cheekAnchor": [
+    191,
+    102
+   ],
+   "layers": {
+    "hair_back": "c1n/hair_back.png",
+    "head": "c1n/head.png",
+    "hair_front": "c1n/hair_front.png"
+   },
+   "items": [
+    "c1n_AF"
+   ],
+   "design": {
+    "body": "c1n/body_design.png",
+    "wear": "c1n/wear_design.png",
+    "tucked": false,
+    "note": "デザインの服（そのキャラの絵の体ごと）。手首の小物もこの中。offset はかけない"
+   },
+   "faces": {
+    "normal": "c1n/face.png",
+    "smile": "c1n/face_smile.png",
+    "close": "c1n/face_close.png",
+    "wink": "c1n/face_wink.png",
+    "surprise": "c1n/face_surprise.png",
+    "trouble": "c1n/face_trouble.png",
+    "shy": "c1n/face_shy.png",
+    "angry": "c1n/face_angry.png",
+    "jito": "c1n/face_jito.png",
+    "ikoiko": "c1n/face_ikoiko.png"
+   },
+   "faceNames": {
+    "normal": "ふだん",
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "ikoiko": "行こ行こ！"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c1n/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "smile",
+     "close",
+     "wink",
+     "surprise",
+     "trouble",
+     "shy",
+     "angry",
+     "jito",
+     "ikoiko"
+    ],
+    "uniqueExprs": [
+     "ikoiko"
+    ],
+    "noNose": "鼻はなし（絵では描かせるが、ドットでは外す）",
+    "note": "ほおは shared.cheek ではなく、このキャラの cheeks を使う（顔の部品のいちばん下）"
+   },
+   "cheeks": {
+    "normal": "c1n/cheek_normal.png",
+    "shy": "c1n/cheek_shy.png",
+    "none": null,
+    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
+   },
+   "hairPreset": "1番のデザイン"
   }
  },
  "items": [
@@ -1296,6 +1388,15 @@
    "back": null,
    "head": true,
    "headOf": "c5n",
+   "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
+  },
+  {
+   "id": "c1n_AF",
+   "name": "青いリボン",
+   "front": "c1n/acc_AF.png",
+   "back": null,
+   "head": true,
+   "headOf": "c1n",
    "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
   }
  ],
