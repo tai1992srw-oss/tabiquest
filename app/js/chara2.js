@@ -445,6 +445,7 @@ const DRAW15 = ['bottom', 'shoes', 'top'], DRAW15_TUCK = ['top', 'bottom', 'shoe
 function wearCatalog(J) {
   const parts = [], sets = [];
   for (const [c, C] of Object.entries(J.chars)) for (const [w, W] of Object.entries(C.wears || {})) {
+    if (oldWearHidden(J, c)) continue;   // 差し替えた前の子の服は、新しい子に服があれば出さない
     const ps = {}; for (const [k, f] of Object.entries(W.parts || {})) { const id = `${c}.${w}.${k}`; ps[k] = id; parts.push({ id, kind: k, file: f, name: `${W.name || w}の${W.partNames?.[k] || WEAR15_PARTS.find(q => q[0] === k)?.[1] || k}`, owner: c, arms: k === 'top' ? W.arms || null : null }); }   // arms：うでのポーズの部品（トップスの胴と、うで 角度×右左）
     sets.push({ id: `${c}.${w}`, name: W.name || w, parts: ps, owner: c, tuck: !!W.tuckDefault });   // tuck：もとのデザインはトップスを中に入れる服
   }
@@ -468,7 +469,7 @@ export function bigPickWear(P, L, kind, v) {
 }
 // 髪型の一覧：みんなの髪（[キャラ, 名前]）と、髪の色のプリセット
 export const bigHairStyles = P => P.big.ids.map(c => [c, P.big.J.chars[c].name + 'の髪']);
-export const bigItems = P => P.big.J.items.map(it => [it.id, it.name || it.id]);
+export const bigItems = P => P.big.J.items.filter(it => oldItem(P.big.J, it.id) === undefined).map(it => [it.id, it.name || it.id]);   // 差し替えた前の子のふだんの小物は出さない
 export function toggleItem15(P, L, id) { const s = new Set(L.items15 || []), I = P.big.J.items, it = I.find(q => q.id === id); if (s.has(id)) s.delete(id); else { if (it?.overFace) for (const q of I) if (q.overFace) s.delete(q.id); s.add(id); } if (s.size) L.items15 = [...s]; else L.items15 = []; }   // [] ＝ ぜんぶはずした（ふだんの装飾品も付けない）。メガネ（overFace）は1つだけ：ほかのをかけたら、前のは外す
 export const bigHairs = P => Object.entries(P.big.J.hairPresets).filter(([k]) => !k.startsWith('_')).map(([k, h]) => [k, h.base]);
 // 髪の色（2026-11-27 くりた「髪の色がパッとしない」→ 案A）：あざやかさを上げ、影はむらさき寄り・光は黄色寄りに少しずらす。
@@ -551,10 +552,15 @@ function bigLook(P, id) {
 }
 // 作り直して差し替えたキャラ（2026-11-27 くりた「0番も差し替え」）：前の子はえらべる一覧から外し、前の子の見た目は新しい子で読む。
 //   前の子の部品（c0 の素体の色・Tシャツの服など）はそのまま使う
-const REPLACED15 = { c0: 'c0n' };
+//   2026-11-28 くりた「もろもろ旧版と入れ替えでいいよ」：作り直した5人も差し替え。前の子の服・ふだんの小物は、新しい子の物に読みかえる
+const REPLACED15 = { c0: 'c0n', c1b: 'c1n', c2b: 'c2n', c4b: 'c4n', c6b: 'c6n', c3b: 'c12n' };
+const oldWearHidden = (J, c) => { const n = REPLACED15[c]; return !!(n && J.chars[n] && Object.keys(J.chars[n].wears || {}).length); };
+const oldItem = (J, id) => { for (const [o, n] of Object.entries(REPLACED15)) { if (!J.chars[n]) continue; const i = (J.chars[o]?.items || []).indexOf(id); if (i >= 0) return (J.chars[n].items || [])[i] || null; } return undefined; };   // 前の子のふだんの小物 → 新しい子の同じ番の小物（ない＝null。前の子の物でない＝undefined）
 function fixBig(P, L) {
   const RB = REPLACED15[L.big] && P.big.J.chars[REPLACED15[L.big]]; if (RB) L = { ...L, big: REPLACED15[L.big] };
   if (REPLACED15[L.hair15] && P.big.J.chars[REPLACED15[L.hair15]]) L = { ...L, hair15: REPLACED15[L.hair15] };
+  if (L.p15) { const q = { ...L.p15 }; for (const k of Object.keys(q)) { const [c] = String(q[k]).split('.'), n = REPLACED15[c]; if (oldWearHidden(P.big.J, c)) q[k] = `${n}.${Object.keys(P.big.J.chars[n].wears)[0]}.${k}`; } L = { ...L, p15: q }; }   // 前の子の服 → 新しい子の服
+  if (Array.isArray(L.items15)) L = { ...L, items15: [...new Set(L.items15.map(q => { const r = oldItem(P.big.J, q); return r === undefined ? q : r; }).filter(Boolean))] };
   const B = P.big, C = B.J.chars[L.big], o = { big: L.big };
   if (isBig(P, L.hair15) && L.hair15 !== L.big) o.hair15 = L.hair15;
   if (B.J.hairPresets[L.h15]) o.h15 = L.h15;
@@ -569,7 +575,7 @@ function fixBig(P, L) {
   else if (w === 'parts') { o.w15 = 'parts'; const q = {}; for (const [k] of WEAR15_PARTS) if (B.wears.parts.some(x => x.id === p15?.[k] && x.kind === k)) q[k] = p15[k]; o.p15 = q; }
   else Object.assign(o, bigLook(P, L.big));
   if (L.tuck15 && o.w15 === 'parts' && o.p15?.top && o.p15?.bottom) o.tuck15 = true;   // トップスを中に入れる（上下がそろっているときだけ）
-  if (Array.isArray(L.items15)) { const its = L.items15.filter(q => B.J.items.some(x => x.id === q)); if (its.length) o.items15 = its; else delete o.items15; }   // 小物（はずした物は入らない）
+  if (Array.isArray(L.items15)) { let its = L.items15.filter(q => B.J.items.some(x => x.id === q)); const of = its.filter(q => B.J.items.find(x => x.id === q).overFace); if (of.length > 1) its = its.filter(q => !of.includes(q) || q === of[of.length - 1]); if (its.length) o.items15 = its; else delete o.items15; }   // 小物（はずした物は入らない。メガネは1つだけ）
   const hv = {}; for (const [k, , mn, mx] of HAIR15_VALS) { const v = Math.round(+L.hv15?.[k] || 0); if (v) hv[k] = Math.max(mn, Math.min(mx, v)); } if (Object.keys(hv).length) o.hv15 = hv;   // 髪の調整
   for (const k of ['face', 'blink']) if (L[k]) o[k] = L[k];
   return o;
