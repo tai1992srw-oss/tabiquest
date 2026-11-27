@@ -479,8 +479,6 @@ const hsl = h => { const [r, g, b] = [1, 3, 5].map(i => parseInt(h.slice(i, i + 
 const hex = ([h, s, l]) => { const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
   return '#' + (s ? [f(h + 1 / 3), f(h), f(h - 1 / 3)] : [l, l, l]).map(v => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0')).join(''); };
 const toHue = (h, to, a) => { const d = ((to - h + 1.5) % 1) - .5; return (h + Math.sign(d) * Math.min(Math.abs(d), a) + 1) % 1; };
-const HAIR_NO_VIVID15 = ['32番のデザイン'];   // parts15 の chars.<c>.hairNoVivid がまだないとき用（書き出しに入ったら消してよい）
-const SKIN15 = { c32n: '#FEE7DA' };   // キャラごとのはじめの肌の色（chars.<c>.skin がまだないとき用。32番 2026-11-28 くりた「肌の色もなおして」）
 function vividHair(pre) {
   const o = { ...pre };
   for (const t of ['shadow2', 'shadow1', 'base', 'light', 'highlight']) { if (!pre[t]) continue; let [h, s, l] = hsl(pre[t]); const grey = s < .12;
@@ -530,7 +528,7 @@ async function loadBig() {
   const J = await (await fetch(BASE15 + 'parts15.json')).json(), IM = {}, files = new Set([J.sotaiBody, ...Object.values(J.wear)]);
   const SC = J.shared?.cheek; if (SC) for (const k of Object.keys(SC.kinds)) files.add(SC.path.replace('{kind}', k));
   J.items = J.items || []; for (const it of J.items) for (const k of ['front', 'back']) if (it[k]) files.add(it[k]);   // 小物・装飾品
-  const noVivid = new Set([...HAIR_NO_VIVID15, ...Object.values(J.chars).filter(C => C.hairNoVivid && C.hairPreset).map(C => C.hairPreset)]);   // デザインの色のままにする髪（chars.<c>.hairNoVivid。32番の白い髪 2026-11-28 くりた「コンペ時の白髪が理想」）
+  const noVivid = new Set([...Object.values(J.chars).filter(C => C.hairNoVivid && C.hairPreset).map(C => C.hairPreset)]);   // デザインの色のままにする髪（chars.<c>.hairNoVivid。32番の白い髪 2026-11-28 くりた「コンペ時の白髪が理想」）
   for (const k of Object.keys(J.hairPresets || {})) if (!noVivid.has(k)) J.hairPresets[k] = vividHair(J.hairPresets[k]);   // 髪の色を案A（あざやか）に
   J.hairPresets._base = vividHair(J.colors.hair);   // プリセットのない子（キャラ0）の元の色も、案A に
   if (J.arms?.body) files.add(J.arms.body);   // うでのポーズ：うでのない体
@@ -688,7 +686,7 @@ function composeBig(P, L) {
   const adj = hairAdj(L), hairIm = (n, at) => { const [im, xy] = fitHair15(P, hair15(P, Hy[n], preset), hid, L.big, [0, 0], at, adj, `${hid}/${n}/${L.big}/${preset}/${at}/${adj.s},${adj.dy},${adj.dx}`); return [im, xy]; };   // 髪：頭の大きさに合わせる
   const hairTo = (g, n, at, f) => { const [im, xy] = hairIm(n, at); if (!im) return; if (!wind) return g.drawImage(im, ...xy);
     const [q, qg] = mk(); qg.drawImage(im, ...xy); g.drawImage(blow(q, wind * f * K15, (HD ? HD.y0 : 57) + hb[1] + 21, 165), 0, 0); };   // 風：後ろ髪は大きく、前髪は少しだけ
-  const sk = L.colors?.skin || C.skin || SKIN15[L.big], PZ = design ? null : poseOf(P, L);   // 肌：お着替えでえらんだ色 → キャラのはじめの肌の色
+  const sk = L.colors?.skin || C.skin, PZ = design ? null : poseOf(P, L);   // 肌：お着替えでえらんだ色 → キャラのはじめの肌の色（chars.<c>.skin。32番 2026-11-28 くりた「肌の色もなおして」）
   if (design) { hairTo(bk, 'hair_back', [0, 0], 7); body.push([B.IM[C.design.body], 0, 0]); wear.push([B.IM[C.design.wear], 0, 0]); }   // デザインの服：そのキャラの絵の体ごと、offset なし
   else {
     hairTo(bk, 'hair_back', o, 7); body.push([skin15(P, PZ ? J.arms.body : J.sotaiBody, sk), 0, 0]); hg.drawImage(skin15(P, C.layers.head, sk), ...o);   // 肌の色（look.colors.skin）。ポーズのときは、ポーズの体

@@ -2338,6 +2338,8 @@
     "img": "c32n/pose_unique.png",
     "name": "くまをぎゅっとだきしめる"
    },
+   "hairNoVivid": true,
+   "skin": "#FEE7DA",
    "wears": {
     "uniform": {
      "name": "32番の服",
