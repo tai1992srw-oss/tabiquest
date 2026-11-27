@@ -447,7 +447,8 @@ function wearCatalog(J) {
   return { parts, sets };
 }
 // 服のひとそろいの一覧（お着替えの「セット」）：[番号, 名前]。'tshirt'・そのキャラのデザインの服・みんなの服・'sotai'（素体＝なにも着ない）
-export const bigWears = (P, id) => { const C = P.big.J.chars[id]; return [['tshirt', 'Tシャツ'], ...P.big.wears.sets.map(s => [s.id, s.name]), ...(C.design && !C.wears ? [['design', 'デザインの服']] : []), ['sotai', '素体']]; };
+const TSHIRT_SET = 'c0.tshirt';   // 分けたTシャツ（2026-11-27）。あれば、前の1枚の Tシャツ（wear/tshirt.png）のかわりに使う
+export const bigWears = (P, id) => { const C = P.big.J.chars[id]; return [...(P.big.wears.sets.some(q => q.id === TSHIRT_SET) ? [] : [['tshirt', 'Tシャツ']]), ...P.big.wears.sets.map(s => [s.id, s.name]), ...(C.design && !C.wears ? [['design', 'デザインの服']] : []), ['sotai', '素体']]; };
 export const bigParts = (P, kind) => P.big.wears.parts.filter(q => q.kind === kind).map(q => [q.id, q.name]);   // 部分ごとの一覧
 // えらんでいるか・えらぶ（kind：'set' か 部分。v：番号）
 export function bigWearOn(P, L, kind, v) {
@@ -495,6 +496,7 @@ function fixBig(P, L) {
   if (B.J.hairPresets[L.h15]) o.h15 = L.h15;
   // 前の形（w15 にそのキャラの服の名前・off15＝ぬいでいる部分）は、部分の組み合わせに直す
   let w = L.w15, p15 = L.p15;
+  if (w === 'tshirt' && B.wears.sets.some(q => q.id === TSHIRT_SET)) { w = 'parts'; p15 = { ...B.wears.sets.find(q => q.id === TSHIRT_SET).parts }; }   // 前の1枚の Tシャツは、分けた Tシャツに
   if (C.wears?.[w]) { const s = B.wears.sets.find(q => q.id === `${L.big}.${w}`); p15 = { ...s.parts }; for (const k of L.off15 || []) delete p15[k]; w = 'parts'; }
   if (w === 'sotai') { w = 'parts'; p15 = {}; }
   if (w === 'design' && !(C.design && !C.wears)) w = '';

@@ -173,7 +173,28 @@
    "faces": {
     "normal": "c0/face.png"
    },
-   "faceNoCheek": "c0/face_nocheek.png"
+   "faceNoCheek": "c0/face_nocheek.png",
+   "wears": {
+    "tshirt": {
+     "name": "Tシャツ",
+     "layers": [
+      "wear/tshirt_bottom.png",
+      "wear/tshirt_shoes.png",
+      "wear/tshirt_top.png"
+     ],
+     "parts": {
+      "top": "wear/tshirt_top.png",
+      "bottom": "wear/tshirt_bottom.png",
+      "shoes": "wear/tshirt_shoes.png"
+     },
+     "partNames": {
+      "top": "Tシャツ",
+      "bottom": "スカート",
+      "shoes": "くつ・くつ下"
+     },
+     "note": "キャラ0のTシャツの服を3つに分けたもの（スカートはそれだけで着られるように描き直した）。c1b の制服と同じ重ね方、offset なし。wear/tshirt.png（1枚）とは、スカートのウエストのまわりが少しちがう"
+    }
+   }
   },
   "c1b": {
    "name": "キャラ1b",
