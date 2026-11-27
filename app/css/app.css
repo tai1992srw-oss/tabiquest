@@ -164,7 +164,7 @@ table.combo .no{color:#3A4180}
 
 /* ---- 到着演出 ---- カードは画面いっぱい（9:16）。上下のあまりは同じ絵をぼかした色でうめ、文字とボタンは絵の上に重ねる */
 .arrival{position:fixed;inset:0;z-index:50;background:#141329;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;--bar:max(0px,calc((100dvh - 100vw * 16 / 9) / 2));--fade:min(46px,var(--bar))}
-.arrival .bgblur{position:absolute;inset:-48px;background:center/cover no-repeat;filter:blur(30px) brightness(.5) saturate(1.15);opacity:0;transition:opacity 1.8s}
+.arrival .bgblur{position:absolute;inset:-48px;background:center/cover no-repeat;filter:blur(30px) saturate(1.1);opacity:0;transition:opacity 1.8s}
 .arrival.go .bgblur{opacity:1}
 .arrival .stage{position:relative;display:flex;justify-content:center;width:min(100vw,calc(100dvh * .5625));height:min(100dvh,calc(100vw / .5625))}
 .arrival .card{width:100%;height:100%;border:none;box-shadow:none;aspect-ratio:auto;background:none;overflow:visible;z-index:2}
@@ -183,7 +183,7 @@ table.combo .no{color:#3A4180}
 .flash{position:absolute;inset:0;background:#FFF8E6;opacity:0;pointer-events:none;z-index:4}
 .flash.on{animation:flash .65s ease-out both}
 .confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;image-rendering:pixelated}
-.after{position:absolute;left:0;right:0;bottom:0;z-index:7;display:flex;flex-direction:column;gap:3px;padding:min(110px,13dvh) 18px calc(env(safe-area-inset-bottom) + 24px);background:linear-gradient(rgba(20,19,41,0),rgba(20,19,41,.88) 48%,#141329);color:#FFFDF8;opacity:0;transform:translateY(14px);pointer-events:none}
+.after{position:absolute;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:7;display:flex;flex-direction:column;gap:3px;padding:16px 16px 14px;border-radius:24px;background:rgba(255,253,248,.82);-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);box-shadow:0 8px 28px rgba(20,19,41,.18);color:#2B2A4C;opacity:0;transform:translateY(14px);pointer-events:none}
 .after.on{opacity:1;transform:none;transition:opacity .35s,transform .35s;pointer-events:auto}
 .after .got{display:flex;align-items:center;gap:8px}
 .after .got b{font:900 19px/1.3 var(--sans)}
@@ -191,9 +191,9 @@ table.combo .no{color:#3A4180}
 .after .gsub{margin:0;font:700 12px/1.5 var(--sans);opacity:.9}
 .after .row{display:flex;flex-wrap:nowrap;gap:10px;margin-top:9px}
 .arrival .after button{height:54px;min-height:0;border:0;border-radius:18px;padding:0;font-family:var(--sans)}
-.arrival .after .go{flex:1.6;background:#FFFDF8;color:#2B2A4C;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px}
+.arrival .after .go{flex:1.6;background:#2B2A4C;color:#FFFDF8;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px}
 .arrival .after .go .ic{color:#8A6CE0}
-.arrival .after .later{flex:1;background:rgba(255,253,248,.16);color:#FFFDF8;font-weight:700;font-size:14px}
+.arrival .after .later{flex:1;background:rgba(43,42,76,.08);color:#2B2A4C;font-weight:700;font-size:14px}
 .arrival .skip{position:absolute;right:14px;bottom:calc(env(safe-area-inset-bottom) + 18px);z-index:8;height:36px;min-height:0;border:0;border-radius:99px;padding:0 14px;font:700 12px var(--sans);background:rgba(20,19,41,.6);color:#FFFDF8}
 @keyframes tFade{from{opacity:0}}
 @keyframes tSlide{from{opacity:0;transform:translateX(-4cqw)}}
