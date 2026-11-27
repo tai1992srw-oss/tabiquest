@@ -3,7 +3,7 @@
 //   見た目（look）と、絵の組み立ては chara2.js。絵は描き足さない
 //   輪郭を替えると、バランスはその輪郭のプリセットになる（そこから自由に動かせる）
 import { settings, saveSettings } from './store.js';
-import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf, bigWears, bigHairs, bigParts, bigWearOn, bigPickWear, bigHairStyles, WEAR15_PARTS } from './chara2.js';
+import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf, bigWears, bigHairs, bigParts, bigWearOn, bigPickWear, bigHairStyles, WEAR15_PARTS, HAIR15_VALS } from './chara2.js';
 import { esc, toast } from './ui.js';
 
 const ICON = { rin: '◯', eye: '◉', brow: '⌒', mouth: '◡', cheek: '❀', hairF: '✂', hairB: '≋', wear: '♥' };
@@ -61,6 +61,8 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
       body.querySelectorAll('[data-w15]').forEach(b => { const v = b.dataset.w15; b.setAttribute('aria-pressed', String(bigWearOn(P, L, f, v))); const t = clone(L); bigPickWear(P, t, f, v); drawLook(b.querySelector('canvas'), P, fixLook(P, t), 'body'); });
     } else if (tab.kind === 'h15') {   // b版の髪：髪型（みんなの髪）と、髪の色（プリセット）
       if (full) body.innerHTML = `<div class="du-colors"><span class="du-lab">髪の色</span><div class="du-sws"><button class="du-sw none" data-h15="" aria-label="髪の色を元の色に">元</button>${bigHairs(P).map(([k, c]) => `<button class="du-sw" data-h15="${esc(k)}" style="background:${c}" aria-label="${esc(k)}" title="${esc(k)}"></button>`).join('')}</div></div><div class="du-grid face">${bigHairStyles(P).map(([c, n]) => `<button class="du-item" data-hs15="${c}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
+      if (full) body.insertAdjacentHTML('beforeend', `<p class="du-hint">髪は、頭の大きさに合わせて置きます。合わないときは、ここで直せます（±0＝頭に合わせた所）</p>${sliders(HAIR15_VALS)}<div class="du-shape"><button data-a="hair15_0">髪の大きさと位置をもどす</button></div>`);
+      setSliders();
       body.querySelectorAll('[data-h15]').forEach(b => b.setAttribute('aria-pressed', String((L.h15 || '') === b.dataset.h15)));
       body.querySelectorAll('[data-hs15]').forEach(b => { const c = b.dataset.hs15; b.setAttribute('aria-pressed', String((L.hair15 || L.big) === c)); drawLook(b.querySelector('canvas'), P, fixLook(P, { ...L, hair15: c }), 'face'); });
     } else if (tab.kind === 'items') {   // 持ち物・かざり：押すと付ける・はずす（同じ所に付く物は入れかわる）。いくつでも組み合わせられる
@@ -97,7 +99,10 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   const setColor = (x, k, hex) => { const c = { ...(x.colors || {}) }; if (hex) c[k] = hex; else delete c[k]; if (Object.keys(c).length) x.colors = c; else delete x.colors; };
   const sliders = list => list.map(([k, nm, mn, mx, hint]) => `<div class="du-sl" data-k="${k}"><b>${nm}</b><button data-d="-1" aria-label="${nm}を1へらす">−</button><input type="range" min="${mn}" max="${mx}" step="1" aria-label="${nm}"><button data-d="1" aria-label="${nm}を1ふやす">＋</button><output></output><small>${hint}</small></div>`).join('');
   const sg = n => (n > 0 ? '+' + n : n === 0 ? '±0' : String(n));   // どの値も、キャラ1（髪は、輪郭に合わせた所）を ±0 として見せる
-  const setSliders = () => body.querySelectorAll('.du-sl').forEach(s => { s.querySelector('input').value = L.v[s.dataset.k]; s.querySelector('output').textContent = sg(L.v[s.dataset.k]); });
+  // スライダーの値：b版は髪の調整（look.hv15）、前の版は look.v
+  const vGet = (x, k) => (x.big ? +(x.hv15?.[k] || 0) : x.v[k]);
+  const vSet = (x, k, n) => { if (!x.big) { x.v[k] = n; return; } const h = { ...(x.hv15 || {}) }; if (n) h[k] = n; else delete h[k]; if (Object.keys(h).length) x.hv15 = h; else delete x.hv15; };
+  const setSliders = () => body.querySelectorAll('.du-sl').forEach(s => { s.querySelector('input').value = vGet(L, s.dataset.k); s.querySelector('output').textContent = sg(vGet(L, s.dataset.k)); });
   // 部品を替える。輪郭を替えたら、バランスをその輪郭のプリセットにする
   const pick = (t, k, c) => { if (k === 'hair') { t.hairF = c; t.hairB = c; } else t[k] = c; if (k === 'rin') t.v = presetOf(P, c, t.v); };
   const cur = (t, k) => (k === 'hair' ? (t.hairF === t.hairB ? t.hairF : null) : t[k]);   // 前髪と後ろ髪がちがう見た目（前に残した物）は、どれにも印を付けない
@@ -115,7 +120,8 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
     else if (b.dataset.wf) { wf = b.dataset.wf; renderBody(); }
     else if (b.dataset.w !== undefined) { if (!wearOn(P, L, wf, b.dataset.w)) change(x => pickWear(P, x, wf, b.dataset.w)); }
     else if (b.dataset.v !== undefined) { if (cur(L, tab.id) !== b.dataset.v) change(x => pick(x, tab.id, b.dataset.v)); }
-    else if (b.dataset.d) { const s = b.closest('.du-sl'), r = s.querySelector('input'), nv = Math.max(+r.min, Math.min(+r.max, L.v[s.dataset.k] + +b.dataset.d)); if (nv !== L.v[s.dataset.k]) change(x => { x.v[s.dataset.k] = nv; }); }
+    else if (b.dataset.d) { const s = b.closest('.du-sl'), r = s.querySelector('input'), k = s.dataset.k, nv = Math.max(+r.min, Math.min(+r.max, vGet(L, k) + +b.dataset.d)); if (nv !== vGet(L, k)) change(x => vSet(x, k, nv)); }
+    else if (a === 'hair15_0') { if (L.hv15) change(x => { delete x.hv15; }); }
     else if (a === 'preset') { const pv = presetOf(P, L.rin, L.v); if (!same(pv, L.v)) change(x => { x.v = pv; }); }
     else if (a === 'hair0') { if (HAIR_VALS.some(([k]) => L.v[k])) change(x => { for (const [k] of HAIR_VALS) x.v[k] = 0; }); }
     else if (b.dataset.coord !== undefined) { const c = coords()[+b.dataset.coord]; if (c) { change(x => { for (const k of Object.keys(x)) delete x[k]; Object.assign(x, fixLook(P, c.look)); }); renderBody(); } }
@@ -135,7 +141,7 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   root.addEventListener('input', e => {
     if (!P) return;
     if (e.target.type === 'color') { const k = e.target.closest('.du-colors').dataset.k; if (!sliding) sliding = clone(L); setColor(L, k, e.target.value); markColors(k); paint(); onChange?.(clone(L)); return; }   // 色を自由にえらぶ
-    const s = e.target.closest('.du-sl'); if (!s) return; if (!sliding) sliding = clone(L); L.v[s.dataset.k] = +e.target.value; s.querySelector('output').textContent = sg(+e.target.value); paint(); onChange?.(clone(L));
+    const s = e.target.closest('.du-sl'); if (!s) return; if (!sliding) sliding = clone(L); vSet(L, s.dataset.k, +e.target.value); s.querySelector('output').textContent = sg(+e.target.value); paint(); onChange?.(clone(L));
   });
   root.addEventListener('change', e => { if (!(e.target.closest('.du-sl') || e.target.type === 'color') || !sliding) return; hist.push(sliding); sliding = null; root.querySelector('[data-a=undo]').disabled = false; renderBody(false); });
   addEventListener('resize', paint); document.addEventListener('keydown', onKey);

@@ -481,7 +481,8 @@ async function loadBig() {
   }
   await Promise.all([...files].map(async f => { IM[f] = await image(BASE15 + f).catch(() => null); }));
   const ids = Object.keys(J.chars).sort((a, b) => (a === 'c0') - (b === 'c0') || a.localeCompare(b));   // キャラ1b・2b… の順、キャラ0 は最後
-  return { J, IM, ids, chars, wears: wearCatalog(J), tint: new Map() };
+  for (const [c, C] of Object.entries(J.chars)) chars[c].head = bbox(IM[C.layers.head]);   // 頭の大きさ（頭の絵の、ドットのある所。offset をかける前）
+  return { J, IM, ids, chars, wears: wearCatalog(J), tint: new Map(), fit: new Map() };
 }
 // そのキャラのはじめの見た目：素体に合わせた服があればそれ、なければデザインの服、それもなければ Tシャツ
 function bigLook(P, id) {
@@ -500,8 +501,41 @@ function fixBig(P, L) {
   if (w === 'tshirt' || w === 'design') o.w15 = w;
   else if (w === 'parts') { o.w15 = 'parts'; const q = {}; for (const [k] of WEAR15_PARTS) if (B.wears.parts.some(x => x.id === p15?.[k] && x.kind === k)) q[k] = p15[k]; o.p15 = q; }
   else Object.assign(o, bigLook(P, L.big));
+  const hv = {}; for (const [k, , mn, mx] of HAIR15_VALS) { const v = Math.round(+L.hv15?.[k] || 0); if (v) hv[k] = Math.max(mn, Math.min(mx, v)); } if (Object.keys(hv).length) o.hv15 = hv;   // 髪の調整
   for (const k of ['face', 'blink']) if (L[k]) o[k] = L[k];
   return o;
+}
+function bbox(im) {
+  if (!im) return null; const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height).data; let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  for (let y = 0; y < c.height; y++) for (let q = 0; q < c.width; q++) if (d[(y * c.width + q) * 4 + 3] > 127) { if (q < x0) x0 = q; if (q > x1) x1 = q; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  return { x0, y0, x1, y1, w: x1 - x0 + 1, h: y1 - y0 + 1, cx: (x0 + x1 + 1) / 2 };
+}
+// 髪の合わせ（2026-11-27 くりた「髪のサイズを頭に合わせる」）：ほかの子の髪は、その髪の持ち主の頭と、かぶる子の頭の大きさ（はば・てっぺん〜あご）をくらべて、
+//   頭のてっぺんのまん中を軸に、横とたてをのばしちぢみさせる。さらに、かぶる子ごとのプリセット（HAIR15）と、お着替えでの調整（look.hv15：大きさ％・高さ・横、ドット）を足す
+//   プリセットは「その子に、どの髪をかぶせても、こう直す」値。ここに数字を書く
+export const HAIR15 = { c1b: { s: 0, dy: 0, dx: 0 }, c2b: { s: 0, dy: 0, dx: 0 }, c0: { s: 0, dy: 0, dx: 0 } };
+export const HAIR15_VALS = [['s', '髪の大きさ', -15, 15, '％。頭に合わせた大きさから'], ['dy', '髪の高さ', -12, 12, 'ドット。小さいほど上'], ['dx', '髪の横の位置', -8, 8, 'ドット。小さいほど左']];
+export const hairAdj = L => { const p = HAIR15[L.big] || {}, a = L.hv15 || {}; return { s: (p.s || 0) + (a.s || 0), dy: (p.dy || 0) + (a.dy || 0), dx: (p.dx || 0) + (a.dx || 0) }; };
+// 髪の絵（持ち主の頭の位置 oO で描かれた物）を、かぶる子の頭（oW の位置）に合わせる。返り値：[絵, 置く位置]
+function fitHair15(P, img, owner, wearer, oO, oW, adj, key) {
+  const B = P.big, HO = B.chars[owner].head, HW = B.chars[wearer].head; if (!img || !HO || !HW) return [img, oW];
+  const k = 1 + adj.s / 100, sx = HW.w / HO.w * k, sy = HW.h / HO.h * k;
+  if (Math.abs(sx - 1) < .01 && Math.abs(sy - 1) < .01) return [img, [oW[0] - oO[0] + Math.round(HW.cx - HO.cx) + adj.dx + oO[0], oW[1] + (HW.y0 - HO.y0) + adj.dy]];   // 同じ大きさなら、ずらすだけ（絵は頭の枠の中の物なので、置く位置＝かぶる子の offset ＋ 頭のずれ）
+  if (B.fit.has(key)) return [B.fit.get(key), [0, 0]];
+  const [W, H] = B.J.size, t = document.createElement('canvas'); t.width = W; t.height = H; const tx = t.getContext('2d', { willReadFrequently: true }); tx.drawImage(img, 0, 0);
+  const src = new Uint32Array(tx.getImageData(0, 0, W, H).data.buffer), out = new ImageData(W, H), dst = new Uint32Array(out.data.buffer), OF = [1 / 6, .5, 5 / 6], cnt = new Map();
+  const ax = HO.cx, ay = HO.y0, bx = HW.cx + oW[0] + adj.dx, by = HW.y0 + oW[1] + adj.dy;   // 軸：持ち主の頭のてっぺんのまん中（絵の中）→ かぶる子の頭のてっぺんのまん中（体の上）
+  const dark = v => (v & 255) + ((v >> 8) & 255) + ((v >> 16) & 255) < 300;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    cnt.clear(); let solid = 0;
+    for (const oy of OF) { const yy = Math.floor((y + oy - by) / sy + ay); if (yy < 0 || yy >= H) continue;
+      for (const ox of OF) { const xx = Math.floor((x + ox - bx) / sx + ax); if (xx < 0 || xx >= W) continue; const v = src[yy * W + xx]; if ((v >>> 24) < 128) continue; solid++; cnt.set(v, (cnt.get(v) || 0) + 1); } }
+    if (solid < 5) continue;
+    let best = 0, bn = 0, bd = 0, dn = 0; for (const [v, n] of cnt) { if (n > bn) { bn = n; best = v; } if (n >= 4 && dark(v) && n > dn) { dn = n; bd = v; } }
+    dst[y * W + x] = dn ? bd : best;
+  }
+  tx.putImageData(out, 0, 0); if (B.fit.size > 24) B.fit.delete(B.fit.keys().next().value); B.fit.set(key, t); return [t, [0, 0]];
 }
 // 髪の色：キャラ0の6色（colors.hair）で描いた髪を、プリセットの同じ番の色に置きかえる（色がぴったり同じドットだけ）
 function hair15(P, f, preset) {
@@ -515,15 +549,16 @@ function hair15(P, f, preset) {
 }
 function composeBig(P, L) {
   const B = P.big, J = B.J, C = J.chars[L.big], [W, H] = J.size, o = C.offset || [0, 0], design = L.w15 === 'design' && C.design && !C.wears, fo = design ? [0, 0] : o;
-  const HC = J.chars[L.hair15] || C, preset = L.h15 || HC.hairPreset || '', Hy = HC.layers, ex = EXPR15[L.face] || {}, SC = J.shared?.cheek, F = C.faceParts;   // 髪型は、ほかのキャラの髪でもよい（その子の頭の位置 offset に置く）
+  const hid = J.chars[L.hair15] ? L.hair15 : L.big, HC = J.chars[hid], preset = L.h15 || HC.hairPreset || '', Hy = HC.layers, ex = EXPR15[L.face] || {}, SC = J.shared?.cheek, F = C.faceParts;   // 髪型は、ほかのキャラの髪でもよい（その子の頭の位置 offset に置く）
   const eye = L.blink ? 'close' : ex.e || 'normal', part = k => (k.startsWith('eye') ? eye : k.startsWith('brow') ? ex.b || 'normal' : k === 'mouth' ? ex.m || 'normal' : 'normal');
   const L1 = []; const put = (im, dx = 0, dy = 0) => im && L1.push([im, dx, dy]);
-  if (design) { put(hair15(P, Hy.hair_back, preset)); put(B.IM[C.design.body]); put(B.IM[C.design.wear]); put(hair15(P, Hy.hair_front, preset)); }   // デザインの服：そのキャラの絵の体ごと、offset なし
+  const adj = hairAdj(L), hairAt = (n, at) => { const [im, xy] = fitHair15(P, hair15(P, Hy[n], preset), hid, L.big, [0, 0], at, adj, `${hid}/${n}/${L.big}/${preset}/${at}/${adj.s},${adj.dy},${adj.dx}`); put(im, ...xy); };   // 髪：頭の大きさに合わせる（髪と頭の絵は、どちらも頭の枠の中の物。at＝かぶる子の頭を置く位置）
+  if (design) { hairAt('hair_back', [0, 0]); put(B.IM[C.design.body]); put(B.IM[C.design.wear]); hairAt('hair_front', [0, 0]); }   // デザインの服：そのキャラの絵の体ごと、offset なし
   else {
-    put(hair15(P, Hy.hair_back, preset), ...o); put(B.IM[J.sotaiBody]); put(B.IM[C.layers.head], ...o);
+    hairAt('hair_back', o); put(B.IM[J.sotaiBody]); put(B.IM[C.layers.head], ...o);
     if (L.w15 === 'tshirt') put(B.IM[J.wear.tshirt]);
     else for (const k of DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (it) put(B.IM[it.file]); }   // 服は offset なし
-    put(hair15(P, Hy.hair_front, preset), ...o);
+    hairAt('hair_front', o);
   }
   if (SC) { const a = C.cheekAnchor || SC.ref; put(B.IM[SC.path.replace('{kind}', L.face === 'shy' ? 'shy' : 'normal')], fo[0] + a[0] - SC.ref[0], fo[1] + a[1] - SC.ref[1]); }   // ほお（共通）は顔の部品のいちばん下
   if (F) for (const k of F.order) { if (k === 'cheek' && SC) continue; put(B.IM[F.path.replace('{part}', k).replace('{expr}', part(k))], ...fo); }
