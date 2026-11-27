@@ -215,11 +215,11 @@
   },
   "32番のデザイン": {
    "line": "#211012",
-   "shadow2": "#BC9687",
-   "shadow1": "#D2AFA0",
-   "base": "#EDD4C8",
-   "light": "#F1DACF",
-   "highlight": "#F9EFEA"
+   "shadow2": "#A68B7F",
+   "shadow1": "#C8B2A7",
+   "base": "#F8E9DE",
+   "light": "#FCFCFB",
+   "highlight": "#FEFEFE"
   },
   "33番のデザイン": {
    "line": "#211012",
@@ -247,11 +247,11 @@
   },
   "35番のデザイン": {
    "line": "#211012",
-   "shadow2": "#6D5F5B",
-   "shadow1": "#998884",
-   "base": "#A2908B",
-   "light": "#D6C3BD",
-   "highlight": "#DBC6C0"
+   "shadow2": "#605350",
+   "shadow1": "#796A66",
+   "base": "#A18F8A",
+   "light": "#D1BCB6",
+   "highlight": "#DAC6BF"
   }
  },
  "shared": {
