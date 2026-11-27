@@ -511,9 +511,12 @@ function poseOf(P, L) {
 export const bigHands = (P, L, side) => { const J = P.big?.J, PZ = J?.arms && poseOf(P, L); if (!PZ) return []; const a = side === 'R' ? PZ.r : PZ.l;
   const hs = (J.arms.hands?.[a] || []).filter(h => h === 'gu' || handOk(J, PZ.A, a, side, h)); return hs.length > 1 ? hs.map(h => [h, J.arms.handNames?.[h] || h]) : []; };
 // えらべるポーズ：[番号, 名前]（プリセット。いまの服で着られる物だけ）。はじめは「立ち」（''）
-export const bigPoses = (P, L) => { const J = P.big?.J; if (!J?.arms) return []; const out = [];
-  for (const [v, n] of J.arms.presets || []) { if (v === 'down-down') continue; if (poseOf(P, { ...L, pose15: v })) out.push([v, n]); }
+export const bigPoses = (P, L) => { const J = P.big?.J; if (!J) return []; const out = [];
+  for (const [v, n] of J.arms?.presets || []) { if (v === 'down-down') continue; if (poseOf(P, { ...L, pose15: v })) out.push([v, n]); }
+  const U = J.chars[L.big]?.uniquePose; if (U?.img && P.big.IM[U.img]) out.push([UNIQUE_POSE, U.name || 'とくべつなポーズ']);   // そのキャラだけのポーズ（1まい絵）
   return out.length ? [['', '立ち'], ...out] : []; };
+// そのキャラだけのポーズ（2026-11-28。31番〜）：chars.<c>.uniquePose ＝ { img, name }。384×576 の1まい絵で、着せかえ・表情・髪の色はなし（絵のまま）。look.pose15 ＝ 'unique' のとき、体・服・頭・顔のかわりに、この1まいだけをかく
+export const UNIQUE_POSE = 'unique';
 // うでの角度の一覧（細かくえらぶ欄）：[角度, 名前]。いまの服で着られないときは []
 export const bigArmAngles = (P, L) => { const J = P.big?.J; if (!J?.arms || !poseOf(P, { ...L, pose15: 'up-up' })) return []; return J.arms.angles.map(a => [a, J.arms.names?.[a] || a]); };
 export const armsOfPose = v => ARMS15(v) || ['down', 'down'];
@@ -533,6 +536,7 @@ async function loadBig() {
   for (const [c, C] of Object.entries(J.chars)) {
     Object.values(C.layers).forEach(f => files.add(f)); for (const w of Object.values(C.wears || {})) { Object.values(w.parts).forEach(f => files.add(f)); Object.values(w.arms || {}).forEach(f => typeof f === 'string' && f.endsWith('.png') && files.add(f)); Object.values(w.arms?.wrist || {}).forEach(f => files.add(f)); }   // うでのポーズの部品
     if (C.design && !C.wears) { files.add(C.design.body); files.add(C.design.wear); }
+    if (C.uniquePose?.img) files.add(C.uniquePose.img);   // そのキャラだけのポーズ（1まい絵）
     for (const f of Object.values(C.cheeks || {})) if (typeof f === 'string' && f.endsWith('.png')) files.add(f);   // キャラだけのほお
     const F = C.faceParts; if (F) { for (const k of F.order) if (k !== 'cheek' || !SC) for (const e of F.exprs) files.add(F.path.replace('{part}', k).replace('{expr}', e)); }
     else files.add(C.faceNoCheek || C.faces.normal.replace('face.png', 'face_nocheek.png'));
@@ -666,6 +670,8 @@ function widenBottom(B, im, n) {
 }
 const bbOf = (B, im) => { if (!im) return null; B.bb = B.bb || new Map(); if (!B.bb.has(im)) B.bb.set(im, bbox(im)); return B.bb.get(im); };
 function composeBig(P, L) {
+  { const U = P.big.J.chars[L.big]?.uniquePose, im = U?.img && L.pose15 === UNIQUE_POSE && P.big.IM[U.img];   // そのキャラだけのポーズ：1まい絵だけ
+    if (im) { const [w, h] = P.big.J.size, c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(im, 0, 0); return c; } }
   const B = P.big, J = B.J, C = J.chars[L.big], [W, H] = J.size, o = C.offset || [0, 0], design = L.w15 === 'design' && C.design && !C.wears, fo = design ? [0, 0] : o;
   const hid = J.chars[L.hair15] ? L.hair15 : L.big, HC = J.chars[hid], preset = L.h15 || HC.hairPreset || '_base', Hy = HC.layers, ux = String(L.face || '').startsWith('u:') ? L.face.slice(2) : '', ex = ux ? (C.faceParts?.exprs.includes(ux) ? { e: ux, b: ux, m: ux } : {}) : EXPR15[L.face] || {}, SC = J.shared?.cheek, F = C.faceParts;   // 髪型は、ほかのキャラの髪でもよい（その子の頭の位置 offset に置く）
   const eye = L.blink ? 'close' : ex.e || 'normal', part = k => (k.startsWith('eye') ? eye : k.startsWith('brow') ? ex.b || 'normal' : k === 'mouth' ? ex.m || 'normal' : 'normal');

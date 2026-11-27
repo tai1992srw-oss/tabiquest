@@ -220,6 +220,30 @@
    "base": "#EDD4C8",
    "light": "#F1DACF",
    "highlight": "#F9EFEA"
+  },
+  "33番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#231824",
+   "shadow1": "#3B2A3D",
+   "base": "#47344A",
+   "light": "#564058",
+   "highlight": "#A87BA7"
+  },
+  "34番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#4D221C",
+   "shadow1": "#864135",
+   "base": "#AF5C4B",
+   "light": "#B4604F",
+   "highlight": "#ED9B7B"
+  },
+  "36番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#5F3633",
+   "shadow1": "#7A4642",
+   "base": "#B37068",
+   "light": "#-80000000-80000000-80000000",
+   "highlight": "#DEA295"
   }
  },
  "shared": {
@@ -2148,7 +2172,73 @@
     "none": null,
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
-   "hairPreset": "31番のデザイン"
+   "hairPreset": "31番のデザイン",
+   "uniquePose": {
+    "img": "c31n/pose_unique.png",
+    "name": "スカートをつまんでごあいさつ"
+   },
+   "wears": {
+    "uniform": {
+     "name": "31番の服",
+     "tuckDefault": false,
+     "parts": {
+      "top": "c31n/uniform_top.png",
+      "bottom": "c31n/uniform_bottom.png",
+      "shoes": "c31n/uniform_shoes.png",
+      "socks": "c31n/uniform_socks.png"
+     },
+     "partNames": {
+      "top": "ゴシックワンピース（上）",
+      "bottom": "ゴシックワンピース（スカート）",
+      "shoes": "ストラップシューズ",
+      "socks": "レースのハイソックス"
+     },
+     "note": "うでのポーズつきの服（research/style/pose_r/SI/c31n、SI/export_app.py）。top＝胴＋立ちのうで、bottom＝立ち姿の絵のドットから、shoes＝デザインの服から。上げるの手は handOffset だけ下げて焼きこみ",
+     "arms": {
+      "torso": "c31n/arms/torso.png",
+      "down_R": "c31n/arms/down_R.png",
+      "down_L": "c31n/arms/down_L.png",
+      "up_R": "c31n/arms/up_R.png",
+      "up_R_fore": "c31n/arms/up_R_fore.png",
+      "up_L": "c31n/arms/up_L.png",
+      "up_L_fore": "c31n/arms/up_L_fore.png",
+      "front_R": "c31n/arms/front_R.png",
+      "front_R_fore": "c31n/arms/front_R_fore.png",
+      "front_L": "c31n/arms/front_L.png",
+      "front_L_fore": "c31n/arms/front_L_fore.png",
+      "back_R": "c31n/arms/back_R.png",
+      "back_L": "c31n/arms/back_L.png",
+      "wrist": {
+       "up_R": "c31n/arms/up_R_wrist.png",
+       "up_R_fore": "c31n/arms/up_R_fore_wrist.png",
+       "up_L": "c31n/arms/up_L_wrist.png",
+       "up_L_fore": "c31n/arms/up_L_fore_wrist.png",
+       "front_R": "c31n/arms/front_R_wrist.png",
+       "front_R_fore": "c31n/arms/front_R_fore_wrist.png",
+       "front_L": "c31n/arms/front_L_wrist.png",
+       "front_L_fore": "c31n/arms/front_L_fore_wrist.png"
+      },
+      "handOffset": {
+       "up_R": [
+        0,
+        3
+       ],
+       "up_L": [
+        0,
+        0
+       ],
+       "front_R": [
+        0,
+        0
+       ],
+       "front_L": [
+        0,
+        0
+       ]
+      }
+     }
+    }
+   }
   },
   "c32n": {
    "name": "32番",
@@ -2159,7 +2249,7 @@
    ],
    "cheekAnchor": [
     192,
-    108
+    133
    ],
    "layers": {
     "hair_back": "c32n/hair_back.png",
