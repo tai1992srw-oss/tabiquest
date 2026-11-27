@@ -774,3 +774,13 @@ body.du-open{overflow:hidden}
 .mh-turn canvas{width:100%;height:auto;image-rendering:pixelated;background:var(--paper);border-radius:10px}
 .mihon .du-sl{margin-bottom:6px}
 .mh-out{width:100%;height:56px;border:1px solid var(--line);border-radius:10px;padding:6px;font:11px ui-monospace,monospace;background:var(--paper);color:var(--ink)}
+/* 保存（2026-11-27）：文字ありで保存するあいだだけ、文字を出す。保存のしかたをえらぶ板 */
+.card.savehud .hud,.card.savehud .credit{opacity:1!important;transition:none!important}
+.viewer.story .card.savehud .cap{display:flex}   /* 見るときは上のバーと重なるのでかくしている県・市と番号も、保存には入れる */
+.savepick{position:fixed;inset:0;z-index:80;background:rgba(20,19,41,.35);display:flex;align-items:flex-end;justify-content:center;padding:0 12px calc(env(safe-area-inset-bottom) + 12px)}
+.savepick .sp-box{width:min(100%,420px);display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:24px;background:#FFFDF8;color:#2B2A4C;box-shadow:0 8px 28px rgba(20,19,41,.25);font-family:var(--sans)}
+.savepick b{font:900 15px/1.4 var(--sans);padding:0 4px 2px}
+.savepick button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:56px;padding:10px 16px;border:0;border-radius:16px;background:#2B2A4C;color:#FFFDF8;font:900 15px/1.3 var(--sans);text-align:left}
+.savepick button small{font:700 11.5px/1.4 var(--sans);opacity:.8}
+.savepick button[data-s=plain]{background:#EFEAF8;color:#2B2A4C}
+.savepick .sp-x{min-height:44px;align-items:center;background:none;color:#2B2A4C;font-weight:700;font-size:14px}

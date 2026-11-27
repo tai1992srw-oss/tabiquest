@@ -13,7 +13,7 @@ const TURNS = [[-1, '左を向く', 'u-2'], [0, '正面', 'u0'], [1, '右を向�
 const LEANS = [[-8, '左に大きく', 't-2'], [-4, '左に', 't-1'], [0, 'まっすぐ', 't0'], [4, '右に', 't1'], [8, '右に大きく', 't2']];
 const WINDS = [[-2, '←強い', 'w-2'], [-1, '←弱い', 'w-1'], [0, 'なし', 'w0'], [1, '弱い→', 'w1'], [2, '強い→', 'w2']];
 const TILTS = [[-10, '左に大きく', 't-2'], [-5, '左に', 't-1'], [0, 'まっすぐ', 't0'], [5, '右に', 't1'], [10, '右に大きく', 't2']];   // 新しいキャラは立ち1つ・表情1つなので、ポーズと表情はまだない（前のキャラにはあった）
-import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast, icon } from './ui.js';
+import { cardEl, img, esc, fmtDate, fmtTime, cardNo, toast, icon, drawHud } from './ui.js';
 
 // 図鑑・旅の記録・称号の上に出す切り替え（同じ図鑑タブの中の3つの見方）
 export function zukanTabs(on) {
@@ -263,10 +263,18 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
     if (e.shiftKey) ph.r += (e.deltaY < 0 ? 1 : -1) * .06; else ph.s = Math.max(.4, Math.min(6, ph.s * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
     engine.setState({ ...card, photo: { ...ph }, look: look() }); }, { passive: false });
 
-  async function saveImage() {
+  // 保存：文字あり（題字・県と番号・下の名前と札。ボタンなどは入れない）か、絵だけ（2026-11-27 くりた「2種類できるように」）
+  function askSave() {
+    const s = document.createElement('div'); s.className = 'savepick'; s.setAttribute('role', 'dialog'); s.setAttribute('aria-label', '保存のしかた');
+    s.innerHTML = `<div class="sp-box"><b>保存のしかた</b><button data-s="text">文字ありで保存<small>題字・名前・時間帯などの札も入れる</small></button><button data-s="plain">絵だけで保存<small>文字はなにも入れない</small></button><button data-s="" class="sp-x">やめる</button></div>`;
+    s.addEventListener('click', e => { const b = e.target.closest('button'); if (!b && e.target !== s) return; s.remove(); if (b?.dataset.s) saveImage(b.dataset.s === 'text'); });
+    document.body.append(s);
+  }
+  async function saveImage(withText = false) {
     const src = engine.canvas, k = Math.max(1, Math.round(4 / RS)), c = document.createElement('canvas'); c.width = src.width * k; c.height = src.height * k;
     const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(src, 0, 0, c.width, c.height);
-    const blob = await new Promise(r => c.toBlob(r, 'image/png')); const name = `tabiquest-${p.id}-${fmtDate(card.at, '')}.png`;
+    if (withText && el) { await document.fonts?.ready; el.classList.add('savehud'); try { const box = src.getBoundingClientRect(); drawHud(el, x, box, c.width / box.width); } finally { el.classList.remove('savehud'); } }
+    const blob = await new Promise(r => c.toBlob(r, 'image/png')); const name = `tabiquest-${p.id}-${fmtDate(card.at, '')}${withText ? '' : '-e'}.png`;
     const file = new File([blob], name, { type: 'image/png' });
     if (navigator.canShare?.({ files: [file] })) { try { await navigator.share({ files: [file], title: p.name }); return; } catch (e) { if (e.name === 'AbortError') return; } }
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
@@ -290,7 +298,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
       const on = !card.fav; setFav(card.id, on); b.setAttribute('aria-pressed', String(on));
       toast(on ? 'お気に入りにしました。この名所のいちばん上に出ます' : 'お気に入りをはずしました');
     }
-    else if (a === 'save') saveImage();
+    else if (a === 'save') askSave();
     else if (a === 'dress') {   // この撮影だけのお着替え。カードの画面からひらいたときは、決定でこのカードに残す。撮影の中からひらいたときは、「残す」を押すまで残さない（試し見は残さない）
       const inCam = root.classList.contains('posing'), before = look(), apply = L => { cur = L; sync(); paint(); };
       openDress({ look: before, home: defaultLook(), title: 'お着替え', note: preview ? '試し見なので、残りません' : inCam ? '「残す」を押すと、このカードに残ります' : 'この撮影だけ。ホームのお着替えは変わりません',

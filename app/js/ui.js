@@ -80,6 +80,34 @@ export function cardEl(place, card, { welcome = true } = {}) {
   return el;
 }
 
+// カードの文字（題字・県と番号・下の名前・時間帯などの札）を、保存する絵に描きこむ（2026-11-27 くりた「題字ありでも保存したい」）
+//   画面に出ている文字を1文字ずつ、その場所・字体・色・影のまま写す。札の地の色（background-color）と角丸も写す。ボタンなどの操作は入れない
+//   g：保存する絵の 2d、box：絵（canvas）の画面での場所（getBoundingClientRect）、k：画面の1px が絵の何px か
+const shadowsOf = s => !s || s === 'none' ? [] : s.split(/,(?![^()]*\))/).map(t => { const c = t.match(/rgba?\([^)]*\)|#[0-9a-f]+/i)?.[0] || '#000', n = t.replace(c, '').trim().split(/\s+/).map(parseFloat); return { c, x: n[0] || 0, y: n[1] || 0, b: n[2] || 0 }; });
+export function drawHud(cardEl, g, box, k) {
+  const vis = el => { for (let e = el; e && e !== cardEl.parentNode; e = e.parentElement) { const s = getComputedStyle(e); if (s.display === 'none' || s.visibility === 'hidden' || +s.opacity === 0) return false; } return true; };
+  const at = r => [(r.left - box.left) * k, (r.top - box.top) * k, r.width * k, r.height * k];
+  const els = [...cardEl.querySelectorAll('.hud *, .credit')].filter(vis);
+  for (const el of els) {   // 札の地
+    const s = getComputedStyle(el), bg = s.backgroundColor; if (!bg || bg === 'transparent' || /rgba\(.*,\s*0\)$/.test(bg)) continue;
+    const [x, y, w, h] = at(el.getBoundingClientRect()); if (w <= 0 || h <= 0) continue;
+    g.save(); g.globalAlpha = +s.opacity || 1; g.fillStyle = bg; g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, Math.min(h / 2, (parseFloat(s.borderTopLeftRadius) || 0) * k)) : g.rect(x, y, w, h); g.fill(); g.restore();
+  }
+  const tw = document.createTreeWalker(cardEl, NodeFilter.SHOW_TEXT), rg = document.createRange();
+  for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+    const el = n.parentElement; if (!el || !el.closest('.hud, .credit') || !vis(el) || !n.data.trim()) continue;
+    const s = getComputedStyle(el), sh = shadowsOf(s.textShadow), tate = s.writingMode.startsWith('vertical'), op = (() => { let o = 1; for (let e = el; e && e !== cardEl; e = e.parentElement) o *= +getComputedStyle(e).opacity; return o; })();
+    g.save(); g.globalAlpha = op; g.font = `${s.fontStyle} ${s.fontWeight} ${parseFloat(s.fontSize) * k}px ${s.fontFamily}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = s.color;
+    for (let i = 0; i < n.data.length; i++) {
+      const ch = n.data[i]; if (!ch.trim()) continue; rg.setStart(n, i); rg.setEnd(n, i + 1); const r = rg.getBoundingClientRect(); if (!r.width) continue;
+      const [x, y, w, h] = at(r), cx = x + (tate ? w / 2 : (w - (parseFloat(s.letterSpacing) || 0) * k) / 2), cy = y + h / 2;
+      for (const q of sh) { g.shadowColor = q.c; g.shadowOffsetX = q.x * k; g.shadowOffsetY = q.y * k; g.shadowBlur = q.b * k; g.fillText(ch, cx, cy); }
+      g.shadowColor = 'transparent'; g.fillText(ch, cx, cy);
+    }
+    g.restore();
+  }
+}
+
 // 線のアイコン（24×24、線2px、角丸）。名前は ICONS のキー
 const ICONS = {
   home: '<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>',
