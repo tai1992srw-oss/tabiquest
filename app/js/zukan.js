@@ -3,7 +3,7 @@ import { PLACES, placeById, LABEL, TIMES, WEATHERS, PLAIN_BG } from './places.js
 // キャラのポーズ（コマの順。assets の data.json の charaPoses と同じ）
 //   体は1つで、腕を差し替える（2026-11-26）。番号は前の13ポーズのまま。なくなったポーズ（ジャンプ・撮る・ながめる・歩く・ハート・地図・自撮り）のカードは、立ちで出る
 const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さし'], [4, '手をふる'], [7, '持つ']];
-import { loadParts as loadChara2, FACES, fixLook as fixLook2, drawLook, bigPoses } from './chara2.js';
+import { loadParts as loadChara2, FACES, facesOf, fixLook as fixLook2, drawLook, bigPoses } from './chara2.js';
 import { book, cardsOf, cardById, setPhoto, defaultLook, shown, setFav, settings } from './store.js';
 import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS, reduceMotion } from './card.js';
@@ -190,7 +190,10 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
       return;
     }
     if (mode !== 'face') return;
-    loadChara2().then(P => { const base = fixLook2(P, look()); strip.querySelectorAll('.opt.face').forEach(b => { const c = b.querySelector('canvas'); if (c) drawLook(c, P, { ...base, face: b.dataset.face || undefined, turn: +ph.turn || undefined, tilt: +ph.tilt || undefined }, 'face'); }); }).catch(() => {});
+    loadChara2().then(P => { const base = fixLook2(P, look());
+      if (mode !== 'face') return; strip.querySelectorAll('.opt.face.uniq').forEach(b => b.remove());   // そのキャラだけの表情（6番の「ぷいっ」など）を、列の終わりに足す
+      strip.insertAdjacentHTML('beforeend', facesOf(P, base).filter(([id]) => id.startsWith('u:')).map(([id, n]) => opt('face', id, n, '<canvas></canvas>', 'face uniq')).join('')); marks();
+      strip.querySelectorAll('.opt.face').forEach(b => { const c = b.querySelector('canvas'); if (c) drawLook(c, P, { ...base, face: b.dataset.face || undefined, turn: +ph.turn || undefined, tilt: +ph.tilt || undefined }, 'face'); }); }).catch(() => {});
   }
   const marks = () => {   // えらんでいるものに印
     const on = (sel, f) => strip.querySelectorAll(sel).forEach(b => b.setAttribute('aria-pressed', String(f(b.dataset))));

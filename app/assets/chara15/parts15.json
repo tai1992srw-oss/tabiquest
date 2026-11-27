@@ -148,6 +148,14 @@
    "base": "#A05040",
    "light": "#CD715F",
    "highlight": "#FFAB9B"
+  },
+  "6番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#6D2F39",
+   "shadow1": "#883D49",
+   "base": "#E77789",
+   "light": "#FF90A2",
+   "highlight": "#FFAEBB"
   }
  },
  "shared": {
@@ -615,6 +623,115 @@
     "note": "キャラ1b と同じ形。順は 目→まゆ→口（ほおは共通の部品を目の下に）"
    },
    "hairPreset": "4番のデザイン"
+  },
+  "c6b": {
+   "name": "6番",
+   "number": 6,
+   "offset": [
+    0,
+    12
+   ],
+   "cheekAnchor": [
+    192,
+    142
+   ],
+   "layers": {
+    "hair_back": "c6b/hair_back.png",
+    "head": "c6b/head.png",
+    "hair_front": "c6b/hair_front.png"
+   },
+   "items": [
+    "c6b_hairacc"
+   ],
+   "design": {
+    "body": "c6b/body_design.png",
+    "wear": "c6b/wear_design.png",
+    "note": "デザインの服（そのキャラの絵の体ごと）。offset はかけない"
+   },
+   "wears": {
+    "uniform": {
+     "name": "6番の服",
+     "layers": [
+      "c6b/uniform_bottom.png",
+      "c6b/uniform_shoes.png",
+      "c6b/uniform_top.png"
+     ],
+     "layersTucked": [
+      "c6b/uniform_top.png",
+      "c6b/uniform_bottom.png",
+      "c6b/uniform_shoes.png"
+     ],
+     "parts": {
+      "top": "c6b/uniform_top.png",
+      "bottom": "c6b/uniform_bottom.png",
+      "shoes": "c6b/uniform_shoes.png"
+     },
+     "partNames": {
+      "top": "ニット",
+      "bottom": "スカート",
+      "shoes": "くつ・くつ下"
+     },
+     "note": "メイン衣装（ステップ4、素体に合わせた。ワインレッドのニット・クリーム色のケーキの刺しゅうのスカート・くつ下とくつ）。もとのデザインはニットを中に入れる（layersTucked）。offset はかけない",
+     "poses": {
+      "r_up": {
+       "top": "c6b/pose/r_up/uniform_top.png",
+       "topFront": "c6b/pose/r_up/uniform_top_front.png"
+      }
+     }
+    }
+   },
+   "faces": {
+    "normal": "c6b/face.png",
+    "angry": "c6b/face_angry.png",
+    "close": "c6b/face_close.png",
+    "jito": "c6b/face_jito.png",
+    "shy": "c6b/face_shy.png",
+    "smile": "c6b/face_smile.png",
+    "surprise": "c6b/face_surprise.png",
+    "trouble": "c6b/face_trouble.png",
+    "wink": "c6b/face_wink.png",
+    "puii": "c6b/face_puii.png"
+   },
+   "faceNames": {
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "puii": "ぷいっ"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c6b/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "angry",
+     "close",
+     "jito",
+     "shy",
+     "smile",
+     "surprise",
+     "trouble",
+     "wink",
+     "puii"
+    ],
+    "sharedCheek": "ほおは shared.cheek を使う",
+    "noNose": "鼻はなし",
+    "uniqueExprs": [
+     "puii"
+    ],
+    "note": "キャラ1b と同じ形。順は 目→まゆ→口（ほおは共通の部品を目の下に）。puii（ぷいっ）は6番だけの表情（ほかのキャラにはない）"
+   },
+   "hairPreset": "6番のデザイン"
   }
  },
  "items": [
@@ -706,6 +823,15 @@
    "headOf": "c4b",
    "overFace": true,
    "note": "4番の顔に合わせて描いたメガネ（まるメガネと同じ場所）。重ね方は c4b_glasses と同じ。ほかの子の顔に合うかはまだ見ていない"
+  },
+  {
+   "id": "c6b_hairacc",
+   "name": "ツインテールのリボンとハートのピン",
+   "front": "c6b/acc_front.png",
+   "back": null,
+   "head": true,
+   "headOf": "c6b",
+   "note": "6番の頭に合わせて描いた髪かざり（ステップ2で別の部品にした）。頭に付くので headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
   }
  ],
  "poses": {
