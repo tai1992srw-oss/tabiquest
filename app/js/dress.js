@@ -15,7 +15,7 @@ const DRESS = [{ id: 'wear', name: '服', icon: ICON.wear, kind: 'wear', focus: 
 const FACE = [{ id: 'chara', name: 'キャラ', icon: '☻', kind: 'chara', focus: 'body' }, slot('rin'), slot('eye'), slot('brow'), slot('mouth'), slot('cheek'), { id: 'bal', name: 'バランス', icon: '⇔', kind: 'bal', focus: 'face' }];
 // 1.5倍のキャラ（キャラ1b・キャラ0）：服（Tシャツ・デザインの服・素体）と髪の色だけえらべる。顔の部品・バランス・小物は、まだ合わない
 const DRESS15 = [{ id: 'w15', name: '服', icon: ICON.wear, kind: 'w15', focus: 'body' }, { id: 'h15', name: '髪', icon: ICON.hairF, kind: 'h15', focus: 'face' }, DRESS[3]];
-const FACE15 = [FACE[0]];
+const FACE15 = [FACE[0], { id: 'skin15', name: '肌の色', icon: '◯', kind: 'skin15', focus: 'body' }];
 const clone = L => JSON.parse(JSON.stringify(L));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -65,6 +65,9 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
       setSliders();
       body.querySelectorAll('[data-h15]').forEach(b => b.setAttribute('aria-pressed', String((L.h15 || '') === b.dataset.h15)));
       body.querySelectorAll('[data-hs15]').forEach(b => { const c = b.dataset.hs15; b.setAttribute('aria-pressed', String((L.hair15 || L.big) === c)); drawLook(b.querySelector('canvas'), P, fixLook(P, { ...L, hair15: c }), 'face'); });
+    } else if (tab.kind === 'skin15') {   // b版の肌の色：体と頭の肌を、えらんだ色に寄せる
+      if (full) body.innerHTML = `${swatches('skin')}<p class="du-hint">体と顔の肌の色が変わります。服の色は変わりません</p>`;
+      markColors('skin');
     } else if (tab.kind === 'items') {   // 持ち物・かざり：押すと付ける・はずす（同じ所に付く物は入れかわる）。いくつでも組み合わせられる
       if (full) body.innerHTML = `<p class="du-hint">押すと付けたり、はずしたりできます。同じ所に付く物（右手の紙袋とぬいぐるみなど）は、入れかわります</p><div class="du-grid body"><button class="du-item" data-it=""><canvas></canvas><span class="du-nm">ぜんぶはずす</span></button>${itemList(P).map(it => `<button class="du-item" data-it="${it.id}"><canvas></canvas><span class="du-nm">${esc(it.name)}</span></button>`).join('')}</div>`;
       body.querySelectorAll('[data-it]').forEach(b => { const id = b.dataset.it, on = id ? (L.items || []).includes(id) : !(L.items || []).length; b.setAttribute('aria-pressed', String(on)); const t = clone(L); if (id) { if (!on) toggleItem(P, t, id); } else delete t.items; drawLook(b.querySelector('canvas'), P, t, 'body'); });

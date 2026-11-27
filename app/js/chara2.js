@@ -494,6 +494,7 @@ function fixBig(P, L) {
   const B = P.big, C = B.J.chars[L.big], o = { big: L.big };
   if (isBig(P, L.hair15) && L.hair15 !== L.big) o.hair15 = L.hair15;
   if (B.J.hairPresets[L.h15]) o.h15 = L.h15;
+  if (/^#[0-9a-f]{6}$/i.test(L.colors?.skin || '')) o.colors = { skin: L.colors.skin };   // 肌の色
   // 前の形（w15 にそのキャラの服の名前・off15＝ぬいでいる部分）は、部分の組み合わせに直す
   let w = L.w15, p15 = L.p15;
   if (w === 'tshirt' && B.wears.sets.some(q => q.id === TSHIRT_SET)) { w = 'parts'; p15 = { ...B.wears.sets.find(q => q.id === TSHIRT_SET).parts }; }   // 前の1枚の Tシャツは、分けた Tシャツに
@@ -539,6 +540,21 @@ function fitHair15(P, img, owner, wearer, oO, oW, adj, key) {
   }
   tx.putImageData(out, 0, 0); if (B.fit.size > 24) B.fit.delete(B.fit.keys().next().value); B.fit.set(key, t); return [t, [0, 0]];
 }
+// 肌の色（2026-11-27）：体（素体）と頭の絵の、肌に近い色（colors.skin の base・shadow1・shadow2・edge から RGB で 34 以内）を、えらんだ色に寄せる。
+//   色ごとに「えらんだ色 × その色 ÷ 元の肌の色（base）」で、影の段は元のまま残す。線（#211012）は変えない。服・顔の部品は変えない（服のベージュや口の中が肌に近いので）
+function skin15(P, f, hex) {
+  const B = P.big, im = B.IM[f]; if (!im || !/^#[0-9a-f]{6}$/i.test(hex || '')) return im;
+  const key = f + '|skin|' + hex; if (B.tint.has(key)) return B.tint.get(key);
+  const hx = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), S = B.J.colors.skin, base = hx(S.base), refs = ['base', 'shadow1', 'shadow2', 'edge'].filter(k => S[k]).map(k => hx(S[k])), to = hx(hex);
+  const [W, H] = B.J.size, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0);
+  const d = x.getImageData(0, 0, W, H), u = d.data;
+  for (let i = 0; i < u.length; i += 4) {
+    if (u[i + 3] < 128) continue; const r = u[i], g = u[i + 1], b = u[i + 2];
+    if (!refs.some(q => (q[0] - r) ** 2 + (q[1] - g) ** 2 + (q[2] - b) ** 2 < 34 * 34)) continue;
+    u[i] = Math.min(255, Math.round(to[0] * r / base[0])); u[i + 1] = Math.min(255, Math.round(to[1] * g / base[1])); u[i + 2] = Math.min(255, Math.round(to[2] * b / base[2]));
+  }
+  x.putImageData(d, 0, 0); B.tint.set(key, c); return c;
+}
 // 髪の色：キャラ0の6色（colors.hair）で描いた髪を、プリセットの同じ番の色に置きかえる（色がぴったり同じドットだけ）
 function hair15(P, f, preset) {
   const B = P.big, im = B.IM[f], to = B.J.hairPresets[preset]; if (!im || !to) return im;
@@ -557,7 +573,7 @@ function composeBig(P, L) {
   const adj = hairAdj(L), hairAt = (n, at) => { const [im, xy] = fitHair15(P, hair15(P, Hy[n], preset), hid, L.big, [0, 0], at, adj, `${hid}/${n}/${L.big}/${preset}/${at}/${adj.s},${adj.dy},${adj.dx}`); put(im, ...xy); };   // 髪：頭の大きさに合わせる（髪と頭の絵は、どちらも頭の枠の中の物。at＝かぶる子の頭を置く位置）
   if (design) { hairAt('hair_back', [0, 0]); put(B.IM[C.design.body]); put(B.IM[C.design.wear]); hairAt('hair_front', [0, 0]); }   // デザインの服：そのキャラの絵の体ごと、offset なし
   else {
-    hairAt('hair_back', o); put(B.IM[J.sotaiBody]); put(B.IM[C.layers.head], ...o);
+    const sk = L.colors?.skin; hairAt('hair_back', o); put(skin15(P, J.sotaiBody, sk)); put(skin15(P, C.layers.head, sk), ...o);   // 肌の色（look.colors.skin）
     if (L.w15 === 'tshirt') put(B.IM[J.wear.tshirt]);
     else for (const k of DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (it) put(B.IM[it.file]); }   // 服は offset なし
     hairAt('hair_front', o);
