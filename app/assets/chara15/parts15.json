@@ -2323,6 +2323,324 @@
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
    "hairPreset": "32番のデザイン"
+  },
+  "c33n": {
+   "name": "33番",
+   "number": 33,
+   "offset": [
+    0,
+    5
+   ],
+   "cheekAnchor": [
+    191,
+    135
+   ],
+   "layers": {
+    "hair_back": "c33n/hair_back.png",
+    "head": "c33n/head.png",
+    "hair_front": "c33n/hair_front.png"
+   },
+   "items": [
+    "c33n_AF"
+   ],
+   "design": {
+    "body": "c33n/body_design.png",
+    "wear": "c33n/wear_design.png",
+    "tucked": false,
+    "note": "デザインの服（そのキャラの絵の体ごと）。手首の小物もこの中。offset はかけない"
+   },
+   "faces": {
+    "normal": "c33n/face.png",
+    "smile": "c33n/face_smile.png",
+    "close": "c33n/face_close.png",
+    "wink": "c33n/face_wink.png",
+    "surprise": "c33n/face_surprise.png",
+    "trouble": "c33n/face_trouble.png",
+    "shy": "c33n/face_shy.png",
+    "angry": "c33n/face_angry.png",
+    "jito": "c33n/face_jito.png",
+    "nishishi": "c33n/face_nishishi.png"
+   },
+   "faceNames": {
+    "normal": "ふだん",
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "nishishi": "にしし"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c33n/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "smile",
+     "close",
+     "wink",
+     "surprise",
+     "trouble",
+     "shy",
+     "angry",
+     "jito",
+     "nishishi"
+    ],
+    "uniqueExprs": [
+     "nishishi"
+    ],
+    "noNose": "鼻はなし（絵では描かせるが、ドットでは外す）",
+    "note": "ほおは shared.cheek ではなく、このキャラの cheeks を使う（顔の部品のいちばん下）"
+   },
+   "cheeks": {
+    "normal": "c33n/cheek_normal.png",
+    "shy": "c33n/cheek_shy.png",
+    "none": null,
+    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
+   },
+   "hairPreset": "33番のデザイン",
+   "wears": {
+    "uniform": {
+     "name": "33番の服",
+     "tuckDefault": false,
+     "parts": {
+      "top": "c33n/uniform_top.png",
+      "bottom": "c33n/uniform_bottom.png",
+      "shoes": "c33n/uniform_shoes.png",
+      "socks": "c33n/uniform_socks.png"
+     },
+     "partNames": {
+      "top": "黒ゴスのワンピース（上）",
+      "bottom": "黒ゴスのワンピース（スカート）",
+      "shoes": "ストラップシューズ",
+      "socks": "波ふちの黒いくつ下"
+     },
+     "note": "うでのポーズつきの服（research/style/pose_r/SI/c33n、SI/export_app.py）。top＝胴＋立ちのうで、bottom＝立ち姿の絵のドットから、shoes＝デザインの服から。上げるの手は handOffset だけ下げて焼きこみ",
+     "arms": {
+      "torso": "c33n/arms/torso.png",
+      "down_R": "c33n/arms/down_R.png",
+      "down_L": "c33n/arms/down_L.png",
+      "up_R": "c33n/arms/up_R.png",
+      "up_R_fore": "c33n/arms/up_R_fore.png",
+      "up_L": "c33n/arms/up_L.png",
+      "up_L_fore": "c33n/arms/up_L_fore.png",
+      "front_R": "c33n/arms/front_R.png",
+      "front_R_fore": "c33n/arms/front_R_fore.png",
+      "front_L": "c33n/arms/front_L.png",
+      "front_L_fore": "c33n/arms/front_L_fore.png",
+      "back_R": "c33n/arms/back_R.png",
+      "back_L": "c33n/arms/back_L.png",
+      "wrist": {
+       "up_R": "c33n/arms/up_R_wrist.png",
+       "up_R_fore": "c33n/arms/up_R_fore_wrist.png",
+       "up_L": "c33n/arms/up_L_wrist.png",
+       "up_L_fore": "c33n/arms/up_L_fore_wrist.png",
+       "front_R": "c33n/arms/front_R_wrist.png",
+       "front_R_fore": "c33n/arms/front_R_fore_wrist.png",
+       "front_L": "c33n/arms/front_L_wrist.png",
+       "front_L_fore": "c33n/arms/front_L_fore_wrist.png"
+      },
+      "handOffset": {
+       "up_R": [
+        0,
+        3
+       ],
+       "up_L": [
+        0,
+        0
+       ],
+       "front_R": [
+        0,
+        0
+       ],
+       "front_L": [
+        0,
+        0
+       ]
+      }
+     }
+    }
+   },
+   "uniquePose": {
+    "img": "c33n/pose_unique.png",
+    "name": "ジャンプでばあっ！"
+   }
+  },
+  "c34n": {
+   "name": "34番",
+   "number": 34,
+   "offset": [
+    0,
+    6
+   ],
+   "cheekAnchor": [
+    192,
+    132
+   ],
+   "layers": {
+    "hair_back": "c34n/hair_back.png",
+    "head": "c34n/head.png",
+    "hair_front": "c34n/hair_front.png"
+   },
+   "items": [
+    "c34n_AF"
+   ],
+   "design": {
+    "body": "c34n/body_design.png",
+    "wear": "c34n/wear_design.png",
+    "tucked": true,
+    "note": "デザインの服（そのキャラの絵の体ごと）。手首の小物もこの中。offset はかけない"
+   },
+   "faces": {
+    "normal": "c34n/face.png",
+    "smile": "c34n/face_smile.png",
+    "close": "c34n/face_close.png",
+    "wink": "c34n/face_wink.png",
+    "surprise": "c34n/face_surprise.png",
+    "trouble": "c34n/face_trouble.png",
+    "shy": "c34n/face_shy.png",
+    "angry": "c34n/face_angry.png",
+    "jito": "c34n/face_jito.png",
+    "araara": "c34n/face_araara.png"
+   },
+   "faceNames": {
+    "normal": "ふだん",
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "araara": "あらあら"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c34n/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "smile",
+     "close",
+     "wink",
+     "surprise",
+     "trouble",
+     "shy",
+     "angry",
+     "jito",
+     "araara"
+    ],
+    "uniqueExprs": [
+     "araara"
+    ],
+    "noNose": "鼻はなし（絵では描かせるが、ドットでは外す）",
+    "note": "ほおは shared.cheek ではなく、このキャラの cheeks を使う（顔の部品のいちばん下）"
+   },
+   "cheeks": {
+    "normal": "c34n/cheek_normal.png",
+    "shy": "c34n/cheek_shy.png",
+    "none": null,
+    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
+   },
+   "hairPreset": "34番のデザイン"
+  },
+  "c36n": {
+   "name": "36番",
+   "number": 36,
+   "offset": [
+    0,
+    8
+   ],
+   "cheekAnchor": [
+    191,
+    132
+   ],
+   "layers": {
+    "hair_back": "c36n/hair_back.png",
+    "head": "c36n/head.png",
+    "hair_front": "c36n/hair_front.png"
+   },
+   "items": [
+    "c36n_AF"
+   ],
+   "design": {
+    "body": "c36n/body_design.png",
+    "wear": "c36n/wear_design.png",
+    "tucked": true,
+    "note": "デザインの服（そのキャラの絵の体ごと）。手首の小物もこの中。offset はかけない"
+   },
+   "faces": {
+    "normal": "c36n/face.png",
+    "smile": "c36n/face_smile.png",
+    "close": "c36n/face_close.png",
+    "wink": "c36n/face_wink.png",
+    "surprise": "c36n/face_surprise.png",
+    "trouble": "c36n/face_trouble.png",
+    "shy": "c36n/face_shy.png",
+    "angry": "c36n/face_angry.png",
+    "jito": "c36n/face_jito.png",
+    "cheese": "c36n/face_cheese.png"
+   },
+   "faceNames": {
+    "normal": "ふだん",
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "cheese": "はい、チーズ！"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c36n/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "smile",
+     "close",
+     "wink",
+     "surprise",
+     "trouble",
+     "shy",
+     "angry",
+     "jito",
+     "cheese"
+    ],
+    "uniqueExprs": [
+     "cheese"
+    ],
+    "noNose": "鼻はなし（絵では描かせるが、ドットでは外す）",
+    "note": "ほおは shared.cheek ではなく、このキャラの cheeks を使う（顔の部品のいちばん下）"
+   },
+   "cheeks": {
+    "normal": "c36n/cheek_normal.png",
+    "shy": "c36n/cheek_shy.png",
+    "none": null,
+    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
+   },
+   "hairPreset": "36番のデザイン"
   }
  },
  "items": [
@@ -2504,6 +2822,33 @@
    "back": null,
    "head": true,
    "headOf": "c32n",
+   "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
+  },
+  {
+   "id": "c33n_AF",
+   "name": "コウモリの羽のヘアピン",
+   "front": "c33n/acc_AF.png",
+   "back": null,
+   "head": true,
+   "headOf": "c33n",
+   "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
+  },
+  {
+   "id": "c34n_AF",
+   "name": "花のかざりとリボン",
+   "front": "c34n/acc_AF.png",
+   "back": null,
+   "head": true,
+   "headOf": "c34n",
+   "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
+  },
+  {
+   "id": "c36n_AF",
+   "name": "べっこうのバレッタ",
+   "front": "c36n/acc_AF.png",
+   "back": null,
+   "head": true,
+   "headOf": "c36n",
    "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
   }
  ],
