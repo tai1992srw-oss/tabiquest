@@ -691,7 +691,12 @@ function composeBig(P, L) {
   }
   else putPart(B.IM[SC ? C.faceNoCheek || C.faces.normal.replace('face.png', 'face_nocheek.png') : C.faces.normal], fo[0] + mv, fo[1]);
   // 顔の上にかける物（メガネなど。overFace）：顔の部品のあと。向きのときは顔の部品といっしょにずらす
-  for (const it of its) if (it.head && it.overFace && it.front && B.IM[it.front]) { const a = itAt(it); tg.drawImage(B.IM[it.front], a[0] + mv, a[1]); }
+  //   メガネは、かける子の目に合わせる（2026-11-27）：headOf の子の目のまん中と、かける子の目のまん中の差だけずらす（目は faceParts の eyeL・eyeR の normal のドットから測る）
+  const eyeC = c => { const Q = J.chars[c]?.faceParts; if (!Q) return null; const bs = ['eyeL', 'eyeR'].map(k => bbOf(B, B.IM[Q.path.replace('{part}', k).replace('{expr}', 'normal')])).filter(b => b && b.x1 >= 0); if (!bs.length) return null;
+    const x0 = Math.min(...bs.map(b => b.x0)), x1 = Math.max(...bs.map(b => b.x1)), y0 = Math.min(...bs.map(b => b.y0)), y1 = Math.max(...bs.map(b => b.y1)); return [(x0 + x1) / 2, (y0 + y1) / 2]; };
+  for (const it of its) if (it.head && it.overFace && it.front && B.IM[it.front]) {
+    const eW = eyeC(L.big), eO = eyeC(it.headOf || L.big), a = eW && eO ? [fo[0] + Math.round(eW[0] - eO[0]), fo[1] + Math.round(eW[1] - eO[1])] : itAt(it);
+    tg.drawImage(B.IM[it.front], a[0] + mv, a[1]); }
   // 頭（輪郭）：向きのときは、目の高さから下を、あごに向かって向いた側へ
   const headF = turn ? rowShift(headC, y => tv * T.jaw * K15 * ramp(y, eyeY, chinY + 3) ** 2) : headC;
   const rot = q => (tilt ? rotate(q, tilt, hcx, chinY, H) : q);   // かしげ：あごの下のまん中を軸に
