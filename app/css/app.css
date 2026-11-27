@@ -49,7 +49,7 @@ h2{margin:0;font:900 16px var(--sans);color:var(--ink)}
 .hud{position:absolute;left:0;right:0;pointer-events:none;font-family:var(--dot);transition:opacity .3s}
 .card.clean .hud{opacity:0}
 .hud.top{top:0;height:100%;font-family:var(--sans);color:#FFFDF8}
-.hud.top.t-bright::before{content:'';position:absolute;left:0;right:0;top:0;height:82cqw;background:linear-gradient(rgba(20,19,41,.34),rgba(20,19,41,0))}
+/* 2026-11-27 くりた「暗いよ」：カードの上下の暗いグラデーションはやめ、文字は影で読ませる */
 .hud .cap{position:absolute;left:5.6cqw;right:5.6cqw;top:4cqw;display:flex;align-items:center;gap:2.6cqw;font:700 2.8cqw/1.4 var(--sans);letter-spacing:.5cqw;opacity:.9}
 .hud .cap i{flex:1;height:1px;background:rgba(255,253,248,.4)}
 .hud .cap .no{font:400 3.1cqw/1.4 var(--dot);letter-spacing:0}
@@ -67,7 +67,7 @@ h2{margin:0;font:900 16px var(--sans);color:var(--ink)}
 .t-bright .ttl{text-shadow:0 .8cqw 0 rgba(43,42,76,.85),0 0 4.6cqw rgba(43,42,76,.55),0 0 1cqw rgba(43,42,76,.5)}
 .t-dark .ttl .yk,.t-dark .ttl .he,.t-dark .cap{text-shadow:0 .5cqw 0 rgba(10,8,40,.5)}
 .t-bright .ttl .yk,.t-bright .ttl .he,.t-bright .ttl .sub,.t-bright .cap{text-shadow:0 .5cqw 0 rgba(43,42,76,.85),0 0 2.6cqw rgba(43,42,76,.5)}
-.hud.bot{bottom:0;padding:7cqw 3.2cqw 2.6cqw;background:linear-gradient(transparent,rgba(10,8,30,.82) 55%);display:flex;justify-content:space-between;align-items:flex-end;gap:2cqw}
+.hud.bot{bottom:0;padding:7cqw 3.2cqw 2.6cqw;text-shadow:0 .5cqw 0 rgba(20,19,41,.85),0 0 2.6cqw rgba(20,19,41,.6);display:flex;justify-content:space-between;align-items:flex-end;gap:2cqw}
 .place{font-size:6cqw;line-height:1.1}
 .meta{font-size:2.9cqw;color:#D8D0F0;margin-top:.8cqw}
 .chips{display:flex;gap:1cqw;flex:none}
@@ -168,7 +168,7 @@ table.combo .no{color:#3A4180}
 .arrival.go .bgblur{opacity:1}
 .arrival .stage{position:relative;display:flex;justify-content:center;width:min(100vw,calc(100dvh * .5625));height:min(100dvh,calc(100vw / .5625))}
 .arrival .card{width:100%;height:100%;border:none;box-shadow:none;aspect-ratio:auto;background:none;overflow:visible;z-index:2}
-.arrival .card .hud.top::before{display:none}   /* 2026-11-27 くりた「黒いらない」：上の暗いグラデーションと、絵の上下のぼかしをやめる */
+/* 2026-11-27 くりた「黒いらない」：到着の絵の上下のぼかしはやめた */
 .arrival .card.pre .hud{opacity:0}
 .arrival .card .hud.bot{display:none}
 .arrival .card .cap{top:calc(env(safe-area-inset-top) + 26px - var(--bar))}
@@ -251,7 +251,7 @@ dl.rec dd{margin:0}
 .viewer.story .frame{position:relative;width:min(100vw,calc(100dvh * .5625));height:min(100dvh,calc(100vw / .5625));transform:translateY(var(--pull,0px));transition:transform .2s}
 .viewer.story .stage{position:absolute;inset:0}
 .viewer.story .card{width:100%;height:100%;margin:0;border:none;box-shadow:none;aspect-ratio:auto;touch-action:none}
-.viewer.story .top{position:absolute;left:0;right:0;top:0;z-index:5;padding:calc(env(safe-area-inset-top) + 8px) 10px 22px;background:linear-gradient(rgba(0,0,0,.55),transparent);pointer-events:none}
+.viewer.story .top{position:absolute;left:0;right:0;top:0;z-index:5;padding:calc(env(safe-area-inset-top) + 8px) 10px 22px;text-shadow:0 1px 2px rgba(20,19,41,.85),0 0 8px rgba(20,19,41,.5);pointer-events:none}
 .viewer.story .bars{display:flex;gap:3px}
 .viewer.story .bars i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.35)}
 .viewer.story .bars i.seen,.viewer.story .bars i.now{background:#fff}
