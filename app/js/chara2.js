@@ -466,7 +466,24 @@ export function bigPickWear(P, L, kind, v) {
 export const bigHairStyles = P => P.big.ids.map(c => [c, P.big.J.chars[c].name + 'の髪']);
 export const bigItems = P => P.big.J.items.map(it => [it.id, it.name || it.id]);
 export function toggleItem15(P, L, id) { const s = new Set(L.items15 || []), I = P.big.J.items, it = I.find(q => q.id === id); if (s.has(id)) s.delete(id); else { if (it?.overFace) for (const q of I) if (q.overFace) s.delete(q.id); s.add(id); } if (s.size) L.items15 = [...s]; else L.items15 = []; }   // [] ＝ ぜんぶはずした（ふだんの装飾品も付けない）。メガネ（overFace）は1つだけ：ほかのをかけたら、前のは外す
-export const bigHairs = P => Object.entries(P.big.J.hairPresets).map(([k, h]) => [k, h.base]);
+export const bigHairs = P => Object.entries(P.big.J.hairPresets).filter(([k]) => !k.startsWith('_')).map(([k, h]) => [k, h.base]);
+// 髪の色（2026-11-27 くりた「髪の色がパッとしない」→ 案A）：あざやかさを上げ、影はむらさき寄り・光は黄色寄りに少しずらす。
+//   灰色に近い色（黒・銀）は色みを動かさない。絵は描き足さず、プリセットの6色だけを変える（parts15.json はそのまま、読みこむときにかける）
+const hsl = h => { const [r, g, b] = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; if (mx === mn) return [0, 0, l];
+  const d = mx - mn, s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); return [(mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) / 6, s, l]; };
+const hex = ([h, s, l]) => { const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+  return '#' + (s ? [f(h + 1 / 3), f(h), f(h - 1 / 3)] : [l, l, l]).map(v => Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16).padStart(2, '0')).join(''); };
+const toHue = (h, to, a) => { const d = ((to - h + 1.5) % 1) - .5; return (h + Math.sign(d) * Math.min(Math.abs(d), a) + 1) % 1; };
+function vividHair(pre) {
+  const o = { ...pre };
+  for (const t of ['shadow2', 'shadow1', 'base', 'light', 'highlight']) { if (!pre[t]) continue; let [h, s, l] = hsl(pre[t]); const grey = s < .12;
+    if (t === 'base') s = Math.min(1, s * 1.25);
+    if (t === 'light') { s = Math.min(1, s * 1.2); l = Math.min(.9, l + .03); if (!grey) h = toHue(h, 50 / 360, .02); }
+    if (t === 'highlight') { l = Math.min(.93, l + .04); if (!grey) h = toHue(h, 50 / 360, .03); }
+    if (t.startsWith('shadow')) { if (!grey) h = toHue(h, 265 / 360, t === 'shadow2' ? .05 : .035); s = Math.min(1, s * 1.3 + .04); l *= .94; }
+    o[t] = hex([h, s, l]); }
+  return o;
+}
 // ポーズ（2026-11-27 くりた「ポーズ機能実装しよう」）：look.pose15 ＝ '<ポーズ>.<手>'（例 'r_up.peace'）。撮影の設定（photo.pose15）から入る
 //   素体の体をポーズの体にかえ、トップスをそのポーズの版にかえ、ひじから先（手）とそで（topFront）を前髪・顔より前に重ねる
 //   ポーズの版がないトップスを着ているとき・デザインの服のときは、立ちのまま
@@ -489,6 +506,8 @@ async function loadBig() {
   const J = await (await fetch(BASE15 + 'parts15.json')).json(), IM = {}, files = new Set([J.sotaiBody, ...Object.values(J.wear)]);
   const SC = J.shared?.cheek; if (SC) for (const k of Object.keys(SC.kinds)) files.add(SC.path.replace('{kind}', k));
   J.items = J.items || []; for (const it of J.items) for (const k of ['front', 'back']) if (it[k]) files.add(it[k]);   // 小物・装飾品
+  for (const k of Object.keys(J.hairPresets || {})) J.hairPresets[k] = vividHair(J.hairPresets[k]);   // 髪の色を案A（あざやか）に
+  J.hairPresets._base = vividHair(J.colors.hair);   // プリセットのない子（キャラ0）の元の色も、案A に
   for (const id of J.poses?.order || []) { const D = J.poses[id]; if (!D) continue; files.add(D.body); for (const h of D.hands || []) files.add(D.front.replace('{hand}', h.id)); }   // ポーズ：素体の体と、手（ひじから先）
   const chars = {};
   for (const [c, C] of Object.entries(J.chars)) {
@@ -594,7 +613,7 @@ const K15 = 1.5;
 const bbOf = (B, im) => { if (!im) return null; B.bb = B.bb || new Map(); if (!B.bb.has(im)) B.bb.set(im, bbox(im)); return B.bb.get(im); };
 function composeBig(P, L) {
   const B = P.big, J = B.J, C = J.chars[L.big], [W, H] = J.size, o = C.offset || [0, 0], design = L.w15 === 'design' && C.design && !C.wears, fo = design ? [0, 0] : o;
-  const hid = J.chars[L.hair15] ? L.hair15 : L.big, HC = J.chars[hid], preset = L.h15 || HC.hairPreset || '', Hy = HC.layers, ex = EXPR15[L.face] || {}, SC = J.shared?.cheek, F = C.faceParts;   // 髪型は、ほかのキャラの髪でもよい（その子の頭の位置 offset に置く）
+  const hid = J.chars[L.hair15] ? L.hair15 : L.big, HC = J.chars[hid], preset = L.h15 || HC.hairPreset || '_base', Hy = HC.layers, ex = EXPR15[L.face] || {}, SC = J.shared?.cheek, F = C.faceParts;   // 髪型は、ほかのキャラの髪でもよい（その子の頭の位置 offset に置く）
   const eye = L.blink ? 'close' : ex.e || 'normal', part = k => (k.startsWith('eye') ? eye : k.startsWith('brow') ? ex.b || 'normal' : k === 'mouth' ? ex.m || 'normal' : 'normal');
   const tilt = design ? 0 : Math.max(-12, Math.min(12, +L.tilt || 0)), tv = Math.round(Math.max(-1, Math.min(1, +L.turn || 0)) * TURN_MAX * 8) / 8, turn = Math.sign(tv), ta = Math.abs(tv), wind = Math.max(-2, Math.min(2, +L.wind || 0));   // デザインの服（頭が体の絵の中）は、かしげない
   const T = TURN_DEF, far = s => (turn > 0 && s === 'R') || (turn < 0 && s === 'L');
