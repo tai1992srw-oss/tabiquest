@@ -491,14 +491,24 @@ function vividHair(pre) {
 // うでのポーズ（2026-11-27 くりた「服okなんで全部実装しといて」）：look.pose15 ＝ '<右うでの角度>-<左うでの角度>'（角度は J.arms.angles：down・up・front・back。右＝キャラ本人の右）
 //   トップスを「胴」と「うで（そでを着たうで＋手）」に分けて重ねる。うでの部品があるトップスを着ているときだけ（ないとき・Tシャツ1枚・デザインの服は立ちのまま）
 //   前の形 'r_up.<手>'（右手を上げる）は 'up-down' として読む
-const ARMS15 = v => { v = String(v || ''); if (v.startsWith('r_up')) return ['up', 'down']; const m = v.match(/^(\w+)-(\w+)$/); return m ? [m[1], m[2]] : null; };
+//   手（2026-11-27 くりた「ポーズが実装された衣装には勝手に入って欲しい」）：'<右の角度>[.<手>]-<左の角度>[.<手>]'（例 'up.peace-front'）。手は J.arms.hands の物。
+//   服の arms.wrist（手首までのうで）があるときだけ、手首のうでに共通の手（J.arms.handPath）を handOffset だけずらしてのせる。ないとき・グーのときは、手つきのうでのまま
+const POSE15_RE = /^(\w+)(?:\.(\w+))?-(\w+)(?:\.(\w+))?$/;
+const ARMS15 = v => { v = String(v || ''); if (v.startsWith('r_up')) return ['up', 'down']; const m = v.match(POSE15_RE); return m ? [m[1], m[3]] : null; };
+export const handsOfPose = v => { const m = String(v || '').match(POSE15_RE); return m ? [m[2] || '', m[4] || ''] : ['', '']; };
+export const poseStr = (r, l, hr = '', hl = '') => (r === 'down' && l === 'down' ? '' : `${r}${hr ? '.' + hr : ''}-${l}${hl ? '.' + hl : ''}`);
+const handOk = (J, A, a, s, h) => !!(h && h !== 'gu' && A.wrist?.[`${a}_${s}`] && J.arms.hands?.[a]?.includes(h));
 function poseOf(P, L) {
   const J = P.big.J, ag = ARMS15(L.pose15); if (!J.arms || !ag || !ag.every(a => J.arms.angles.includes(a)) || (ag[0] === 'down' && ag[1] === 'down')) return null;
   if (L.w15 !== 'parts' || !L.p15?.top) return null;
   const top = P.big.wears.parts.find(q => q.id === L.p15.top), A = top?.arms; if (!A?.torso) return null;
   if (!ag.every((a, i) => A[`${a}_${'RL'[i]}`])) return null;
-  return { r: ag[0], l: ag[1], A };
+  const [hr, hl] = handsOfPose(L.pose15);
+  return { r: ag[0], l: ag[1], A, h: { R: handOk(J, A, ag[0], 'R', hr) ? hr : '', L: handOk(J, A, ag[1], 'L', hl) ? hl : '' } };
 }
+// えらべる手：[手, 名前]（その角度で、いまの服で手をかえられるときだけ。はじめのグーもふくむ）
+export const bigHands = (P, L, side) => { const J = P.big?.J, PZ = J?.arms && poseOf(P, L); if (!PZ) return []; const a = side === 'R' ? PZ.r : PZ.l;
+  const hs = (J.arms.hands?.[a] || []).filter(h => h === 'gu' || handOk(J, PZ.A, a, side, h)); return hs.length > 1 ? hs.map(h => [h, J.arms.handNames?.[h] || h]) : []; };
 // えらべるポーズ：[番号, 名前]（プリセット。いまの服で着られる物だけ）。はじめは「立ち」（''）
 export const bigPoses = (P, L) => { const J = P.big?.J; if (!J?.arms) return []; const out = [];
   for (const [v, n] of J.arms.presets || []) { if (v === 'down-down') continue; if (poseOf(P, { ...L, pose15: v })) out.push([v, n]); }
@@ -517,9 +527,10 @@ async function loadBig() {
   for (const k of Object.keys(J.hairPresets || {})) J.hairPresets[k] = vividHair(J.hairPresets[k]);   // 髪の色を案A（あざやか）に
   J.hairPresets._base = vividHair(J.colors.hair);   // プリセットのない子（キャラ0）の元の色も、案A に
   if (J.arms?.body) files.add(J.arms.body);   // うでのポーズ：うでのない体
+  if (J.arms?.handPath) for (const [a, hs] of Object.entries(J.arms.hands || {})) for (const s of 'RL') for (const h of hs) files.add(J.arms.handPath.replace('{a}', a).replace('{s}', s).replace('{h}', h));   // 共通の手
   const chars = {};
   for (const [c, C] of Object.entries(J.chars)) {
-    Object.values(C.layers).forEach(f => files.add(f)); for (const w of Object.values(C.wears || {})) { Object.values(w.parts).forEach(f => files.add(f)); Object.values(w.arms || {}).forEach(f => typeof f === 'string' && f.endsWith('.png') && files.add(f)); }   // うでのポーズの部品
+    Object.values(C.layers).forEach(f => files.add(f)); for (const w of Object.values(C.wears || {})) { Object.values(w.parts).forEach(f => files.add(f)); Object.values(w.arms || {}).forEach(f => typeof f === 'string' && f.endsWith('.png') && files.add(f)); Object.values(w.arms?.wrist || {}).forEach(f => files.add(f)); }   // うでのポーズの部品
     if (C.design && !C.wears) { files.add(C.design.body); files.add(C.design.wear); }
     for (const f of Object.values(C.cheeks || {})) if (typeof f === 'string' && f.endsWith('.png')) files.add(f);   // キャラだけのほお
     const F = C.faceParts; if (F) { for (const k of F.order) if (k !== 'cheek' || !SC) for (const e of F.exprs) files.add(F.path.replace('{part}', k).replace('{expr}', e)); }
@@ -649,7 +660,7 @@ function composeBig(P, L) {
     else for (const k of L.tuck15 ? DRAW15_TUCK : DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (!it) continue;   // 服は offset なし
       if (k !== 'top' || !PZ) { wear.push([B.IM[it.file], 0, 0]); continue; }
       // うでのポーズ：トップスのかわりに、後ろのうで → トップスの胴 → ほかのうで（backOver の服は、後ろのうでも胴より前）
-      const A = PZ.A, arm = (a, s) => skin15(P, A[`${a}_${s}`], sk, true), sides = [['R', PZ.r], ['L', PZ.l]];
+      const A = PZ.A, arm = (a, s) => skin15(P, PZ.h[s] ? A.wrist[`${a}_${s}`] : A[`${a}_${s}`], sk, true), sides = [['R', PZ.r], ['L', PZ.l]];
       for (const [s, a] of sides) if (a === 'back' && !A.backOver) wear.push([arm(a, s), 0, 0]);
       wear.push([B.IM[A.torso], 0, 0]);
       for (const [s, a] of sides) if (a !== 'back' || A.backOver) wear.push([arm(a, s), 0, 0]);
@@ -688,6 +699,7 @@ function composeBig(P, L) {
   x.drawImage(rot(backC), 0, 0); for (const [im, dx, dy] of body) im && x.drawImage(im, dx, dy); if (!design) x.drawImage(rot(headF), 0, 0);
   for (const [im, dx, dy] of wear) im && x.drawImage(im, dx, dy);
   x.drawImage(rot(topC), 0, 0);
-  if (PZ) for (const [s, a] of [['R', PZ.r], ['L', PZ.l]]) { const f = PZ.A[`${a}_${s}_fore`]; if (f) { const im = skin15(P, f, sk, true); im && x.drawImage(im, 0, 0); } }   // うでのポーズ：上げる・むねの前のうでの、前髪より前の所（前髪・顔より前）
+  if (PZ) for (const [s, a] of [['R', PZ.r], ['L', PZ.l]]) { const h = PZ.h[s], f = h ? PZ.A.wrist[`${a}_${s}_fore`] : PZ.A[`${a}_${s}_fore`]; if (f) { const im = skin15(P, f, sk, true); im && x.drawImage(im, 0, 0); }
+    if (h) { const hi = skin15(P, J.arms.handPath.replace('{a}', a).replace('{s}', s).replace('{h}', h), sk, true), d = PZ.A.handOffset?.[`${a}_${s}`] || [0, 0]; hi && x.drawImage(hi, d[0], d[1]); } }   // えらんだ手（共通の手）を、手首のうでの先に   // うでのポーズ：上げる・むねの前のうでの、前髪より前の所（前髪・顔より前）
   return c;
 }

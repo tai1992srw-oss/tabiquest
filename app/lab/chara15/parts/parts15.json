@@ -1004,7 +1004,35 @@
       "front_L": "c5n/arms/front_L.png",
       "front_L_fore": "c5n/arms/front_L_fore.png",
       "back_R": "c5n/arms/back_R.png",
-      "back_L": "c5n/arms/back_L.png"
+      "back_L": "c5n/arms/back_L.png",
+      "wrist": {
+       "up_R": "c5n/arms/up_R_wrist.png",
+       "up_R_fore": "c5n/arms/up_R_fore_wrist.png",
+       "up_L": "c5n/arms/up_L_wrist.png",
+       "up_L_fore": "c5n/arms/up_L_fore_wrist.png",
+       "front_R": "c5n/arms/front_R_wrist.png",
+       "front_R_fore": "c5n/arms/front_R_fore_wrist.png",
+       "front_L": "c5n/arms/front_L_wrist.png",
+       "front_L_fore": "c5n/arms/front_L_fore_wrist.png"
+      },
+      "handOffset": {
+       "up_R": [
+        0,
+        2
+       ],
+       "up_L": [
+        0,
+        2
+       ],
+       "front_R": [
+        0,
+        0
+       ],
+       "front_L": [
+        0,
+        0
+       ]
+      }
      }
     }
    }
@@ -1262,6 +1290,22 @@
     "上げる＋むねの前"
    ]
   ],
-  "note": "うでは左右べつ（R＝キャラ本人の右＝見て左、L＝左）。look.pose15 ＝ \"<右の角度>-<左の角度>\"（例 up-down）。トップスに wears.<w>.arms があるときだけ。重ねる順：後ろ髪 → arms.body（素体の体のかわり） → 頭 → 服（いつもの順。トップスの所に：後ろのうで → トップスの胴 → ほかのうで。backOver の服は後ろのうでも胴より前） → 前髪 → 顔 → _fore（上げる・むねの前のうでの前髪より前の所）。うでの部品は、そで・うでの肌・手がいっしょ（肌は素体の肌3色なので、肌の色の変えかたはいつもどおり）。作るもと research/style/pose_r/BK/（メモ research/style/右手のポーズ_メモ.md の 8）"
+  "note": "うでは左右べつ（R＝キャラ本人の右＝見て左、L＝左）。look.pose15 ＝ \"<右の角度>-<左の角度>\"（例 up-down）。トップスに wears.<w>.arms があるときだけ。重ねる順：後ろ髪 → arms.body（素体の体のかわり） → 頭 → 服（いつもの順。トップスの所に：後ろのうで → トップスの胴 → ほかのうで。backOver の服は後ろのうでも胴より前） → 前髪 → 顔 → _fore（上げる・むねの前のうでの前髪より前の所）。うでの部品は、そで・うでの肌・手がいっしょ（肌は素体の肌3色なので、肌の色の変えかたはいつもどおり）。作るもと research/style/pose_r/BK/（メモ research/style/右手のポーズ_メモ.md の 8）",
+  "hands": {
+   "up": [
+    "gu",
+    "peace",
+    "wave"
+   ],
+   "front": [
+    "gu"
+   ]
+  },
+  "handNames": {
+   "gu": "グー",
+   "peace": "ピース",
+   "wave": "はーい"
+  },
+  "handPath": "arms/hand_{a}_{s}_{h}.png"
  }
 }
