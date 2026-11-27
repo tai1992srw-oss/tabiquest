@@ -143,11 +143,11 @@
   },
   "4番のデザイン": {
    "line": "#211012",
-   "shadow2": "#4C1F16",
-   "shadow1": "#5E291E",
-   "base": "#A05040",
-   "light": "#CD715F",
-   "highlight": "#FFAB9B"
+   "shadow2": "#431D16",
+   "shadow1": "#6F352B",
+   "base": "#A55344",
+   "light": "#D1826D",
+   "highlight": "#E99C84"
   },
   "6番のデザイン": {
    "line": "#211012",
@@ -1271,6 +1271,90 @@
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
    "hairPreset": "1番のデザイン"
+  },
+  "c4n": {
+   "name": "4番",
+   "number": 4,
+   "offset": [
+    0,
+    7
+   ],
+   "cheekAnchor": [
+    192,
+    133
+   ],
+   "layers": {
+    "hair_back": "c4n/hair_back.png",
+    "head": "c4n/head.png",
+    "hair_front": "c4n/hair_front.png"
+   },
+   "items": [
+    "c4n_AF"
+   ],
+   "design": {
+    "body": "c4n/body_design.png",
+    "wear": "c4n/wear_design.png",
+    "tucked": true,
+    "note": "デザインの服（そのキャラの絵の体ごと）。手首の小物もこの中。offset はかけない"
+   },
+   "faces": {
+    "normal": "c4n/face.png",
+    "smile": "c4n/face_smile.png",
+    "close": "c4n/face_close.png",
+    "wink": "c4n/face_wink.png",
+    "surprise": "c4n/face_surprise.png",
+    "trouble": "c4n/face_trouble.png",
+    "shy": "c4n/face_shy.png",
+    "angry": "c4n/face_angry.png",
+    "jito": "c4n/face_jito.png",
+    "jitsuha": "c4n/face_jitsuha.png"
+   },
+   "faceNames": {
+    "normal": "ふだん",
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "jitsuha": "ここ、じつは…"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c4n/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "smile",
+     "close",
+     "wink",
+     "surprise",
+     "trouble",
+     "shy",
+     "angry",
+     "jito",
+     "jitsuha"
+    ],
+    "uniqueExprs": [
+     "jitsuha"
+    ],
+    "noNose": "鼻はなし（絵では描かせるが、ドットでは外す）",
+    "note": "ほおは shared.cheek ではなく、このキャラの cheeks を使う（顔の部品のいちばん下）"
+   },
+   "cheeks": {
+    "normal": "c4n/cheek_normal.png",
+    "shy": "c4n/cheek_shy.png",
+    "none": null,
+    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
+   },
+   "hairPreset": "4番のデザイン"
   }
  },
  "items": [
@@ -1398,6 +1482,16 @@
    "head": true,
    "headOf": "c1n",
    "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
+  },
+  {
+   "id": "c4n_AF",
+   "name": "まるメガネ",
+   "front": "c4n/acc_AF.png",
+   "back": null,
+   "head": true,
+   "headOf": "c4n",
+   "note": "そのキャラの顔に合わせて描いたメガネ。headOf の offset で頭といっしょに動かす。overFace＝顔の部品より上",
+   "overFace": true
   }
  ],
  "arms": {
