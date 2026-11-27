@@ -122,6 +122,7 @@ export function renderHome(view, { header } = {}) {
   let C = null, face = '', joyUntil = 0, moodUntil = 0, mood = '', nextMood = performance.now() + 6000, nextBlink = performance.now() + 2500, blinkUntil = 0, raf = 0, alive = true;
   const MOODS = ['smile', 'smile', 'close', 'smug', 'wow'];
   // ときどき、ぬるっと横を向いて、しばらくしてもどる（きょろきょろ）。look：いまの向き、lookTo：向かう先
+  const LOOK_AROUND = false;   // 2026-11-27 くりた「顔の向きはナシに」：きょろきょろはしない（もどすときは true）
   let look = 0, lookTo = 0, nextLook = performance.now() + 5000, lookBack = 0;
   const fit = () => {
     if (!C) return;
@@ -136,7 +137,7 @@ export function renderHome(view, { header } = {}) {
     if (!rm && t > nextBlink) { blinkUntil = t + 140; nextBlink = t + 2600 + Math.random() * 3200; if (Math.random() < .2) nextBlink = t + 320; }   // ときどき2回つづけて
     const base = t < joyUntil ? face : t < moodUntil ? mood : '';
     const f = t < blinkUntil && !['close', 'grin', 'shy'].includes(base) ? 'blink' : base;
-    if (!rm && t > nextLook) { lookTo = Math.random() < .5 ? -1 : 1; lookBack = t + 2200 + Math.random() * 1800; nextLook = t + 11000 + Math.random() * 9000; }
+    if (LOOK_AROUND && !rm && t > nextLook) { lookTo = Math.random() < .5 ? -1 : 1; lookBack = t + 2200 + Math.random() * 1800; nextLook = t + 11000 + Math.random() * 9000; }
     if (lookBack && t > lookBack) { lookTo = 0; lookBack = 0; }
     if (look !== lookTo) look = Math.round((look + Math.sign(lookTo - look) / 8) * 8) / 8;   // 1コマに 1/8 ずつ（約 0.13 秒で向く）
     const key = f + '|' + look;

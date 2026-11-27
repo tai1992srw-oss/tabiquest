@@ -7,8 +7,8 @@ import { loadParts as loadChara2, FACES, facesOf, fixLook as fixLook2, drawLook,
 import { book, cardsOf, cardById, setPhoto, defaultLook, shown, setFav, settings } from './store.js';
 import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS, reduceMotion } from './card.js';
-// 撮影でえらぶもの（下の列に出す。着替えは、お着替えの画面をひらく）
-const MODES = [['pose', 'ポーズ'], ['face', '表情'], ['turn', '向き'], ['tilt', 'かしげ'], ['wind', '風'], ['light', '光']];   // 腰（photo.lean）は、えらべなくした（前に残したカードは、そのまま出る）   // かしげ：首をかしげる（photo.tilt）。ポーズと表情は、新しいキャラではまだない
+// 撮影でえらぶもの（下の列に出す。着替えは、お着替えの画面をひらく）。顔の向き（photo.turn）は、2026-11-27 くりた「うまくいってないのでナシに」でえらべなくした（前のカードも正面で出る）
+const MODES = [['pose', 'ポーズ'], ['face', '表情'], ['tilt', 'かしげ'], ['wind', '風'], ['light', '光']];   // 腰（photo.lean）は、えらべなくした（前に残したカードは、そのまま出る）   // かしげ：首をかしげる（photo.tilt）。ポーズと表情は、新しいキャラではまだない
 const TURNS = [[-1, '左を向く', 'u-2'], [0, '正面', 'u0'], [1, '右を向く', 'u2']];   // 1段だけ
 const LEANS = [[-8, '左に大きく', 't-2'], [-4, '左に', 't-1'], [0, 'まっすぐ', 't0'], [4, '右に', 't1'], [8, '右に大きく', 't2']];
 const WINDS = [[-2, '←強い', 'w-2'], [-1, '←弱い', 'w-1'], [0, 'なし', 'w0'], [1, '弱い→', 'w1'], [2, '強い→', 'w2']];
