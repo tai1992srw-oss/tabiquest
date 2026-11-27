@@ -215,11 +215,11 @@
   },
   "32番のデザイン": {
    "line": "#211012",
-   "shadow2": "#A68B7F",
-   "shadow1": "#C8B2A7",
-   "base": "#F8E9DE",
-   "light": "#FCFCFB",
-   "highlight": "#FEFEFE"
+   "shadow2": "#BF9A8A",
+   "shadow1": "#D9BBAB",
+   "base": "#F5DDCF",
+   "light": "#F9EBE1",
+   "highlight": "#FCF6F1"
   },
   "33番のデザイン": {
    "line": "#211012",
@@ -2253,11 +2253,11 @@
    "number": 32,
    "offset": [
     0,
-    9
+    16
    ],
    "cheekAnchor": [
-    192,
-    133
+    190,
+    125
    ],
    "layers": {
     "hair_back": "c32n/hair_back.png",
@@ -2271,7 +2271,7 @@
     "body": "c32n/body_design.png",
     "wear": "c32n/wear_design.png",
     "tucked": false,
-    "note": "デザインの服（黒ゴスのワンピース・くつ下・くつ。ワンピースは上下つながったまま）。手首の小物もこの中。offset はかけない"
+    "note": "デザインの服（黒ゴスのワンピース・くつ下・くつ）。手首の小物もこの中。offset はかけない"
    },
    "faces": {
     "normal": "c32n/face.png",
@@ -2383,7 +2383,7 @@
       "handOffset": {
        "up_R": [
         0,
-        0
+        1
        ],
        "up_L": [
         0,
@@ -2395,7 +2395,7 @@
        ],
        "front_L": [
         0,
-        0
+        3
        ]
       }
      }
