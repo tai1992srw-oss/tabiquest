@@ -2787,6 +2787,10 @@
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
    "hairPreset": "36番のデザイン",
+   "uniquePose": {
+    "img": "c36n/pose_unique.png",
+    "name": "はい、こっち向いて〜！（カメラをかまえる）"
+   },
    "wears": {
     "uniform": {
      "name": "36番の服",
@@ -2849,10 +2853,6 @@
       "torsoTuck": "c36n/arms/torso_tuck.png"
      }
     }
-   },
-   "uniquePose": {
-    "img": "c36n/pose_unique.png",
-    "name": "はい、こっち向いて〜！（カメラをかまえる）"
    }
   },
   "c35n": {
