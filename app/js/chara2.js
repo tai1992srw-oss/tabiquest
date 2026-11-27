@@ -606,7 +606,7 @@ function composeBig(P, L) {
     if (!it.head && it.front && B.IM[it.front]) wear.push([B.IM[it.front], ...itAt(it)]);   // 頭でない物（手に持つ物など）の前の層は、服の上
   }
   // 前髪：向きのときは、てっぺんほど向いた側へ（頭に付く装飾品も、前髪といっしょに）
-  { const [q, qg] = mk(); hairTo(qg, 'hair_front', design ? [0, 0] : o, 3.5); for (const it of its) if (it.head && it.front && B.IM[it.front]) qg.drawImage(B.IM[it.front], ...itAt(it));
+  { const [q, qg] = mk(); hairTo(qg, 'hair_front', design ? [0, 0] : o, 3.5); for (const it of its) if (it.head && !it.overFace && it.front && B.IM[it.front]) qg.drawImage(B.IM[it.front], ...itAt(it));
     tg.drawImage(turn ? rowShift(q, y => tv * T.hair * K15 * (1 - ramp(y, eyeY - 15, eyeY + 18))) : q, 0, 0); }
   // 顔の部品：向きのときは、部品ごとにずらし、奥の目・まゆは列をぬいて細く（はしをそろえる）
   const mv = Math.round(tv * T.move * K15);
@@ -622,6 +622,8 @@ function composeBig(P, L) {
     else putPart(im, fo[0] + mv + (k === 'mouth' ? Math.round(tv * T.mouth * K15) : 0), fo[1]);
   }
   else putPart(B.IM[SC ? C.faceNoCheek || C.faces.normal.replace('face.png', 'face_nocheek.png') : C.faces.normal], fo[0] + mv, fo[1]);
+  // 顔の上にかける物（メガネなど。overFace）：顔の部品のあと。向きのときは顔の部品といっしょにずらす
+  for (const it of its) if (it.head && it.overFace && it.front && B.IM[it.front]) { const a = itAt(it); tg.drawImage(B.IM[it.front], a[0] + mv, a[1]); }
   // 頭（輪郭）：向きのときは、目の高さから下を、あごに向かって向いた側へ
   const headF = turn ? rowShift(headC, y => tv * T.jaw * K15 * ramp(y, eyeY, chinY + 3) ** 2) : headC;
   const rot = q => (tilt ? rotate(q, tilt, hcx, chinY, H) : q);   // かしげ：あごの下のまん中を軸に

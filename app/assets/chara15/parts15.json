@@ -140,6 +140,14 @@
    "base": "#C49CC8",
    "light": "#FACDFF",
    "highlight": "#FCDAFF"
+  },
+  "4番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#4C1F16",
+   "shadow1": "#5E291E",
+   "base": "#A05040",
+   "light": "#CD715F",
+   "highlight": "#FFAB9B"
   }
  },
  "shared": {
@@ -480,6 +488,103 @@
     }
    },
    "hairPreset": "キャラ3bのデザイン"
+  },
+  "c4b": {
+   "name": "4番",
+   "number": 4,
+   "offset": [
+    0,
+    7
+   ],
+   "cheekAnchor": [
+    191,
+    132
+   ],
+   "layers": {
+    "hair_back": "c4b/hair_back.png",
+    "head": "c4b/head.png",
+    "hair_front": "c4b/hair_front.png"
+   },
+   "items": [
+    "c4b_glasses"
+   ],
+   "design": {
+    "body": "c4b/body_design.png",
+    "wear": "c4b/wear_design.png",
+    "note": "デザインの服（そのキャラの絵の体ごと）。offset はかけない"
+   },
+   "wears": {
+    "uniform": {
+     "name": "4番の服",
+     "layers": [
+      "c4b/uniform_bottom.png",
+      "c4b/uniform_shoes.png",
+      "c4b/uniform_top.png"
+     ],
+     "layersTucked": [
+      "c4b/uniform_top.png",
+      "c4b/uniform_bottom.png",
+      "c4b/uniform_shoes.png"
+     ],
+     "parts": {
+      "top": "c4b/uniform_top.png",
+      "bottom": "c4b/uniform_bottom.png",
+      "shoes": "c4b/uniform_shoes.png"
+     },
+     "partNames": {
+      "top": "ブラウス",
+      "bottom": "スカート",
+      "shoes": "くつ・くつ下"
+     },
+     "note": "メイン衣装（ステップ4、素体に合わせた。緑がかった青のブラウス・からし色のスカート・くつ下とくつ）。もとのデザインはブラウスを中に入れる（layersTucked）。offset はかけない"
+    }
+   },
+   "faces": {
+    "normal": "c4b/face.png",
+    "angry": "c4b/face_angry.png",
+    "close": "c4b/face_close.png",
+    "jito": "c4b/face_jito.png",
+    "shy": "c4b/face_shy.png",
+    "smile": "c4b/face_smile.png",
+    "surprise": "c4b/face_surprise.png",
+    "trouble": "c4b/face_trouble.png",
+    "wink": "c4b/face_wink.png"
+   },
+   "faceNames": {
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c4b/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "angry",
+     "close",
+     "jito",
+     "shy",
+     "smile",
+     "surprise",
+     "trouble",
+     "wink"
+    ],
+    "sharedCheek": "ほおは shared.cheek を使う",
+    "noNose": "鼻はなし",
+    "note": "キャラ1b と同じ形。順は 目→まゆ→口（ほおは共通の部品を目の下に）"
+   },
+   "hairPreset": "4番のデザイン"
   }
  },
  "items": [
@@ -491,6 +596,16 @@
    "head": true,
    "headOf": "c3b",
    "note": "12番（キャラ3b）の頭に合わせて描いた装飾品（ステップ2で別の部品にした）。頭に付くので、c3b の offset で頭といっしょに動かす。重ねる順は 前髪 → 装飾品 → 顔。ほかのキャラの頭にのせるときも、まずは c3b の offset のまま"
+  },
+  {
+   "id": "c4b_glasses",
+   "name": "まるメガネ",
+   "front": "c4b/acc_front.png",
+   "back": null,
+   "head": true,
+   "headOf": "c4b",
+   "overFace": true,
+   "note": "4番の頭に合わせて描いたメガネ（ステップ2で別の部品にした）。頭に付くので headOf の offset で頭といっしょに動かす。目の上にかけるので、重ねる順は 前髪 → 顔 → メガネ（overFace＝true は顔の部品より上）"
   }
  ]
 }
