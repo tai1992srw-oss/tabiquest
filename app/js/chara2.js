@@ -702,7 +702,7 @@ function composeBig(P, L) {
     }
   }
   // 小物・装飾品（look.items15）：頭に付く物は headOf のキャラの頭の位置（offset）に置いて、頭といっしょにかしげる。後ろの層は後ろ髪のあと、前の層は前髪のあと
-  const its = (L.items15 || []).map(id => J.items.find(q => q.id === id)).filter(Boolean), itAt = it => (design ? [0, 0] : it.head ? (J.chars[it.headOf]?.offset || o) : [0, 0]);
+  const its = (L.items15 || []).map(id => J.items.find(q => q.id === id)).filter(it => it && !(PZ && it.standOnly)), itAt = it => (design ? [0, 0] : it.head ? (J.chars[it.headOf]?.offset || o) : [0, 0]);   // standOnly：立ちのうでの位置に描いた物（手首のシュシュなど）。うでのポーズのときは出さない
   for (const it of its) {
     if (it.back && B.IM[it.back]) { if (it.head) bk.drawImage(B.IM[it.back], ...itAt(it)); else body.unshift([B.IM[it.back], ...itAt(it)]); }   // 後ろの層：頭の物は後ろ髪の上、ほかは体の下
     if (!it.head && it.front && B.IM[it.front]) wear.push([B.IM[it.front], ...itAt(it)]);   // 頭でない物（手に持つ物など）の前の層は、服の上
