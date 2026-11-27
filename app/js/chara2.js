@@ -509,24 +509,6 @@ function poseOf(P, L) {
 // えらべる手：[手, 名前]（その角度で、いまの服で手をかえられるときだけ。はじめのグーもふくむ）
 export const bigHands = (P, L, side) => { const J = P.big?.J, PZ = J?.arms && poseOf(P, L); if (!PZ) return []; const a = side === 'R' ? PZ.r : PZ.l;
   const hs = (J.arms.hands?.[a] || []).filter(h => h === 'gu' || handOk(J, PZ.A, a, side, h)); return hs.length > 1 ? hs.map(h => [h, J.arms.handNames?.[h] || h]) : []; };
-// 素体のインナーをチューブトップに（2026-11-27 くりた「素体をチューブトップに変えようか」）：肩ひも（白）と、肩ひものふちの線を、肌の色にぬりかえて消す。
-//   体の絵（sotaiBody・arms.body）を読みこんだときに1回だけ。絵は描き足さない（肌の色のドットにかえるだけ）。むねの上のふちの線（y204 あたり）がチューブトップの上のふちになる
-const TUBE_TOP = false;
-function tubeTop(im, skin) {
-  if (!im) return im; const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0);
-  const d = x.getImageData(0, 0, c.width, c.height), u = d.data, W = c.width, at = (X, Y) => (Y * W + X) * 4, op = (X, Y) => u[at(X, Y) + 3] > 128;
-  const isW = (X, Y) => { const i = at(X, Y); return op(X, Y) && Math.min(u[i], u[i + 1], u[i + 2]) > 225; }, isL = (X, Y) => { const i = at(X, Y); return op(X, Y) && u[i] + u[i + 1] + u[i + 2] < 120; };
-  const Y0 = 170, Y1 = 204, strap = new Set();
-  for (let Y = Y0; Y < Y1; Y++) for (let X = 1; X < W - 1; X++) if (isW(X, Y)) strap.add(Y * W + X);
-  const near = (X, Y, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (strap.has((Y + dy) * W + X + dx)) return true; return false; };
-  const to = [];
-  for (let Y = Y0; Y < Y1; Y++) for (let X = 1; X < W - 1; X++) {
-    if (strap.has(Y * W + X)) to.push([X, Y]);
-    else if (isL(X, Y) && near(X, Y, 2) && op(X - 1, Y) && op(X + 1, Y) && op(X, Y - 1) && op(X, Y + 1)) to.push([X, Y]);   // 肩ひものふちの線（まわりが全部ドットの所だけ。体のりんかくの線は残す）
-  }
-  for (const [X, Y] of to) { const i = at(X, Y); u[i] = skin[0]; u[i + 1] = skin[1]; u[i + 2] = skin[2]; }
-  x.putImageData(d, 0, 0); return c;
-}
 // えらべるポーズ：[番号, 名前]（プリセット。いまの服で着られる物だけ）。はじめは「立ち」（''）
 export const bigPoses = (P, L) => { const J = P.big?.J; if (!J?.arms) return []; const out = [];
   for (const [v, n] of J.arms.presets || []) { if (v === 'down-down') continue; if (poseOf(P, { ...L, pose15: v })) out.push([v, n]); }
@@ -556,7 +538,6 @@ async function loadBig() {
     const o = C.offset || [0, 0]; chars[c] = { cx: Math.round(J.size[0] / 2 / 1.5), headTop: Math.round((57 + o[1]) / 1.5) };   // 顔の寄りの切りぬき（256×384 の目もり）
   }
   await Promise.all([...files].map(async f => { IM[f] = await image(BASE15 + f).catch(() => null); }));
-  if (TUBE_TOP) { const sb = J.colors?.skin?.base || '#fddcbb', sk = [1, 3, 5].map(i => parseInt(sb.slice(i, i + 2), 16)); for (const f of [J.sotaiBody, J.arms?.body]) if (f && IM[f]) IM[f] = tubeTop(IM[f], sk); }   // 素体のインナーはチューブトップ（くりたの返事待ち。決まるまで false）
   const ids = Object.keys(J.chars).filter(c => !REPLACED15[c] || !J.chars[REPLACED15[c]]).sort((a, b) => ((J.chars[a].number ?? 99) || 99) - ((J.chars[b].number ?? 99) || 99) || a.localeCompare(b));   // 出席番号の順（1番・2番…、0番は最後）
   for (const [c, C] of Object.entries(J.chars)) chars[c].head = bbox(IM[C.layers.head]);   // 頭の大きさ（頭の絵の、ドットのある所。offset をかける前）
   return { J, IM, ids, chars, wears: wearCatalog(J), tint: new Map(), fit: new Map() };
