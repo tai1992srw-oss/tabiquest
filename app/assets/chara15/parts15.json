@@ -212,6 +212,14 @@
    "base": "#342D30",
    "light": "#3E3639",
    "highlight": "#473F42"
+  },
+  "32番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#BC9687",
+   "shadow1": "#D2AFA0",
+   "base": "#EDD4C8",
+   "light": "#F1DACF",
+   "highlight": "#F9EFEA"
   }
  },
  "shared": {
@@ -2141,6 +2149,90 @@
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
    "hairPreset": "31番のデザイン"
+  },
+  "c32n": {
+   "name": "32番",
+   "number": 32,
+   "offset": [
+    0,
+    9
+   ],
+   "cheekAnchor": [
+    192,
+    108
+   ],
+   "layers": {
+    "hair_back": "c32n/hair_back.png",
+    "head": "c32n/head.png",
+    "hair_front": "c32n/hair_front.png"
+   },
+   "items": [
+    "c32n_AF"
+   ],
+   "design": {
+    "body": "c32n/body_design.png",
+    "wear": "c32n/wear_design.png",
+    "tucked": false,
+    "note": "デザインの服（黒ゴスのワンピース・くつ下・くつ。ワンピースは上下つながったまま）。手首の小物もこの中。offset はかけない"
+   },
+   "faces": {
+    "normal": "c32n/face.png",
+    "smile": "c32n/face_smile.png",
+    "close": "c32n/face_close.png",
+    "wink": "c32n/face_wink.png",
+    "surprise": "c32n/face_surprise.png",
+    "trouble": "c32n/face_trouble.png",
+    "shy": "c32n/face_shy.png",
+    "angry": "c32n/face_angry.png",
+    "jito": "c32n/face_jito.png",
+    "moji": "c32n/face_moji.png"
+   },
+   "faceNames": {
+    "normal": "ふだん",
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "moji": "もじもじ"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c32n/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "smile",
+     "close",
+     "wink",
+     "surprise",
+     "trouble",
+     "shy",
+     "angry",
+     "jito",
+     "moji"
+    ],
+    "uniqueExprs": [
+     "moji"
+    ],
+    "noNose": "鼻はなし（絵では描かせるが、ドットでは外す）",
+    "note": "ほおは shared.cheek ではなく、このキャラの cheeks を使う（顔の部品のいちばん下）"
+   },
+   "cheeks": {
+    "normal": "c32n/cheek_normal.png",
+    "shy": "c32n/cheek_shy.png",
+    "none": null,
+    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
+   },
+   "hairPreset": "32番のデザイン"
   }
  },
  "items": [
@@ -2313,6 +2405,15 @@
    "back": null,
    "head": true,
    "headOf": "c31n",
+   "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
+  },
+  {
+   "id": "c32n_AF",
+   "name": "黒いリボンと十字のピン",
+   "front": "c32n/acc_AF.png",
+   "back": null,
+   "head": true,
+   "headOf": "c32n",
    "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
   }
  ],
