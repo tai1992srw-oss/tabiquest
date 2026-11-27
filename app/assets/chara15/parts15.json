@@ -244,6 +244,14 @@
    "base": "#B37068",
    "light": "#-80000000-80000000-80000000",
    "highlight": "#DEA295"
+  },
+  "35番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#6D5F5B",
+   "shadow1": "#998884",
+   "base": "#A2908B",
+   "light": "#D6C3BD",
+   "highlight": "#DBC6C0"
   }
  },
  "shared": {
@@ -2341,7 +2349,8 @@
     "hair_front": "c33n/hair_front.png"
    },
    "items": [
-    "c33n_AF"
+    "c33n_AF",
+    "c33n_AW"
    ],
    "design": {
     "body": "c33n/body_design.png",
@@ -2407,6 +2416,10 @@
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
    "hairPreset": "33番のデザイン",
+   "uniquePose": {
+    "img": "c33n/pose_unique.png",
+    "name": "ジャンプでばあっ！"
+   },
    "wears": {
     "uniform": {
      "name": "33番の服",
@@ -2468,10 +2481,6 @@
       }
      }
     }
-   },
-   "uniquePose": {
-    "img": "c33n/pose_unique.png",
-    "name": "ジャンプでばあっ！"
    }
   },
   "c34n": {
@@ -2641,6 +2650,90 @@
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
    "hairPreset": "36番のデザイン"
+  },
+  "c35n": {
+   "name": "35番",
+   "number": 35,
+   "offset": [
+    0,
+    9
+   ],
+   "cheekAnchor": [
+    192,
+    129
+   ],
+   "layers": {
+    "hair_back": "c35n/hair_back.png",
+    "head": "c35n/head.png",
+    "hair_front": "c35n/hair_front.png"
+   },
+   "items": [
+    "c35n_AF"
+   ],
+   "design": {
+    "body": "c35n/body_design.png",
+    "wear": "c35n/wear_design.png",
+    "tucked": true,
+    "note": "デザインの服（緑の短いジャケット・クリームのハイネックのニット（スカートに入れる）・チャコールのロングスカート・こげ茶のショートブーツ。くつ下なし）。手首の小物もこの中。offset はかけない"
+   },
+   "faces": {
+    "normal": "c35n/face.png",
+    "smile": "c35n/face_smile.png",
+    "close": "c35n/face_close.png",
+    "wink": "c35n/face_wink.png",
+    "surprise": "c35n/face_surprise.png",
+    "trouble": "c35n/face_trouble.png",
+    "shy": "c35n/face_shy.png",
+    "angry": "c35n/face_angry.png",
+    "jito": "c35n/face_jito.png",
+    "eraierai": "c35n/face_eraierai.png"
+   },
+   "faceNames": {
+    "normal": "ふだん",
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "eraierai": "えらいえらい"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c35n/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "smile",
+     "close",
+     "wink",
+     "surprise",
+     "trouble",
+     "shy",
+     "angry",
+     "jito",
+     "eraierai"
+    ],
+    "uniqueExprs": [
+     "eraierai"
+    ],
+    "noNose": "鼻はなし（絵では描かせるが、ドットでは外す）",
+    "note": "ほおは shared.cheek ではなく、このキャラの cheeks を使う（顔の部品のいちばん下）"
+   },
+   "cheeks": {
+    "normal": "c35n/cheek_normal.png",
+    "shy": "c35n/cheek_shy.png",
+    "none": null,
+    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
+   },
+   "hairPreset": "35番のデザイン"
   }
  },
  "items": [
@@ -2834,6 +2927,15 @@
    "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
   },
   {
+   "id": "c33n_AW",
+   "name": "紫のシュシュ",
+   "front": "c33n/acc_AW.png",
+   "back": null,
+   "head": false,
+   "standOnly": true,
+   "note": "手首の小物。体と同じ枠・offset なし。standOnly＝うでのポーズのときは出さない"
+  },
+  {
    "id": "c34n_AF",
    "name": "花のかざりとリボン",
    "front": "c34n/acc_AF.png",
@@ -2849,6 +2951,15 @@
    "back": null,
    "head": true,
    "headOf": "c36n",
+   "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
+  },
+  {
+   "id": "c35n_AF",
+   "name": "シルバーのフープピアス",
+   "front": "c35n/acc_AF.png",
+   "back": null,
+   "head": true,
+   "headOf": "c35n",
    "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
   }
  ],
