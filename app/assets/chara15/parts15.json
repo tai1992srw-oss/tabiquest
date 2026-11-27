@@ -1849,7 +1849,8 @@
      "parts": {
       "top": "c6n/uniform_top.png",
       "bottom": "c6n/uniform_bottom.png",
-      "shoes": "c6n/uniform_shoes.png"
+      "shoes": "c6n/uniform_shoes.png",
+      "topTuck": "c6n/uniform_top_tuck.png"
      },
      "partNames": {
       "top": "ワインレッドのニット",
@@ -1898,7 +1899,8 @@
         0,
         0
        ]
-      }
+      },
+      "torsoTuck": "c6n/arms/torso_tuck.png"
      }
     }
    }

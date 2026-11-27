@@ -446,7 +446,7 @@ function wearCatalog(J) {
   const parts = [], sets = [];
   for (const [c, C] of Object.entries(J.chars)) for (const [w, W] of Object.entries(C.wears || {})) {
     if (oldWearHidden(J, c)) continue;   // 差し替えた前の子の服は、新しい子に服があれば出さない
-    const ps = {}; for (const [k, f] of Object.entries(W.parts || {})) { const id = `${c}.${w}.${k}`; ps[k] = id; parts.push({ id, kind: k, file: f, name: `${W.name || w}の${W.partNames?.[k] || WEAR15_PARTS.find(q => q[0] === k)?.[1] || k}`, owner: c, arms: k === 'top' ? W.arms || null : null }); }   // arms：うでのポーズの部品（トップスの胴と、うで 角度×右左）
+    const ps = {}; for (const [k, f] of Object.entries(W.parts || {})) { if (k === 'topTuck') continue; const id = `${c}.${w}.${k}`; ps[k] = id; parts.push({ id, kind: k, file: f, name: `${W.name || w}の${W.partNames?.[k] || WEAR15_PARTS.find(q => q[0] === k)?.[1] || k}`, owner: c, arms: k === 'top' ? W.arms || null : null, ...(k === 'top' && W.parts.topTuck ? { tuckFile: W.parts.topTuck } : {}) }); }   // arms：うでのポーズの部品（トップスの胴と、うで 角度×右左）。tuckFile：中に入れたとき用の短い胴（topTuck。6番〜）
     sets.push({ id: `${c}.${w}`, name: W.name || w, parts: ps, owner: c, tuck: !!W.tuckDefault });   // tuck：もとのデザインはトップスを中に入れる服
   }
   return { parts, sets };
@@ -664,11 +664,11 @@ function composeBig(P, L) {
     hairTo(bk, 'hair_back', o, 7); body.push([skin15(P, PZ ? J.arms.body : J.sotaiBody, sk), 0, 0]); hg.drawImage(skin15(P, C.layers.head, sk), ...o);   // 肌の色（look.colors.skin）。ポーズのときは、ポーズの体
     if (L.w15 === 'tshirt') wear.push([B.IM[J.wear.tshirt], 0, 0]);
     else for (const k of L.tuck15 ? DRAW15_TUCK : DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (!it) continue;   // 服は offset なし
-      if (k !== 'top' || !PZ) { wear.push([B.IM[it.file], 0, 0]); continue; }
+      if (k !== 'top' || !PZ) { wear.push([B.IM[(L.tuck15 && it.tuckFile) || it.file], 0, 0]); continue; }   // 中に入れたときは、短い胴があればそれ
       // うでのポーズ：トップスのかわりに、後ろのうで → トップスの胴 → ほかのうで（backOver の服は、後ろのうでも胴より前）
       const A = PZ.A, arm = (a, s) => skin15(P, PZ.h[s] ? A.wrist[`${a}_${s}`] : A[`${a}_${s}`], sk, true), sides = [['R', PZ.r], ['L', PZ.l]];
       for (const [s, a] of sides) if (a === 'back' && !A.backOver) wear.push([arm(a, s), 0, 0]);
-      wear.push([B.IM[A.torso], 0, 0]);
+      wear.push([B.IM[(L.tuck15 && A.torsoTuck) || A.torso], 0, 0]);
       for (const [s, a] of sides) if (a !== 'back' || A.backOver) wear.push([arm(a, s), 0, 0]);
     }
   }
