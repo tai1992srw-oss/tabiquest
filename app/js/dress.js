@@ -3,7 +3,7 @@
 //   見た目（look）と、絵の組み立ては chara2.js。絵は描き足さない
 //   輪郭を替えると、バランスはその輪郭のプリセットになる（そこから自由に動かせる）
 import { settings, saveSettings } from './store.js';
-import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf, bigWears, bigHairs, bigParts, bigWearOn, bigPickWear, bigHairStyles, WEAR15_PARTS, HAIR15_VALS, bigItems, toggleItem15 } from './chara2.js';
+import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf, bigWears, bigHairs, bigParts, bigWearOn, bigPickWear, bigHairStyles, WEAR15_PARTS, HAIR15_VALS, bigItems, toggleItem15, BW15_MAX } from './chara2.js';
 import { esc, toast } from './ui.js';
 
 const ICON = { rin: '◯', eye: '◉', brow: '⌒', mouth: '◡', cheek: '❀', hairF: '✂', hairB: '≋', wear: '♥' };
@@ -57,7 +57,8 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
     if (!P) return;
     if (tab.kind === 'w15') {   // b版の服：上の絞りこみ（セット・トップス・ボトムス・くつ）で、ひとそろいと部分を切りかえる。部分は、キャラをこえて組み合わせられる
       const f = wf, list = f === 'set' ? bigWears(P, L.big) : [['', 'なし'], ...bigParts(P, f)];
-      if (full) body.innerHTML = `<div class="du-chips">${[['set', 'セット'], ...WEAR15_PARTS].map(([k, n]) => `<button data-wf="${k}" aria-pressed="${k === f}">${n}</button>`).join('')}</div><div class="du-shape"><button data-a="tuck15"></button></div><div class="du-grid body">${list.map(([k, n]) => `<button class="du-item" data-w15="${esc(k)}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
+      if (full) body.innerHTML = `<div class="du-chips">${[['set', 'セット'], ...WEAR15_PARTS].map(([k, n]) => `<button data-wf="${k}" aria-pressed="${k === f}">${n}</button>`).join('')}</div><div class="du-shape"><button data-a="tuck15"></button></div>${sliders([['bw15', 'ボトムスのはば', 0, BW15_MAX, '中に入れたトップスが横から出るときに広げる']])}<div class="du-grid body">${list.map(([k, n]) => `<button class="du-item" data-w15="${esc(k)}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
+      setSliders(); body.querySelectorAll('.du-sl[data-k=bw15] button, .du-sl[data-k=bw15] input').forEach(e => { e.disabled = !(L.w15 === 'parts' && L.p15?.bottom); });
       const tb = body.querySelector('[data-a=tuck15]'); if (tb) { const ok = L.w15 === 'parts' && L.p15?.top && L.p15?.bottom; tb.disabled = !ok; tb.setAttribute('aria-pressed', String(!!L.tuck15)); tb.textContent = L.tuck15 ? 'トップス：中に入れている（押すと外に出す）' : 'トップス：外に出している（押すと中に入れる）'; }
       body.querySelectorAll('[data-w15]').forEach(b => { const v = b.dataset.w15; b.setAttribute('aria-pressed', String(bigWearOn(P, L, f, v))); const t = clone(L); bigPickWear(P, t, f, v); drawLook(b.querySelector('canvas'), P, fixLook(P, t), 'body'); });
     } else if (tab.kind === 'h15') {   // b版の髪：髪型（みんなの髪）と、髪の色（プリセット）
@@ -107,8 +108,8 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   const sliders = list => list.map(([k, nm, mn, mx, hint]) => `<div class="du-sl" data-k="${k}"><b>${nm}</b><button data-d="-1" aria-label="${nm}を1へらす">−</button><input type="range" min="${mn}" max="${mx}" step="1" aria-label="${nm}"><button data-d="1" aria-label="${nm}を1ふやす">＋</button><output></output><small>${hint}</small></div>`).join('');
   const sg = n => (n > 0 ? '+' + n : n === 0 ? '±0' : String(n));   // どの値も、キャラ1（髪は、輪郭に合わせた所）を ±0 として見せる
   // スライダーの値：b版は髪の調整（look.hv15）、前の版は look.v
-  const vGet = (x, k) => (x.big ? +(x.hv15?.[k] || 0) : x.v[k]);
-  const vSet = (x, k, n) => { if (!x.big) { x.v[k] = n; return; } const h = { ...(x.hv15 || {}) }; if (n) h[k] = n; else delete h[k]; if (Object.keys(h).length) x.hv15 = h; else delete x.hv15; };
+  const vGet = (x, k) => (k === 'bw15' ? +(x.bw15 || 0) : x.big ? +(x.hv15?.[k] || 0) : x.v[k]);
+  const vSet = (x, k, n) => { if (k === 'bw15') { if (n > 0) x.bw15 = n; else delete x.bw15; return; } if (!x.big) { x.v[k] = n; return; } const h = { ...(x.hv15 || {}) }; if (n) h[k] = n; else delete h[k]; if (Object.keys(h).length) x.hv15 = h; else delete x.hv15; };
   const setSliders = () => body.querySelectorAll('.du-sl').forEach(s => { s.querySelector('input').value = vGet(L, s.dataset.k); s.querySelector('output').textContent = sg(vGet(L, s.dataset.k)); });
   // 部品を替える。輪郭を替えたら、バランスをその輪郭のプリセットにする
   const pick = (t, k, c) => { if (k === 'hair') { t.hairF = c; t.hairB = c; } else t[k] = c; if (k === 'rin') t.v = presetOf(P, c, t.v); };
