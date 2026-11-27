@@ -101,7 +101,7 @@ export function loadParts() {
 }
 // キャラのプリセット：そのキャラの部品とバランスを、ひとそろい（色は元の色、髪の調整は 0）。名前は、ならび順に「キャラ1」「キャラ2」…
 export const charaLook = (P, id) => isBig(P, id) ? bigLook(P, id) : ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, k === 'cheek' && !P.J.chars[id].pieces.cheekL ? '' : id])), v: presetOf(P, id) });
-export const charaName = (P, id) => isBig(P, id) ? P.big.J.chars[id].name : `キャラ${P.ids.indexOf(id) + 1}`;
+export const charaName = (P, id) => isBig(P, id) ? (P.big.J.chars[id].number != null ? `${P.big.J.chars[id].number}番` : P.big.J.chars[id].name) : `キャラ${P.ids.indexOf(id) + 1}`;
 // はじめの見た目：最初の子（1つめの id）の部品とバランス
 export const firstLook = P => !SMALL ? bigLook(P, P.big.ids[0]) : ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, P.ids[0]])), v: presetOf(P, P.ids[0]) });
 // 見た目をととのえる（前のキャラの見た目や、欠けた項目は、はじめの見た目で埋める）
@@ -464,6 +464,8 @@ export function bigPickWear(P, L, kind, v) {
 }
 // 髪型の一覧：みんなの髪（[キャラ, 名前]）と、髪の色のプリセット
 export const bigHairStyles = P => P.big.ids.map(c => [c, P.big.J.chars[c].name + 'の髪']);
+export const bigItems = P => P.big.J.items.map(it => [it.id, it.name || it.id]);
+export function toggleItem15(P, L, id) { const s = new Set(L.items15 || []); if (s.has(id)) s.delete(id); else s.add(id); if (s.size) L.items15 = [...s]; else L.items15 = []; }   // [] ＝ ぜんぶはずした（ふだんの装飾品も付けない）
 export const bigHairs = P => Object.entries(P.big.J.hairPresets).map(([k, h]) => [k, h.base]);
 // 表情（FACES の id）を、顔の部品ごとの表情（faceParts.exprs）にする。e：目、b：まゆ、m：口（ないときは ふだん）
 const EXPR15 = { smile: { m: 'smile' }, grin: { e: 'smile', b: 'smile', m: 'smile' }, close: { e: 'close', b: 'close', m: 'close' }, wink: { e: 'wink', b: 'wink', m: 'wink' },
@@ -472,6 +474,7 @@ const EXPR15 = { smile: { m: 'smile' }, grin: { e: 'smile', b: 'smile', m: 'smil
 async function loadBig() {
   const J = await (await fetch(BASE15 + 'parts15.json')).json(), IM = {}, files = new Set([J.sotaiBody, ...Object.values(J.wear)]);
   const SC = J.shared?.cheek; if (SC) for (const k of Object.keys(SC.kinds)) files.add(SC.path.replace('{kind}', k));
+  J.items = J.items || []; for (const it of J.items) for (const k of ['front', 'back']) if (it[k]) files.add(it[k]);   // 小物・装飾品
   const chars = {};
   for (const [c, C] of Object.entries(J.chars)) {
     Object.values(C.layers).forEach(f => files.add(f)); for (const w of Object.values(C.wears || {})) Object.values(w.parts).forEach(f => files.add(f));
@@ -481,14 +484,15 @@ async function loadBig() {
     const o = C.offset || [0, 0]; chars[c] = { cx: Math.round(J.size[0] / 2 / 1.5), headTop: Math.round((57 + o[1]) / 1.5) };   // 顔の寄りの切りぬき（256×384 の目もり）
   }
   await Promise.all([...files].map(async f => { IM[f] = await image(BASE15 + f).catch(() => null); }));
-  const ids = Object.keys(J.chars).sort((a, b) => (a === 'c0') - (b === 'c0') || a.localeCompare(b));   // キャラ1b・2b… の順、キャラ0 は最後
+  const ids = Object.keys(J.chars).sort((a, b) => ((J.chars[a].number ?? 99) || 99) - ((J.chars[b].number ?? 99) || 99) || a.localeCompare(b));   // 出席番号の順（1番・2番…、0番は最後）
   for (const [c, C] of Object.entries(J.chars)) chars[c].head = bbox(IM[C.layers.head]);   // 頭の大きさ（頭の絵の、ドットのある所。offset をかける前）
   return { J, IM, ids, chars, wears: wearCatalog(J), tint: new Map(), fit: new Map() };
 }
 // そのキャラのはじめの見た目：素体に合わせた服があればそれ、なければデザインの服、それもなければ Tシャツ
 function bigLook(P, id) {
-  const C = P.big.J.chars[id], w = Object.keys(C.wears || {})[0];
-  return w ? { big: id, w15: 'parts', p15: { ...P.big.wears.sets.find(q => q.id === `${id}.${w}`).parts } } : { big: id, w15: C.design ? 'design' : 'tshirt' };
+  const C = P.big.J.chars[id], w = Object.keys(C.wears || {})[0], its = (C.items || []).filter(q => P.big.J.items.some(x => x.id === q));
+  const o = w ? { big: id, w15: 'parts', p15: { ...P.big.wears.sets.find(q => q.id === `${id}.${w}`).parts } } : { big: id, w15: C.design ? 'design' : 'tshirt' };
+  if (its.length) o.items15 = its; return o;   // その子のふだんの装飾品（chars.<c>.items）
 }
 function fixBig(P, L) {
   const B = P.big, C = B.J.chars[L.big], o = { big: L.big };
@@ -504,6 +508,7 @@ function fixBig(P, L) {
   if (w === 'tshirt' || w === 'design') o.w15 = w;
   else if (w === 'parts') { o.w15 = 'parts'; const q = {}; for (const [k] of WEAR15_PARTS) if (B.wears.parts.some(x => x.id === p15?.[k] && x.kind === k)) q[k] = p15[k]; o.p15 = q; }
   else Object.assign(o, bigLook(P, L.big));
+  if (Array.isArray(L.items15)) { const its = L.items15.filter(q => B.J.items.some(x => x.id === q)); if (its.length) o.items15 = its; else delete o.items15; }   // 小物（はずした物は入らない）
   const hv = {}; for (const [k, , mn, mx] of HAIR15_VALS) { const v = Math.round(+L.hv15?.[k] || 0); if (v) hv[k] = Math.max(mn, Math.min(mx, v)); } if (Object.keys(hv).length) o.hv15 = hv;   // 髪の調整
   for (const k of ['face', 'blink']) if (L[k]) o[k] = L[k];
   return o;
@@ -593,8 +598,15 @@ function composeBig(P, L) {
     if (L.w15 === 'tshirt') wear.push([B.IM[J.wear.tshirt], 0, 0]);
     else for (const k of DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (it) wear.push([B.IM[it.file], 0, 0]); }   // 服は offset なし
   }
-  // 前髪：向きのときは、てっぺんほど向いた側へ
-  { const [q, qg] = mk(); hairTo(qg, 'hair_front', design ? [0, 0] : o, 3.5); tg.drawImage(turn ? rowShift(q, y => tv * T.hair * K15 * (1 - ramp(y, eyeY - 15, eyeY + 18))) : q, 0, 0); }
+  // 小物・装飾品（look.items15）：頭に付く物は headOf のキャラの頭の位置（offset）に置いて、頭といっしょにかしげる。後ろの層は後ろ髪のあと、前の層は前髪のあと
+  const its = (L.items15 || []).map(id => J.items.find(q => q.id === id)).filter(Boolean), itAt = it => (design ? [0, 0] : it.head ? (J.chars[it.headOf]?.offset || o) : [0, 0]);
+  for (const it of its) {
+    if (it.back && B.IM[it.back]) { if (it.head) bk.drawImage(B.IM[it.back], ...itAt(it)); else body.unshift([B.IM[it.back], ...itAt(it)]); }   // 後ろの層：頭の物は後ろ髪の上、ほかは体の下
+    if (!it.head && it.front && B.IM[it.front]) wear.push([B.IM[it.front], ...itAt(it)]);   // 頭でない物（手に持つ物など）の前の層は、服の上
+  }
+  // 前髪：向きのときは、てっぺんほど向いた側へ（頭に付く装飾品も、前髪といっしょに）
+  { const [q, qg] = mk(); hairTo(qg, 'hair_front', design ? [0, 0] : o, 3.5); for (const it of its) if (it.head && it.front && B.IM[it.front]) qg.drawImage(B.IM[it.front], ...itAt(it));
+    tg.drawImage(turn ? rowShift(q, y => tv * T.hair * K15 * (1 - ramp(y, eyeY - 15, eyeY + 18))) : q, 0, 0); }
   // 顔の部品：向きのときは、部品ごとにずらし、奥の目・まゆは列をぬいて細く（はしをそろえる）
   const mv = Math.round(tv * T.move * K15);
   const putPart = (im, dx, dy, cut = 0) => {

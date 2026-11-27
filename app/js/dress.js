@@ -3,7 +3,7 @@
 //   見た目（look）と、絵の組み立ては chara2.js。絵は描き足さない
 //   輪郭を替えると、バランスはその輪郭のプリセットになる（そこから自由に動かせる）
 import { settings, saveSettings } from './store.js';
-import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf, bigWears, bigHairs, bigParts, bigWearOn, bigPickWear, bigHairStyles, WEAR15_PARTS, HAIR15_VALS } from './chara2.js';
+import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf, bigWears, bigHairs, bigParts, bigWearOn, bigPickWear, bigHairStyles, WEAR15_PARTS, HAIR15_VALS, bigItems, toggleItem15 } from './chara2.js';
 import { esc, toast } from './ui.js';
 
 const ICON = { rin: '◯', eye: '◉', brow: '⌒', mouth: '◡', cheek: '❀', hairF: '✂', hairB: '≋', wear: '♥' };
@@ -14,7 +14,7 @@ const slot = id => ({ id, name: SLOTS.find(q => q[0] === id)[1], icon: ICON[id],
 const DRESS = [{ id: 'wear', name: '服', icon: ICON.wear, kind: 'wear', focus: 'body' }, { id: 'hair', name: '髪', icon: ICON.hairF, kind: 'slot', focus: 'face' }, { id: 'items', name: '小物', icon: '✿', kind: 'items', focus: 'body' }, { id: 'coord', name: 'コーデ', icon: '★', kind: 'coord', focus: 'body' }];
 const FACE = [{ id: 'chara', name: 'キャラ', icon: '☻', kind: 'chara', focus: 'body' }, slot('rin'), slot('eye'), slot('brow'), slot('mouth'), slot('cheek'), { id: 'bal', name: 'バランス', icon: '⇔', kind: 'bal', focus: 'face' }];
 // 1.5倍のキャラ（キャラ1b・キャラ0）：服（Tシャツ・デザインの服・素体）と髪の色だけえらべる。顔の部品・バランス・小物は、まだ合わない
-const DRESS15 = [{ id: 'w15', name: '服', icon: ICON.wear, kind: 'w15', focus: 'body' }, { id: 'h15', name: '髪', icon: ICON.hairF, kind: 'h15', focus: 'face' }, DRESS[3]];
+const DRESS15 = [{ id: 'w15', name: '服', icon: ICON.wear, kind: 'w15', focus: 'body' }, { id: 'h15', name: '髪', icon: ICON.hairF, kind: 'h15', focus: 'face' }, { id: 'items15', name: '小物', icon: '✿', kind: 'items15', focus: 'face' }, DRESS[3]];
 const FACE15 = [FACE[0], { id: 'skin15', name: '肌の色', icon: '◯', kind: 'skin15', focus: 'body' }];
 const clone = L => JSON.parse(JSON.stringify(L));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -65,6 +65,9 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
       setSliders();
       body.querySelectorAll('[data-h15]').forEach(b => b.setAttribute('aria-pressed', String((L.h15 || '') === b.dataset.h15)));
       body.querySelectorAll('[data-hs15]').forEach(b => { const c = b.dataset.hs15; b.setAttribute('aria-pressed', String((L.hair15 || L.big) === c)); drawLook(b.querySelector('canvas'), P, fixLook(P, { ...L, hair15: c }), 'face'); });
+    } else if (tab.kind === 'items15') {   // b版の小物・装飾品：押すと付ける・はずす
+      if (full) body.innerHTML = `<p class="du-hint">押すと付けたり、はずしたりできます</p><div class="du-grid face"><button class="du-item" data-it15=""><canvas></canvas><span class="du-nm">ぜんぶはずす</span></button>${bigItems(P).map(([id, n]) => `<button class="du-item" data-it15="${esc(id)}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
+      body.querySelectorAll('[data-it15]').forEach(b => { const id = b.dataset.it15, on = id ? (L.items15 || []).includes(id) : !(L.items15 || []).length; b.setAttribute('aria-pressed', String(on)); const t = clone(L); if (id) { if (!on) toggleItem15(P, t, id); } else t.items15 = []; drawLook(b.querySelector('canvas'), P, t, 'face'); });
     } else if (tab.kind === 'skin15') {   // b版の肌の色：体と頭の肌を、えらんだ色に寄せる
       if (full) body.innerHTML = `${swatches('skin')}<p class="du-hint">体と顔の肌の色が変わります。服の色は変わりません</p>`;
       markColors('skin');
@@ -115,6 +118,7 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
     const b = e.target.closest('button'); if (!b || !P) { if (b?.dataset.a === 'cancel') close(); return; } const a = b.dataset.a;
     if (b.dataset.tab) { tab = TABS.find(t => t.id === b.dataset.tab); root.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b))); paint(); renderBody(); }
     else if (b.dataset.w15 !== undefined) { const v = b.dataset.w15; if (!bigWearOn(P, L, wf, v)) change(x => { bigPickWear(P, x, wf, v); Object.assign(x, fixLook(P, x)); }); }
+    else if (b.dataset.it15 !== undefined) { const id = b.dataset.it15; if (id) change(x => toggleItem15(P, x, id)); else if ((L.items15 || []).length) change(x => { x.items15 = []; }); }
     else if (b.dataset.hs15) { const c = b.dataset.hs15; if ((L.hair15 || L.big) !== c) change(x => { if (c === x.big) delete x.hair15; else x.hair15 = c; }); }
     else if (b.dataset.h15 !== undefined) { if ((L.h15 || '') !== b.dataset.h15) change(x => { x.h15 = b.dataset.h15; }); }
     else if (b.dataset.chara) { const t = fixLook(P, charaLook(P, b.dataset.chara)); if (!same(t, fixLook(P, L))) change(x => { for (const k of Object.keys(x)) delete x[k]; Object.assign(x, t); }); }
