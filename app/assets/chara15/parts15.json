@@ -2328,7 +2328,10 @@
     "normal": "c32n/cheek_normal.png",
     "shy": "c32n/cheek_shy.png",
     "none": null,
-    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
+    "shyFor": [
+     "moji"
+    ],
+    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）と shyFor の表情（もじもじ）には shy、ほかは normal がはじめ"
    },
    "hairPreset": "32番のデザイン",
    "uniquePose": {
@@ -2343,13 +2346,13 @@
       "top": "c32n/uniform_top.png",
       "bottom": "c32n/uniform_bottom.png",
       "shoes": "c32n/uniform_shoes.png",
-      "legs": "c32n/uniform_legs.png"
+      "socks": "c32n/uniform_socks.png"
      },
      "partNames": {
       "top": "黒ゴスのワンピース（上）",
       "bottom": "黒ゴスのワンピース（スカート）",
       "shoes": "ストラップシューズ",
-      "legs": "フリルのひざ下くつ下"
+      "socks": "フリルのひざ下くつ下"
      },
      "note": "うでのポーズつきの服（research/style/pose_r/SI/c32n、SI/export_app.py）。top＝胴＋立ちのうで、bottom＝立ち姿の絵のドットから、shoes＝デザインの服から。上げるの手は handOffset だけ下げて焼きこみ",
      "arms": {

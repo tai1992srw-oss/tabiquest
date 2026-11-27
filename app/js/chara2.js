@@ -557,7 +557,6 @@ function bigLook(P, id) {
 // 作り直して差し替えたキャラ（2026-11-27 くりた「0番も差し替え」）：前の子はえらべる一覧から外し、前の子の見た目は新しい子で読む。
 //   前の子の部品（c0 の素体の色・Tシャツの服など）はそのまま使う
 //   2026-11-28 くりた「もろもろ旧版と入れ替えでいいよ」：作り直した5人も差し替え。前の子の服・ふだんの小物は、新しい子の物に読みかえる
-const SHY_CHEEK_U = { c32n: ['moji'] };   // parts15 の cheeks.shyFor がまだないキャラ用（書き出しに入ったら消してよい）
 const REPLACED15 = { c0: 'c0n', c1b: 'c1n', c2b: 'c2n', c4b: 'c4n', c6b: 'c6n', c3b: 'c12n' };
 const oldWearHidden = (J, c) => { const n = REPLACED15[c]; return !!(n && J.chars[n] && Object.keys(J.chars[n].wears || {}).length); };
 const oldItem = (J, id) => { for (const [o, n] of Object.entries(REPLACED15)) { if (!J.chars[n]) continue; const i = (J.chars[o]?.items || []).indexOf(id); if (i >= 0) return (J.chars[n].items || [])[i] || null; } return undefined; };   // 前の子のふだんの小物 → 新しい子の同じ番の小物（ない＝null。前の子の物でない＝undefined）
@@ -717,7 +716,7 @@ function composeBig(P, L) {
     const b = bbOf(B, im); if (!b || b.x1 < 0) return; const [q] = [document.createElement('canvas')]; q.width = b.w; q.height = b.h; q.getContext('2d').drawImage(im, -b.x0, -b.y0);
     const nq = narrow(q, cut); tg.drawImage(nq, b.x0 + dx + (turn > 0 ? cut : 0), b.y0 + dy);   // 細くした分、向いた側のはしをそろえる
   };
-  const shyCheek = L.face === 'shy' || (!!ux && (C.cheeks?.shyFor || SHY_CHEEK_U[L.big] || []).includes(ux));   // 照れのほお：照れの表情と、固有の表情のうち cheeks.shyFor に入っている物（32番のもじもじ など）
+  const shyCheek = L.face === 'shy' || (!!ux && (C.cheeks?.shyFor || []).includes(ux));   // 照れのほお：照れの表情と、固有の表情のうち cheeks.shyFor に入っている物（32番のもじもじ など）
   if (C.cheeks) { const f = C.cheeks[shyCheek ? 'shy' : 'normal']; f && putPart(B.IM[f], fo[0] + mv, fo[1]); }   // キャラだけのほお（5番〜。顔と同じ枠・offset）
   else if (SC) { const a = C.cheekAnchor || SC.ref; putPart(B.IM[SC.path.replace('{kind}', L.face === 'shy' ? 'shy' : 'normal')], fo[0] + a[0] - SC.ref[0] + mv, fo[1] + a[1] - SC.ref[1]); }   // ほお（共通）は顔の部品のいちばん下
   if (F) for (const k of F.order) {
