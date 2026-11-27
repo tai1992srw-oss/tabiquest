@@ -46,6 +46,14 @@ export function season(c, kind, s) {
       : s === 'winter' ? [112, 114, 72] : s === 'autumn' ? [100, 132, 60] : [70, 150, 58];   // 芝桜などは冬も葉が残る：秋はくすんだ緑、冬は茶色がかった緑
     return g.map(v => Math.min(255, v * (.45 + l * 1.1)));
   }
+  // 葉を落とす木（2026-11-27、表参道のけやき・巣鴨のいちょう）：秋はその木の色に色づき、冬は葉を落とした枝の色（明るさは元の絵のまま）
+  if (kind === 'zelkova' || kind === 'ginkgo') {
+    if (s === 'summer') return c;
+    const l = (c[0] * .3 + c[1] * .59 + c[2] * .11) / 255;
+    if (s === 'spring') return mix(c, [150, 206, 86], .3);
+    const g = s === 'winter' ? [124, 108, 98] : kind === 'ginkgo' ? [238, 196, 40] : (l < .4 ? [150, 78, 40] : [212, 146, 58]);
+    return g.map(v => Math.min(255, v * (.45 + l * 1.1)));
+  }
   if (kind === 'cap') return s === 'summer' ? mix(c, [86, 108, 150], .82) : c;
   if (!kind || s === 'summer') return c;
   if (kind === 'grass') return s === 'autumn' ? mix(c, [186, 178, 84], .38) : s === 'winter' ? mix(c, [150, 148, 96], .5) : mix(c, [150, 206, 86], .2);   // 芝生：秋は少し黄色く、冬は枯れ色（赤くはしない）

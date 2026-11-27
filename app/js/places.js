@@ -301,6 +301,56 @@ const DOT = [
     item: { id: 'kanagawa-048-omiyage', name: 'だるま（仮）' },
     alt: '川崎大師の大本堂の前に分身キャラが立つ、動くドット絵カード',
   },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。巣鴨地蔵通り商店街から、高岩寺（とげぬき地蔵）の門を見る。額の「高岩寺」はフォントで入れた
+    id: 'tokyo-032', kind: 'dot', no: '013-32', name: '巣鴨地蔵通り商店街', pref: '東京都', city: '豊島区',
+    lat: 35.7357, lng: 139.73565, radius: 300, categories: ['街並み・港', '食・市場'],
+    scene: 'sugamo', times: ['day', 'morning', 'evening', 'night'],
+    blurb: 'とげぬき地蔵の高岩寺へ続く、古い店が並ぶ商店街。食べ歩きができる',
+    welcome: 'ようこそ、巣鴨地蔵通り商店街へ！',
+    item: { id: 'tokyo-032-omiyage', name: 'とげぬき地蔵のお守り（仮）' },
+    alt: '巣鴨地蔵通り商店街の、高岩寺の門の前に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。サンシャイン水族館の屋上の「天空のペンギン」（空を飛ぶように泳ぐ水そう）
+    id: 'tokyo-033', kind: 'dot', no: '013-33', name: 'サンシャイン水族館', pref: '東京都', city: '豊島区',
+    lat: 35.72896, lng: 139.71957, radius: 150, categories: ['テーマパーク・施設'],
+    scene: 'sunshineaq', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '池袋のビルの屋上にある水族館。ペンギンが空を飛ぶように泳ぐ水そうが有名',
+    welcome: 'ようこそ、サンシャイン水族館へ！',
+    item: { id: 'tokyo-033-omiyage', name: 'ペンギンのぬいぐるみ（仮）' },
+    alt: 'サンシャイン水族館の屋上の庭に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。渋谷駅の上の高層ビルの屋上から、スクランブル交差点を見下ろす
+    id: 'tokyo-034', kind: 'dot', no: '013-34', name: '渋谷の屋上展望台', pref: '東京都', city: '渋谷区',
+    lat: 35.65828, lng: 139.70161, radius: 80, categories: ['夜景', '街並み・港'],
+    scene: 'shibuyasky', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '渋谷駅の上の高層ビルの屋上。スクランブル交差点を真上から見下ろせる',
+    welcome: 'ようこそ、渋谷の屋上展望台へ！',
+    item: { id: 'tokyo-034-omiyage', name: '展望台の記念メダル（仮）' },
+    alt: '渋谷の屋上展望台の木の床に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。歩道橋の上から、表参道のけやき並木を見る
+    id: 'tokyo-035', kind: 'dot', no: '013-35', name: '表参道', pref: '東京都', city: '渋谷区',
+    lat: 35.667, lng: 139.7085, radius: 400, categories: ['街並み・港'],
+    scene: 'omotesando', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '明治神宮へ続くけやき並木の大通り。冬はイルミネーション',
+    welcome: 'ようこそ、表参道へ！',
+    item: { id: 'tokyo-035-omiyage', name: 'けやきのしおり（仮）' },
+    alt: '表参道の歩道橋の上に分身キャラが立つ、動くドット絵カード',
+  },
+  {
+    // 絵は Codex（昼・夜・雪の3枚）。ハチ公広場から、渋谷スクランブル交差点を地上の高さで見る
+    id: 'shibuya-scramble', kind: 'dot', no: '013-05', name: '渋谷スクランブル交差点', pref: '東京都', city: '渋谷区',
+    lat: 35.659503, lng: 139.700544, radius: 150, categories: ['街並み・港', '夜景'],
+    scene: 'scramble', times: ['day', 'morning', 'evening', 'night'],
+    blurb: '一度に数千人が渡ると言われる交差点',
+    welcome: 'ようこそ、渋谷スクランブル交差点へ！',
+    item: { id: 'shibuya-scramble-omiyage', name: 'ハチ公のキーホルダー（仮）' },
+    alt: 'ハチ公広場に分身キャラが立つ、動くドット絵カード',
+  },
 ];
 
 // 写真の名所は、時間帯の色づけをコードで行う（形は変えない）ので4つの時間帯すべてを持つ

@@ -42,10 +42,15 @@ import * as owakudani from './scenes/owakudani.js';
 import * as ashinoko from './scenes/ashinoko.js';
 import * as oyama from './scenes/oyama.js';
 import * as kawasakidaishi from './scenes/kawasakidaishi.js';
+import * as sugamo from './scenes/sugamo.js';
+import * as sunshineaq from './scenes/sunshineaq.js';
+import * as shibuyasky from './scenes/shibuyasky.js';
+import * as omotesando from './scenes/omotesando.js';
+import * as scramble from './scenes/scramble.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.152';
+export const VERSION = '0.10.153';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);
@@ -74,6 +79,11 @@ engine.register('owakudani', owakudani.build);
 engine.register('ashinoko', ashinoko.build);
 engine.register('oyama', oyama.build);
 engine.register('kawasakidaishi', kawasakidaishi.build);
+engine.register('sugamo', sugamo.build);
+engine.register('sunshineaq', sunshineaq.build);
+engine.register('shibuyasky', shibuyasky.build);
+engine.register('omotesando', omotesando.build);
+engine.register('scramble', scramble.build);
 engine.register('kamakura', kamakura.build);
 for (const p of PLACES) if (p.kind === 'photo') engine.register(p.scene, () => photo.build(p));
 // 絵のない名所は、写真の名所のしくみに空の絵を渡して使う
