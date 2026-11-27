@@ -104,7 +104,8 @@ export function loadParts() {
 }
 // キャラのプリセット：そのキャラの部品とバランスを、ひとそろい（色は元の色、髪の調整は 0）。名前は、ならび順に「キャラ1」「キャラ2」…
 export const charaLook = (P, id) => isBig(P, id) ? bigLook(P, id) : ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, k === 'cheek' && !P.J.chars[id].pieces.cheekL ? '' : id])), v: presetOf(P, id) });
-export const charaName = (P, id) => isBig(P, id) ? (P.big.J.chars[id].number != null ? `${P.big.J.chars[id].number}番` : P.big.J.chars[id].name) : `キャラ${P.ids.indexOf(id) + 1}`;
+// 同じ番号の作り直し（c0n など）は「（新）」をつける
+export const charaName = (P, id) => isBig(P, id) ? (P.big.J.chars[id].number != null ? `${P.big.J.chars[id].number}番${id.endsWith('n') && Object.entries(P.big.J.chars).some(([c, C]) => c !== id && C.number === P.big.J.chars[id].number) ? '（新）' : ''}` : P.big.J.chars[id].name) : `キャラ${P.ids.indexOf(id) + 1}`;
 // はじめの見た目：最初の子（1つめの id）の部品とバランス
 export const firstLook = P => !SMALL ? bigLook(P, P.big.ids[0]) : ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, P.ids[0]])), v: presetOf(P, P.ids[0]) });
 // 見た目をととのえる（前のキャラの見た目や、欠けた項目は、はじめの見た目で埋める）

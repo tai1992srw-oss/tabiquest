@@ -172,6 +172,14 @@
    "base": "#E2722C",
    "light": "#EE853A",
    "highlight": "#FAB36A"
+  },
+  "0番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#2C180E",
+   "shadow1": "#512F1E",
+   "base": "#75462F",
+   "light": "#905D43",
+   "highlight": "#AD7456"
   }
  },
  "shared": {
@@ -968,6 +976,88 @@
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
    "hairPreset": "5番のデザイン"
+  },
+  "c0n": {
+   "name": "0番",
+   "number": 0,
+   "offset": [
+    0,
+    2
+   ],
+   "cheekAnchor": [
+    191,
+    135
+   ],
+   "layers": {
+    "hair_back": "c0n/hair_back.png",
+    "head": "c0n/head.png",
+    "hair_front": "c0n/hair_front.png"
+   },
+   "items": [],
+   "design": {
+    "body": "c0n/body_design.png",
+    "wear": "c0n/wear_design.png",
+    "tucked": false,
+    "note": "デザインの服（そのキャラの絵の体ごと）。手首の小物もこの中。offset はかけない"
+   },
+   "faces": {
+    "normal": "c0n/face.png",
+    "smile": "c0n/face_smile.png",
+    "close": "c0n/face_close.png",
+    "wink": "c0n/face_wink.png",
+    "surprise": "c0n/face_surprise.png",
+    "trouble": "c0n/face_trouble.png",
+    "shy": "c0n/face_shy.png",
+    "angry": "c0n/face_angry.png",
+    "jito": "c0n/face_jito.png",
+    "daijobu": "c0n/face_daijobu.png"
+   },
+   "faceNames": {
+    "normal": "ふだん",
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "daijobu": "だいじょうぶ？"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c0n/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "smile",
+     "close",
+     "wink",
+     "surprise",
+     "trouble",
+     "shy",
+     "angry",
+     "jito",
+     "daijobu"
+    ],
+    "uniqueExprs": [
+     "daijobu"
+    ],
+    "noNose": "鼻はなし（絵では描かせるが、ドットでは外す）",
+    "note": "ほおは shared.cheek ではなく、このキャラの cheeks を使う（顔の部品のいちばん下）"
+   },
+   "cheeks": {
+    "normal": "c0n/cheek_normal.png",
+    "shy": "c0n/cheek_shy.png",
+    "none": null,
+    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
+   },
+   "hairPreset": "0番のデザイン"
   }
  },
  "items": [
