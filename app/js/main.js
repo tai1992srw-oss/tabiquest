@@ -50,7 +50,7 @@ import * as scramble from './scenes/scramble.js';
 import * as kamakura from './scenes/kamakura.js';
 import * as photo from './scenes/photo.js';
 
-export const VERSION = '0.10.200';
+export const VERSION = '0.10.201';
 engine.register('minatomirai', minatomirai.build);
 engine.register('chukagai', chukagai.build);
 engine.register('tokyotower', tokyotower.build);
@@ -98,6 +98,7 @@ function header() {
   document.getElementById('pts').textContent = `${book().points}pt`;
   document.getElementById('debugBadge').hidden = mode() !== 'debug';
   document.getElementById('debugReload').hidden = !DEBUG;
+  { const v = document.getElementById('debugVer'); if (v) { v.hidden = !DEBUG; v.textContent = `v${VERSION}`; } }   // デバッグ版：いま読んでいる版（最新を読むボタンの横）
 }
 // デバッグ版：「最新を読む」＝オフライン用の保存（Service Worker とキャッシュ）を消して、読み込み直す。記録（localStorage）は消さない
 export async function reloadLatest() {
