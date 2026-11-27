@@ -217,11 +217,20 @@
       "shoes": "くつ・くつ下"
      },
      "note": "キャラ0のTシャツの服を3つに分けたもの（スカートはそれだけで着られるように描き直した）。c1b の制服と同じ重ね方、offset なし。wear/tshirt.png（1枚）とは、スカートのウエストのまわりが少しちがう",
-     "poses": {
-      "r_up": {
-       "top": "c0/pose/r_up/tshirt_top.png",
-       "topFront": "c0/pose/r_up/tshirt_top_front.png"
-      }
+     "arms": {
+      "torso": "c0/arms/tshirt_torso.png",
+      "down_R": "c0/arms/tshirt_down_R.png",
+      "down_L": "c0/arms/tshirt_down_L.png",
+      "up_R": "c0/arms/tshirt_up_R.png",
+      "up_R_fore": "c0/arms/tshirt_up_R_fore.png",
+      "up_L": "c0/arms/tshirt_up_L.png",
+      "up_L_fore": "c0/arms/tshirt_up_L_fore.png",
+      "front_R": "c0/arms/tshirt_front_R.png",
+      "front_R_fore": "c0/arms/tshirt_front_R_fore.png",
+      "front_L": "c0/arms/tshirt_front_L.png",
+      "front_L_fore": "c0/arms/tshirt_front_L_fore.png",
+      "back_R": "c0/arms/tshirt_back_R.png",
+      "back_L": "c0/arms/tshirt_back_L.png"
      }
     }
    },
@@ -262,11 +271,21 @@
       "shoes": "くつ・ソックス"
      },
      "note": "メイン衣装（ステップ4、素体に合わせて作り直した）。素体＋Tシャツと同じ重ね方で、服の所に layers の順（スカート→くつ・ソックス→トップス）で重ねる。ソックスはくつの側（くりた）。offset はかけない。トップス・ボトムス・くつはべつべつに着せられる",
-     "poses": {
-      "r_up": {
-       "top": "c1b/pose/r_up/uniform_top.png",
-       "topFront": "c1b/pose/r_up/uniform_top_front.png"
-      }
+     "arms": {
+      "torso": "c1b/arms/uniform_torso.png",
+      "down_R": "c1b/arms/uniform_down_R.png",
+      "down_L": "c1b/arms/uniform_down_L.png",
+      "up_R": "c1b/arms/uniform_up_R.png",
+      "up_R_fore": "c1b/arms/uniform_up_R_fore.png",
+      "up_L": "c1b/arms/uniform_up_L.png",
+      "up_L_fore": "c1b/arms/uniform_up_L_fore.png",
+      "front_R": "c1b/arms/uniform_front_R.png",
+      "front_R_fore": "c1b/arms/uniform_front_R_fore.png",
+      "front_L": "c1b/arms/uniform_front_L.png",
+      "front_L_fore": "c1b/arms/uniform_front_L_fore.png",
+      "back_R": "c1b/arms/uniform_back_R.png",
+      "back_L": "c1b/arms/uniform_back_L.png",
+      "backOver": true
      }
     }
    },
@@ -407,11 +426,20 @@
       "shoes": "くつ・くつ下"
      },
      "note": "メイン衣装（ステップ4、素体に合わせた。ベージュのTシャツ・茶色のスカート・くつ下とブーツ）。c1b の制服と同じ重ね方、offset はかけない",
-     "poses": {
-      "r_up": {
-       "top": "c2b/pose/r_up/uniform_top.png",
-       "topFront": "c2b/pose/r_up/uniform_top_front.png"
-      }
+     "arms": {
+      "torso": "c2b/arms/uniform_torso.png",
+      "down_R": "c2b/arms/uniform_down_R.png",
+      "down_L": "c2b/arms/uniform_down_L.png",
+      "up_R": "c2b/arms/uniform_up_R.png",
+      "up_R_fore": "c2b/arms/uniform_up_R_fore.png",
+      "up_L": "c2b/arms/uniform_up_L.png",
+      "up_L_fore": "c2b/arms/uniform_up_L_fore.png",
+      "front_R": "c2b/arms/uniform_front_R.png",
+      "front_R_fore": "c2b/arms/uniform_front_R_fore.png",
+      "front_L": "c2b/arms/uniform_front_L.png",
+      "front_L_fore": "c2b/arms/uniform_front_L_fore.png",
+      "back_R": "c2b/arms/uniform_back_R.png",
+      "back_L": "c2b/arms/uniform_back_L.png"
      }
     }
    },
@@ -511,11 +539,20 @@
       "shoes": "くつ・くつ下"
      },
      "note": "メイン衣装（ステップ4、素体に合わせた。ミントのブラウス・ワイン色のスカート・くつ下とブーツ）。ふだんは layers（ブラウスを外に出す）。layersTucked はブラウスをスカートの中に入れる順（もとのデザインの見た目）。ゲームで切りかえられるように。offset はかけない",
-     "poses": {
-      "r_up": {
-       "top": "c3b/pose/r_up/uniform_top.png",
-       "topFront": "c3b/pose/r_up/uniform_top_front.png"
-      }
+     "arms": {
+      "torso": "c3b/arms/uniform_torso.png",
+      "down_R": "c3b/arms/uniform_down_R.png",
+      "down_L": "c3b/arms/uniform_down_L.png",
+      "up_R": "c3b/arms/uniform_up_R.png",
+      "up_R_fore": "c3b/arms/uniform_up_R_fore.png",
+      "up_L": "c3b/arms/uniform_up_L.png",
+      "up_L_fore": "c3b/arms/uniform_up_L_fore.png",
+      "front_R": "c3b/arms/uniform_front_R.png",
+      "front_R_fore": "c3b/arms/uniform_front_R_fore.png",
+      "front_L": "c3b/arms/uniform_front_L.png",
+      "front_L_fore": "c3b/arms/uniform_front_L_fore.png",
+      "back_R": "c3b/arms/uniform_back_R.png",
+      "back_L": "c3b/arms/uniform_back_L.png"
      }
     }
    },
@@ -570,11 +607,20 @@
       "shoes": "くつ・くつ下"
      },
      "note": "メイン衣装（ステップ4、素体に合わせた。緑がかった青のブラウス・からし色のスカート・くつ下とくつ）。もとのデザインはブラウスを中に入れる（layersTucked）。offset はかけない",
-     "poses": {
-      "r_up": {
-       "top": "c4b/pose/r_up/uniform_top.png",
-       "topFront": "c4b/pose/r_up/uniform_top_front.png"
-      }
+     "arms": {
+      "torso": "c4b/arms/uniform_torso.png",
+      "down_R": "c4b/arms/uniform_down_R.png",
+      "down_L": "c4b/arms/uniform_down_L.png",
+      "up_R": "c4b/arms/uniform_up_R.png",
+      "up_R_fore": "c4b/arms/uniform_up_R_fore.png",
+      "up_L": "c4b/arms/uniform_up_L.png",
+      "up_L_fore": "c4b/arms/uniform_up_L_fore.png",
+      "front_R": "c4b/arms/uniform_front_R.png",
+      "front_R_fore": "c4b/arms/uniform_front_R_fore.png",
+      "front_L": "c4b/arms/uniform_front_L.png",
+      "front_L_fore": "c4b/arms/uniform_front_L_fore.png",
+      "back_R": "c4b/arms/uniform_back_R.png",
+      "back_L": "c4b/arms/uniform_back_L.png"
      }
     }
    },
@@ -674,11 +720,20 @@
       "shoes": "くつ・くつ下"
      },
      "note": "メイン衣装（ステップ4、素体に合わせた。ワインレッドのニット・クリーム色のケーキの刺しゅうのスカート・くつ下とくつ）。もとのデザインはニットを中に入れる（layersTucked）。offset はかけない",
-     "poses": {
-      "r_up": {
-       "top": "c6b/pose/r_up/uniform_top.png",
-       "topFront": "c6b/pose/r_up/uniform_top_front.png"
-      }
+     "arms": {
+      "torso": "c6b/arms/uniform_torso.png",
+      "down_R": "c6b/arms/uniform_down_R.png",
+      "down_L": "c6b/arms/uniform_down_L.png",
+      "up_R": "c6b/arms/uniform_up_R.png",
+      "up_R_fore": "c6b/arms/uniform_up_R_fore.png",
+      "up_L": "c6b/arms/uniform_up_L.png",
+      "up_L_fore": "c6b/arms/uniform_up_L_fore.png",
+      "front_R": "c6b/arms/uniform_front_R.png",
+      "front_R_fore": "c6b/arms/uniform_front_R_fore.png",
+      "front_L": "c6b/arms/uniform_front_L.png",
+      "front_L_fore": "c6b/arms/uniform_front_L_fore.png",
+      "back_R": "c6b/arms/uniform_back_R.png",
+      "back_L": "c6b/arms/uniform_back_L.png"
      }
     }
    },
@@ -836,29 +891,58 @@
    "note": "6番の頭に合わせて描いた髪かざり（ステップ2で別の部品にした）。頭に付くので headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
   }
  ],
- "poses": {
-  "order": [
-   "r_up"
+ "arms": {
+  "angles": [
+   "down",
+   "up",
+   "front",
+   "back"
   ],
-  "r_up": {
-   "name": "右手を上げる",
-   "body": "pose/r_up/sotai_body.png",
-   "front": "pose/r_up/arm_{hand}.png",
-   "hands": [
-    {
-     "id": "gu",
-     "name": "グー"
-    },
-    {
-     "id": "peace",
-     "name": "ピース"
-    },
-    {
-     "id": "wave",
-     "name": "はーい"
-    }
+  "names": {
+   "down": "下ろす",
+   "up": "上げる",
+   "front": "むねの前",
+   "back": "後ろ"
+  },
+  "body": "arms/body.png",
+  "presets": [
+   [
+    "down-down",
+    "立ち"
    ],
-   "note": "キャラ本人の右手（見て左）を上げる。うでの角度は1つ、手首から先だけ差しかえる。重ねる順：hair_back(+offset) → body（sotaiBody のかわり） → head(+offset) → 服（いつもの順。トップスは wears.<w>.poses.r_up.top） → hair_front(+offset) → 装飾品（overFace でない物） → front（ひじから先のうで＋手） → topFront（ひじから先のそで。手首の上にかぶさる） → 顔（ほお・目・まゆ・口） → overFace の装飾品（メガネ）。front は顔の部品とは重ならない（全キャラで0ドット）が、12番のリボン（c3b_ribbon_star）とは重なるので、装飾品より前に置く。上うでは前髪のうしろ（body と top は前髪より下）でよい。topFront がない服（半そで）は、そのまま飛ばす。作るもと research/style/pose_r/（メモ research/style/右手のポーズ_メモ.md）"
-  }
+   [
+    "up-down",
+    "右手を上げる"
+   ],
+   [
+    "down-up",
+    "左手を上げる"
+   ],
+   [
+    "up-up",
+    "バンザイ"
+   ],
+   [
+    "front-front",
+    "両手をむねの前"
+   ],
+   [
+    "front-down",
+    "片手をむねの前"
+   ],
+   [
+    "back-back",
+    "おすまし"
+   ],
+   [
+    "back-up",
+    "後ろ手で手を上げる"
+   ],
+   [
+    "up-front",
+    "上げる＋むねの前"
+   ]
+  ],
+  "note": "うでは左右べつ（R＝キャラ本人の右＝見て左、L＝左）。look.pose15 ＝ \"<右の角度>-<左の角度>\"（例 up-down）。トップスに wears.<w>.arms があるときだけ。重ねる順：後ろ髪 → arms.body（素体の体のかわり） → 頭 → 服（いつもの順。トップスの所に：後ろのうで → トップスの胴 → ほかのうで。backOver の服は後ろのうでも胴より前） → 前髪 → 顔 → _fore（上げる・むねの前のうでの前髪より前の所）。うでの部品は、そで・うでの肌・手がいっしょ（肌は素体の肌3色なので、肌の色の変えかたはいつもどおり）。作るもと research/style/pose_r/BK/（メモ research/style/右手のポーズ_メモ.md の 8）"
  }
 }

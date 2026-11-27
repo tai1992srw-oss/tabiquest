@@ -3,7 +3,7 @@ import { PLACES, placeById, LABEL, TIMES, WEATHERS, PLAIN_BG } from './places.js
 // キャラのポーズ（コマの順。assets の data.json の charaPoses と同じ）
 //   体は1つで、腕を差し替える（2026-11-26）。番号は前の13ポーズのまま。なくなったポーズ（ジャンプ・撮る・ながめる・歩く・ハート・地図・自撮り）のカードは、立ちで出る
 const POSES = [[0, '立ち'], [1, 'ばんざい'], [2, 'ピース'], [3, '指さし'], [4, '手をふる'], [7, '持つ']];
-import { loadParts as loadChara2, FACES, facesOf, fixLook as fixLook2, drawLook, bigPoses } from './chara2.js';
+import { loadParts as loadChara2, FACES, facesOf, fixLook as fixLook2, drawLook, bigPoses, bigArmAngles, armsOfPose } from './chara2.js';
 import { book, cardsOf, cardById, setPhoto, defaultLook, shown, setFav, settings } from './store.js';
 import { openDress } from './dress.js';
 import { engine, snapshot, clearSnaps, RS, reduceMotion } from './card.js';
@@ -185,8 +185,12 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   function paint() {   // 表情の列：いまの見た目・向き・かしげのまま、顔のあたりの小さな絵
     if (mode === 'pose') {   // ポーズの列：いまの見た目のまま、全身の小さな絵。いまの服で着られるポーズだけ
       loadChara2().then(P => { if (mode !== 'pose') return; const base = { ...fixLook2(P, look()), face: ph.face || undefined, turn: +ph.turn || undefined, tilt: +ph.tilt || undefined }, list = bigPoses(P, base);
-        strip.innerHTML = list.length ? list.map(([v, n]) => opt('pose15', v, n, '<canvas></canvas>', 'pose')).join('') : '<span class="gl">この服では、ポーズはまだえらべません</span>';
-        strip.querySelectorAll('.opt.pose').forEach(b => drawLook(b.querySelector('canvas'), P, { ...base, pose15: b.dataset.pose15 || undefined }, 'bust')); marks(); }).catch(() => {});
+        // プリセットの欄（名前のついたポーズ）と、細かくいじれる欄（右うで・左うでの角度を、それぞれえらぶ）。2026-11-27 くりた
+        const ang = bigArmAngles(P, base), [r, l] = armsOfPose(ph.pose15), pv = (rr, ll) => (rr === 'down' && ll === 'down' ? undefined : `${rr}-${ll}`);
+        strip.innerHTML = list.length ? `<span class="gl">ポーズ</span>${list.map(([v, n]) => opt('pose15', v, n, '<canvas></canvas>', 'pose')).join('')}`
+          + `<span class="gl">右うで</span>${ang.map(([a, n]) => opt('armr', a, n, '<canvas></canvas>', 'pose arm')).join('')}<span class="gl">左うで</span>${ang.map(([a, n]) => opt('arml', a, n, '<canvas></canvas>', 'pose arm')).join('')}`
+          : '<span class="gl">この服では、ポーズはまだえらべません</span>';
+        strip.querySelectorAll('.opt.pose').forEach(b => { const d = b.dataset, v = d.pose15 !== undefined ? d.pose15 || undefined : d.armr ? pv(d.armr, l) : pv(r, d.arml); drawLook(b.querySelector('canvas'), P, { ...base, pose15: v }, 'bust'); }); marks(); }).catch(() => {});
       return;
     }
     if (mode !== 'face') return;
@@ -197,7 +201,7 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
   }
   const marks = () => {   // えらんでいるものに印
     const on = (sel, f) => strip.querySelectorAll(sel).forEach(b => b.setAttribute('aria-pressed', String(f(b.dataset))));
-    on('[data-pose15]', d => d.pose15 === (ph.pose15 || '')); on('[data-face]', d => d.face === (ph.face || '')); on('[data-light]', d => d.light === ph.light);
+    on('[data-pose15]', d => d.pose15 === (ph.pose15 || '')); { const [r, l] = armsOfPose(ph.pose15); on('[data-armr]', d => d.armr === r); on('[data-arml]', d => d.arml === l); } on('[data-face]', d => d.face === (ph.face || '')); on('[data-light]', d => d.light === ph.light);
     on('[data-face]', d => d.face === (ph.face || ''));
     on('[data-tilt]', d => +d.tilt === (+ph.tilt || 0)); on('[data-lean]', d => +d.lean === (+ph.lean || 0)); on('[data-turn]', d => +d.turn === Math.sign(+ph.turn || 0)); on('[data-wind]', d => +d.wind === (+ph.wind || 0));
     on('[data-rim]', d => +d.rim === (ph.rim | 0)); on('[data-glow]', d => +d.glow === (ph.glow | 0));
@@ -320,7 +324,10 @@ export function openViewer({ cardId, preview, onClose, posing = false }) {
       turnRaf = requestAnimationFrame(step);
     }
     else if (['tilt', 'turn', 'lean', 'wind'].some(q => b.dataset[q] !== undefined)) { const k = ['tilt', 'turn', 'lean', 'wind'].find(q => b.dataset[q] !== undefined); ph[k] = +b.dataset[k]; if (!ph[k]) delete ph[k]; sync(); paint(); }
-    else if (b.dataset.pose15 !== undefined) { if (b.dataset.pose15) ph.pose15 = b.dataset.pose15; else delete ph.pose15; sync(); }
+    else if (b.dataset.pose15 !== undefined) { if (b.dataset.pose15) ph.pose15 = b.dataset.pose15; else delete ph.pose15; sync(); paint(); }
+    else if (b.dataset.armr !== undefined || b.dataset.arml !== undefined) {   // 細かくいじれる欄：片方のうでだけ変える
+      const [r, l] = armsOfPose(ph.pose15), nr = b.dataset.armr ?? r, nl = b.dataset.arml ?? l;
+      if (nr === 'down' && nl === 'down') delete ph.pose15; else ph.pose15 = `${nr}-${nl}`; sync(); paint(); }
     else if (b.dataset.face !== undefined) { ph.face = b.dataset.face; sync(); }
     else if (a === 'center') { ph.x = 0; ph.y = 0; ph.s = 1; ph.r = 0; sync(); }
     else if (a === 'keep') {   // まん中の丸いボタン：この配置（とお着替え）をカードに残して、撮影をおわる
