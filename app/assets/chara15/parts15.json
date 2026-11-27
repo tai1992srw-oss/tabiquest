@@ -891,7 +891,67 @@
     "note": "キャラ1b と同じ形。順は 目→まゆ→口（ほおは共通の部品を目の下に）。kiite（ちゃんと聞いて）は3番だけの表情"
    },
    "note": "ステップ4（素体に合わせたメイン衣装）はまだ。wears はなし（Tシャツなど共通の服と、デザインの服だけ）",
-   "hairPreset": "3番のデザイン"
+   "hairPreset": "3番のデザイン",
+   "wears": {
+    "uniform": {
+     "name": "3番の服",
+     "tuckDefault": true,
+     "parts": {
+      "top": "c3n/uniform_top.png",
+      "bottom": "c3n/uniform_bottom.png",
+      "shoes": "c3n/uniform_shoes.png"
+     },
+     "partNames": {
+      "top": "ワインレッドのニット",
+      "bottom": "ロングスカート・ベルト",
+      "shoes": "くつ下・ストラップのくつ"
+     },
+     "note": "うでのポーズつきの服（research/style/pose_r/SI/c3n、SI/export_app.py）。top＝胴＋立ちのうで、bottom＝立ち姿の絵のドットから、shoes＝デザインの服から。上げるの手は handOffset だけ下げて焼きこみ",
+     "arms": {
+      "torso": "c3n/arms/torso.png",
+      "down_R": "c3n/arms/down_R.png",
+      "down_L": "c3n/arms/down_L.png",
+      "up_R": "c3n/arms/up_R.png",
+      "up_R_fore": "c3n/arms/up_R_fore.png",
+      "up_L": "c3n/arms/up_L.png",
+      "up_L_fore": "c3n/arms/up_L_fore.png",
+      "front_R": "c3n/arms/front_R.png",
+      "front_R_fore": "c3n/arms/front_R_fore.png",
+      "front_L": "c3n/arms/front_L.png",
+      "front_L_fore": "c3n/arms/front_L_fore.png",
+      "back_R": "c3n/arms/back_R.png",
+      "back_L": "c3n/arms/back_L.png",
+      "wrist": {
+       "up_R": "c3n/arms/up_R_wrist.png",
+       "up_R_fore": "c3n/arms/up_R_fore_wrist.png",
+       "up_L": "c3n/arms/up_L_wrist.png",
+       "up_L_fore": "c3n/arms/up_L_fore_wrist.png",
+       "front_R": "c3n/arms/front_R_wrist.png",
+       "front_R_fore": "c3n/arms/front_R_fore_wrist.png",
+       "front_L": "c3n/arms/front_L_wrist.png",
+       "front_L_fore": "c3n/arms/front_L_fore_wrist.png"
+      },
+      "handOffset": {
+       "up_R": [
+        0,
+        4
+       ],
+       "up_L": [
+        0,
+        9
+       ],
+       "front_R": [
+        0,
+        0
+       ],
+       "front_L": [
+        0,
+        0
+       ]
+      }
+     }
+    }
+   }
   },
   "c5n": {
    "name": "5番",
