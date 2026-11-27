@@ -520,6 +520,7 @@ async function loadBig() {
   for (const [c, C] of Object.entries(J.chars)) {
     Object.values(C.layers).forEach(f => files.add(f)); for (const w of Object.values(C.wears || {})) { Object.values(w.parts).forEach(f => files.add(f)); Object.values(w.arms || {}).forEach(f => typeof f === 'string' && f.endsWith('.png') && files.add(f)); }   // うでのポーズの部品
     if (C.design && !C.wears) { files.add(C.design.body); files.add(C.design.wear); }
+    for (const f of Object.values(C.cheeks || {})) if (typeof f === 'string' && f.endsWith('.png')) files.add(f);   // キャラだけのほお
     const F = C.faceParts; if (F) { for (const k of F.order) if (k !== 'cheek' || !SC) for (const e of F.exprs) files.add(F.path.replace('{part}', k).replace('{expr}', e)); }
     else files.add(C.faceNoCheek || C.faces.normal.replace('face.png', 'face_nocheek.png'));
     const o = C.offset || [0, 0]; chars[c] = { cx: Math.round(J.size[0] / 2 / 1.5), headTop: Math.round((57 + o[1]) / 1.5) };   // 顔の寄りの切りぬき（256×384 の目もり）
@@ -663,7 +664,8 @@ function composeBig(P, L) {
     const b = bbOf(B, im); if (!b || b.x1 < 0) return; const [q] = [document.createElement('canvas')]; q.width = b.w; q.height = b.h; q.getContext('2d').drawImage(im, -b.x0, -b.y0);
     const nq = narrow(q, cut); tg.drawImage(nq, b.x0 + dx + (turn > 0 ? cut : 0), b.y0 + dy);   // 細くした分、向いた側のはしをそろえる
   };
-  if (SC) { const a = C.cheekAnchor || SC.ref; putPart(B.IM[SC.path.replace('{kind}', L.face === 'shy' ? 'shy' : 'normal')], fo[0] + a[0] - SC.ref[0] + mv, fo[1] + a[1] - SC.ref[1]); }   // ほお（共通）は顔の部品のいちばん下
+  if (C.cheeks) { const f = C.cheeks[L.face === 'shy' ? 'shy' : 'normal']; f && putPart(B.IM[f], fo[0] + mv, fo[1]); }   // キャラだけのほお（5番〜。顔と同じ枠・offset）
+  else if (SC) { const a = C.cheekAnchor || SC.ref; putPart(B.IM[SC.path.replace('{kind}', L.face === 'shy' ? 'shy' : 'normal')], fo[0] + a[0] - SC.ref[0] + mv, fo[1] + a[1] - SC.ref[1]); }   // ほお（共通）は顔の部品のいちばん下
   if (F) for (const k of F.order) {
     if (k === 'cheek' && SC) continue; const im = B.IM[F.path.replace('{part}', k).replace('{expr}', part(k))], s = k.slice(-1);
     if (k.startsWith('eye') || k.startsWith('brow')) putPart(im, fo[0] + mv + Math.round(tv * (far(s) ? T.far : T.near) * K15), fo[1], far(s) ? Math.round((k.startsWith('eye') ? T.eyeCut : T.browCut) * ta * K15) : 0);
