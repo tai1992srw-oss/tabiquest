@@ -975,7 +975,39 @@
     "none": null,
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
-   "hairPreset": "5番のデザイン"
+   "hairPreset": "5番のデザイン",
+   "wears": {
+    "uniform": {
+     "name": "5番の服",
+     "tuckDefault": false,
+     "parts": {
+      "top": "c5n/uniform_top.png",
+      "bottom": "c5n/uniform_bottom.png",
+      "shoes": "c5n/uniform_shoes.png"
+     },
+     "partNames": {
+      "top": "スポーツシャツ",
+      "bottom": "ショートパンツ・スパッツ",
+      "shoes": "くつ下・くつ"
+     },
+     "note": "うでのポーズつきの服（research/style/pose_r/SI/c5n、SI/export_app.py）。top＝胴＋立ちのうで、bottom＝立ち姿の絵のドットから、shoes＝デザインの服から。上げるの手は2ドット下げて焼きこみ",
+     "arms": {
+      "torso": "c5n/arms/torso.png",
+      "down_R": "c5n/arms/down_R.png",
+      "down_L": "c5n/arms/down_L.png",
+      "up_R": "c5n/arms/up_R.png",
+      "up_R_fore": "c5n/arms/up_R_fore.png",
+      "up_L": "c5n/arms/up_L.png",
+      "up_L_fore": "c5n/arms/up_L_fore.png",
+      "front_R": "c5n/arms/front_R.png",
+      "front_R_fore": "c5n/arms/front_R_fore.png",
+      "front_L": "c5n/arms/front_L.png",
+      "front_L_fore": "c5n/arms/front_L_fore.png",
+      "back_R": "c5n/arms/back_R.png",
+      "back_L": "c5n/arms/back_L.png"
+     }
+    }
+   }
   },
   "c0n": {
    "name": "0番",
