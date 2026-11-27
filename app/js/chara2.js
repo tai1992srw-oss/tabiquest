@@ -434,7 +434,8 @@ export function applyParts(P, ch, st) {
 const BASE15 = 'assets/chara15/';
 const isBig = (P, id) => !!P.big?.J.chars[id];
 //   服：Tシャツ（みんな）・そのキャラの服（chars.<c>.wears。キャラ1b の制服＝2026-11-27 素体に合わせて作り直した物。前の「デザインの服」は使わない）・素体
-export const bigWears = (P, id) => [['tshirt', 'Tシャツ'], ...Object.entries(P.big.J.chars[id].wears || {}).map(([k, w]) => [k, w.name || k]), ['sotai', '素体']];
+//   素体に合わせた服がまだないキャラ（キャラ2b など）は、「デザインの服」（そのキャラの絵の体ごと。design）
+export const bigWears = (P, id) => { const C = P.big.J.chars[id]; return [['tshirt', 'Tシャツ'], ...Object.entries(C.wears || {}).map(([k, w]) => [k, w.name || k]), ...(C.design && !C.wears ? [['design', 'デザインの服']] : []), ['sotai', '素体']]; };
 export const WEAR15_PARTS = [['top', 'トップス'], ['bottom', 'ボトムス'], ['shoes', 'くつ']];
 export const bigWearParts = (P, L) => { const w = P.big.J.chars[L.big]?.wears?.[L.w15], wp = w?.parts; return wp ? WEAR15_PARTS.filter(([k]) => wp[k]).map(([k, n]) => [k, w.partNames?.[k] || n]) : []; };   // 名前は parts15.json の partNames（くつ・ソックス など）
 export const bigHairs = P => Object.entries(P.big.J.hairPresets).map(([k, h]) => [k, h.base]);
@@ -448,15 +449,16 @@ async function loadBig() {
   const chars = {};
   for (const [c, C] of Object.entries(J.chars)) {
     Object.values(C.layers).forEach(f => files.add(f)); for (const w of Object.values(C.wears || {})) Object.values(w.parts).forEach(f => files.add(f));
+    if (C.design && !C.wears) { files.add(C.design.body); files.add(C.design.wear); }
     const F = C.faceParts; if (F) { for (const k of F.order) if (k !== 'cheek' || !SC) for (const e of F.exprs) files.add(F.path.replace('{part}', k).replace('{expr}', e)); }
     else files.add(C.faceNoCheek || C.faces.normal.replace('face.png', 'face_nocheek.png'));
     const o = C.offset || [0, 0]; chars[c] = { cx: Math.round(J.size[0] / 2 / 1.5), headTop: Math.round((57 + o[1]) / 1.5) };   // 顔の寄りの切りぬき（256×384 の目もり）
   }
   await Promise.all([...files].map(async f => { IM[f] = await image(BASE15 + f).catch(() => null); }));
-  const ids = Object.keys(J.chars).sort((a, b) => (a === 'c1b' ? -1 : b === 'c1b' ? 1 : 0));   // キャラ1b を先に
+  const ids = Object.keys(J.chars).sort((a, b) => (a === 'c0') - (b === 'c0') || a.localeCompare(b));   // キャラ1b・2b… の順、キャラ0 は最後
   return { J, IM, ids, chars, tint: new Map() };
 }
-const bigLook = (P, id) => ({ big: id, w15: Object.keys(P.big.J.chars[id].wears || {})[0] || 'tshirt', h15: '' });
+const bigLook = (P, id) => ({ big: id, w15: Object.keys(P.big.J.chars[id].wears || {})[0] || (P.big.J.chars[id].design ? 'design' : 'tshirt'), h15: '' });
 function fixBig(P, L) {   // 前の w15 'design'（デザインの服）は、そのキャラの服になる
   const o = { big: L.big, w15: bigWears(P, L.big).some(([k]) => k === L.w15) ? L.w15 : bigLook(P, L.big).w15, h15: P.big.J.hairPresets[L.h15] ? L.h15 : '' };
   const wp = P.big.J.chars[L.big].wears?.[o.w15]?.parts, off = wp ? (L.off15 || []).filter(k => wp[k]) : []; if (off.length) o.off15 = WEAR15_PARTS.map(([k]) => k).filter(k => off.includes(k));   // 制服の上下・くつを、べつべつにぬぐ
@@ -474,13 +476,14 @@ function hair15(P, f, preset) {
   x.putImageData(d, 0, 0); B.tint.set(key, c); return c;
 }
 function composeBig(P, L) {
-  const B = P.big, J = B.J, C = J.chars[L.big], [W, H] = J.size, o = C.offset || [0, 0], fo = o, wr = C.wears?.[L.w15];
+  const B = P.big, J = B.J, C = J.chars[L.big], [W, H] = J.size, o = C.offset || [0, 0], wr = C.wears?.[L.w15], design = L.w15 === 'design' && C.design && !C.wears, fo = design ? [0, 0] : o;
   const preset = L.h15 || C.hairPreset || '', Ly = C.layers, ex = EXPR15[L.face] || {}, SC = J.shared?.cheek, F = C.faceParts;
   const eye = L.blink ? 'close' : ex.e || 'normal', part = k => (k.startsWith('eye') ? eye : k.startsWith('brow') ? ex.b || 'normal' : k === 'mouth' ? ex.m || 'normal' : 'normal');
   const L1 = []; const put = (im, dx = 0, dy = 0) => im && L1.push([im, dx, dy]);
-  put(hair15(P, Ly.hair_back, preset), ...o); put(B.IM[J.sotaiBody]); put(B.IM[Ly.head], ...o);
-  if (L.w15 === 'tshirt') put(B.IM[J.wear.tshirt]); else if (wr) { const off = new Set((L.off15 || []).map(k => wr.parts[k])); for (const f of wr.layers) if (!off.has(f)) put(B.IM[f]); }   // off15：ぬいでいる部分（top・bottom・shoes）   // 服は offset なし。制服は スカート・ソックス → くつ → トップス（layers の順）
-  put(hair15(P, Ly.hair_front, preset), ...o);
+  if (design) { put(hair15(P, Ly.hair_back, preset)); put(B.IM[C.design.body]); put(B.IM[C.design.wear]); put(hair15(P, Ly.hair_front, preset)); }   // デザインの服：そのキャラの絵の体ごと、offset なし
+  else { put(hair15(P, Ly.hair_back, preset), ...o); put(B.IM[J.sotaiBody]); put(B.IM[Ly.head], ...o); }
+  if (design) ; else if (L.w15 === 'tshirt') put(B.IM[J.wear.tshirt]); else if (wr) { const off = new Set((L.off15 || []).map(k => wr.parts[k])); for (const f of wr.layers) if (!off.has(f)) put(B.IM[f]); }   // off15：ぬいでいる部分（top・bottom・shoes）   // 服は offset なし。制服は スカート・ソックス → くつ → トップス（layers の順）
+  if (!design) put(hair15(P, Ly.hair_front, preset), ...o);
   if (SC) { const a = C.cheekAnchor || SC.ref; put(B.IM[SC.path.replace('{kind}', L.face === 'shy' ? 'shy' : 'normal')], fo[0] + a[0] - SC.ref[0], fo[1] + a[1] - SC.ref[1]); }   // ほお（共通）は顔の部品のいちばん下
   if (F) for (const k of F.order) { if (k === 'cheek' && SC) continue; put(B.IM[F.path.replace('{part}', k).replace('{expr}', part(k))], ...fo); }
   else put(B.IM[SC ? C.faceNoCheek || C.faces.normal.replace('face.png', 'face_nocheek.png') : C.faces.normal], ...fo);

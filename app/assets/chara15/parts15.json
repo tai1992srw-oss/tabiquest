@@ -124,6 +124,14 @@
    "base": "#5E8A5A",
    "light": "#7EB17A",
    "highlight": "#BAEBB5"
+  },
+  "キャラ2bのデザイン": {
+   "line": "#211012",
+   "shadow2": "#412C2F",
+   "shadow1": "#51383C",
+   "base": "#8A646A",
+   "light": "#B1858C",
+   "highlight": "#EBC0C7"
   }
  },
  "shared": {
@@ -255,6 +263,73 @@
     "noNose": "鼻はなしで統一（2026-11-27 くりた）。nose の部品はない",
     "note": "顔まるごと（faces）の代わりに、部品ごとに表情をえらんで重ねる。順は order（ほお→目→まゆ→口）。どれも 384×576 の同じ枠・offset は顔と同じ。部品をぜんぶ同じ表情にすると faces と0ドット"
    }
+  },
+  "c2b": {
+   "name": "キャラ2b",
+   "offset": [
+    0,
+    5
+   ],
+   "cheekAnchor": [
+    191,
+    132
+   ],
+   "layers": {
+    "hair_back": "c2b/hair_back.png",
+    "head": "c2b/head.png",
+    "hair_front": "c2b/hair_front.png"
+   },
+   "design": {
+    "body": "c2b/body_design.png",
+    "wear": "c2b/wear_design.png",
+    "note": "デザインの服（ベージュのTシャツ・茶色のスカート・くつ下・ブーツ）。そのキャラの絵の体に重ねる。offset はかけない。まだステップ4（素体に合わせた服）は作っていない"
+   },
+   "faces": {
+    "normal": "c2b/face.png",
+    "angry": "c2b/face_angry.png",
+    "close": "c2b/face_close.png",
+    "jito": "c2b/face_jito.png",
+    "shy": "c2b/face_shy.png",
+    "smile": "c2b/face_smile.png",
+    "surprise": "c2b/face_surprise.png",
+    "trouble": "c2b/face_trouble.png",
+    "wink": "c2b/face_wink.png"
+   },
+   "faceNames": {
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c2b/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "angry",
+     "close",
+     "jito",
+     "shy",
+     "smile",
+     "surprise",
+     "trouble",
+     "wink"
+    ],
+    "sharedCheek": "ほおは shared.cheek を使う",
+    "noNose": "鼻はなし",
+    "note": "キャラ1b と同じ形。順は 目→まゆ→口（ほおは共通の部品を目の下に）"
+   },
+   "hairPreset": "キャラ2bのデザイン"
   }
  }
 }
