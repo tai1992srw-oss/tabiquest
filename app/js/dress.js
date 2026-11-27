@@ -3,7 +3,7 @@
 //   見た目（look）と、絵の組み立ては chara2.js。絵は描き足さない
 //   輪郭を替えると、バランスはその輪郭のプリセットになる（そこから自由に動かせる）
 import { settings, saveSettings } from './store.js';
-import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf, bigWears, bigHairs, bigWearParts } from './chara2.js';
+import { loadParts, itemList, toggleItem, WEAR_PARTS, WEAR_NAMES, pickWear, wearOn, wearItems, wearName, SLOTS, NONE, VALS, HAIR_VALS, COLORS, presetOf, charaLook, charaName, fixLook, has, itemName, drawLook, cropOf, bigWears, bigHairs, bigParts, bigWearOn, bigPickWear, bigHairStyles, WEAR15_PARTS } from './chara2.js';
 import { esc, toast } from './ui.js';
 
 const ICON = { rin: '◯', eye: '◉', brow: '⌒', mouth: '◡', cheek: '❀', hairF: '✂', hairB: '≋', wear: '♥' };
@@ -14,7 +14,7 @@ const slot = id => ({ id, name: SLOTS.find(q => q[0] === id)[1], icon: ICON[id],
 const DRESS = [{ id: 'wear', name: '服', icon: ICON.wear, kind: 'wear', focus: 'body' }, { id: 'hair', name: '髪', icon: ICON.hairF, kind: 'slot', focus: 'face' }, { id: 'items', name: '小物', icon: '✿', kind: 'items', focus: 'body' }, { id: 'coord', name: 'コーデ', icon: '★', kind: 'coord', focus: 'body' }];
 const FACE = [{ id: 'chara', name: 'キャラ', icon: '☻', kind: 'chara', focus: 'body' }, slot('rin'), slot('eye'), slot('brow'), slot('mouth'), slot('cheek'), { id: 'bal', name: 'バランス', icon: '⇔', kind: 'bal', focus: 'face' }];
 // 1.5倍のキャラ（キャラ1b・キャラ0）：服（Tシャツ・デザインの服・素体）と髪の色だけえらべる。顔の部品・バランス・小物は、まだ合わない
-const DRESS15 = [{ id: 'w15', name: '服', icon: ICON.wear, kind: 'w15', focus: 'body' }, { id: 'h15', name: '髪の色', icon: ICON.hairF, kind: 'h15', focus: 'face' }, DRESS[3]];
+const DRESS15 = [{ id: 'w15', name: '服', icon: ICON.wear, kind: 'w15', focus: 'body' }, { id: 'h15', name: '髪', icon: ICON.hairF, kind: 'h15', focus: 'face' }, DRESS[3]];
 const FACE15 = [FACE[0]];
 const clone = L => JSON.parse(JSON.stringify(L));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -55,15 +55,14 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   // 下の一覧を描く。full＝タブを切りかえたとき（絵から作り直す）。そうでなければ、えらんだ印と数字だけ直す
   function renderBody(full = true) {
     if (!P) return;
-    if (tab.kind === 'w15') {   // 1.5倍のキャラの服
-      // 制服などは、上下・くつをべつべつに着る・ぬぐ（押すたびに切りかえ）
-      const wps = bigWearParts(P, L), off = L.off15 || [];
-      if (full) body.innerHTML = `${wps.length ? `<div class="du-chips">${wps.map(([k, n]) => `<button data-wp15="${k}"></button>`).join('')}</div><p class="du-hint">押すと、その部分を着たり、ぬいだりできます</p>` : ''}<div class="du-grid body">${bigWears(P, L.big).map(([k, n]) => `<button class="du-item" data-w15="${k}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
-      body.querySelectorAll('[data-wp15]').forEach(b => { const on = !off.includes(b.dataset.wp15); b.setAttribute('aria-pressed', String(on)); const n = wps.find(q => q[0] === b.dataset.wp15)?.[1]; if (!n) return; b.textContent = on ? '✓ ' + n : n + '（ぬいでいる）'; });
-      body.querySelectorAll('[data-w15]').forEach(b => { b.setAttribute('aria-pressed', String(L.w15 === b.dataset.w15)); drawLook(b.querySelector('canvas'), P, fixLook(P, { ...L, w15: b.dataset.w15, off15: undefined }), 'body'); });
-    } else if (tab.kind === 'h15') {   // 1.5倍のキャラの髪の色（プリセット）
-      if (full) body.innerHTML = `<div class="du-grid face">${[['', '元の色'], ...bigHairs(P).map(([k]) => [k, k])].map(([k, n]) => `<button class="du-item" data-h15="${esc(k)}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
-      body.querySelectorAll('[data-h15]').forEach(b => { b.setAttribute('aria-pressed', String((L.h15 || '') === b.dataset.h15)); drawLook(b.querySelector('canvas'), P, { ...L, h15: b.dataset.h15 }, 'face'); });
+    if (tab.kind === 'w15') {   // b版の服：上の絞りこみ（セット・トップス・ボトムス・くつ）で、ひとそろいと部分を切りかえる。部分は、キャラをこえて組み合わせられる
+      const f = wf, list = f === 'set' ? bigWears(P, L.big) : [['', 'なし'], ...bigParts(P, f)];
+      if (full) body.innerHTML = `<div class="du-chips">${[['set', 'セット'], ...WEAR15_PARTS].map(([k, n]) => `<button data-wf="${k}" aria-pressed="${k === f}">${n}</button>`).join('')}</div><div class="du-grid body">${list.map(([k, n]) => `<button class="du-item" data-w15="${esc(k)}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
+      body.querySelectorAll('[data-w15]').forEach(b => { const v = b.dataset.w15; b.setAttribute('aria-pressed', String(bigWearOn(P, L, f, v))); const t = clone(L); bigPickWear(P, t, f, v); drawLook(b.querySelector('canvas'), P, fixLook(P, t), 'body'); });
+    } else if (tab.kind === 'h15') {   // b版の髪：髪型（みんなの髪）と、髪の色（プリセット）
+      if (full) body.innerHTML = `<div class="du-colors"><span class="du-lab">髪の色</span><div class="du-sws"><button class="du-sw none" data-h15="" aria-label="髪の色を元の色に">元</button>${bigHairs(P).map(([k, c]) => `<button class="du-sw" data-h15="${esc(k)}" style="background:${c}" aria-label="${esc(k)}" title="${esc(k)}"></button>`).join('')}</div></div><div class="du-grid face">${bigHairStyles(P).map(([c, n]) => `<button class="du-item" data-hs15="${c}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
+      body.querySelectorAll('[data-h15]').forEach(b => b.setAttribute('aria-pressed', String((L.h15 || '') === b.dataset.h15)));
+      body.querySelectorAll('[data-hs15]').forEach(b => { const c = b.dataset.hs15; b.setAttribute('aria-pressed', String((L.hair15 || L.big) === c)); drawLook(b.querySelector('canvas'), P, fixLook(P, { ...L, hair15: c }), 'face'); });
     } else if (tab.kind === 'items') {   // 持ち物・かざり：押すと付ける・はずす（同じ所に付く物は入れかわる）。いくつでも組み合わせられる
       if (full) body.innerHTML = `<p class="du-hint">押すと付けたり、はずしたりできます。同じ所に付く物（右手の紙袋とぬいぐるみなど）は、入れかわります</p><div class="du-grid body"><button class="du-item" data-it=""><canvas></canvas><span class="du-nm">ぜんぶはずす</span></button>${itemList(P).map(it => `<button class="du-item" data-it="${it.id}"><canvas></canvas><span class="du-nm">${esc(it.name)}</span></button>`).join('')}</div>`;
       body.querySelectorAll('[data-it]').forEach(b => { const id = b.dataset.it, on = id ? (L.items || []).includes(id) : !(L.items || []).length; b.setAttribute('aria-pressed', String(on)); const t = clone(L); if (id) { if (!on) toggleItem(P, t, id); } else delete t.items; drawLook(b.querySelector('canvas'), P, t, 'body'); });
@@ -107,8 +106,8 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
   root.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || !P) { if (b?.dataset.a === 'cancel') close(); return; } const a = b.dataset.a;
     if (b.dataset.tab) { tab = TABS.find(t => t.id === b.dataset.tab); root.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b))); paint(); renderBody(); }
-    else if (b.dataset.w15) { if (L.w15 !== b.dataset.w15 || L.off15) { change(x => { x.w15 = b.dataset.w15; delete x.off15; }); renderBody(); } }   // 服をえらびなおすと、ぜんぶ着る
-    else if (b.dataset.wp15) { const k = b.dataset.wp15; change(x => { const o = new Set(x.off15 || []); if (o.has(k)) o.delete(k); else o.add(k); if (o.size) x.off15 = [...o]; else delete x.off15; }); }
+    else if (b.dataset.w15 !== undefined) { const v = b.dataset.w15; if (!bigWearOn(P, L, wf, v)) change(x => { bigPickWear(P, x, wf, v); Object.assign(x, fixLook(P, x)); }); }
+    else if (b.dataset.hs15) { const c = b.dataset.hs15; if ((L.hair15 || L.big) !== c) change(x => { if (c === x.big) delete x.hair15; else x.hair15 = c; }); }
     else if (b.dataset.h15 !== undefined) { if ((L.h15 || '') !== b.dataset.h15) change(x => { x.h15 = b.dataset.h15; }); }
     else if (b.dataset.chara) { const t = fixLook(P, charaLook(P, b.dataset.chara)); if (!same(t, fixLook(P, L))) change(x => { for (const k of Object.keys(x)) delete x[k]; Object.assign(x, t); }); }
     else if (b.dataset.c !== undefined) { const k = b.closest('.du-colors').dataset.k; if ((L.colors?.[k] || '') !== b.dataset.c) change(x => setColor(x, k, b.dataset.c)); }
