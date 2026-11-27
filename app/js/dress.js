@@ -57,7 +57,8 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
     if (!P) return;
     if (tab.kind === 'w15') {   // b版の服：上の絞りこみ（セット・トップス・ボトムス・くつ）で、ひとそろいと部分を切りかえる。部分は、キャラをこえて組み合わせられる
       const f = wf, list = f === 'set' ? bigWears(P, L.big) : [['', 'なし'], ...bigParts(P, f)];
-      if (full) body.innerHTML = `<div class="du-chips">${[['set', 'セット'], ...WEAR15_PARTS].map(([k, n]) => `<button data-wf="${k}" aria-pressed="${k === f}">${n}</button>`).join('')}</div><div class="du-grid body">${list.map(([k, n]) => `<button class="du-item" data-w15="${esc(k)}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
+      if (full) body.innerHTML = `<div class="du-chips">${[['set', 'セット'], ...WEAR15_PARTS].map(([k, n]) => `<button data-wf="${k}" aria-pressed="${k === f}">${n}</button>`).join('')}</div><div class="du-shape"><button data-a="tuck15"></button></div><div class="du-grid body">${list.map(([k, n]) => `<button class="du-item" data-w15="${esc(k)}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
+      const tb = body.querySelector('[data-a=tuck15]'); if (tb) { const ok = L.w15 === 'parts' && L.p15?.top && L.p15?.bottom; tb.disabled = !ok; tb.setAttribute('aria-pressed', String(!!L.tuck15)); tb.textContent = L.tuck15 ? 'トップス：中に入れている（押すと外に出す）' : 'トップス：外に出している（押すと中に入れる）'; }
       body.querySelectorAll('[data-w15]').forEach(b => { const v = b.dataset.w15; b.setAttribute('aria-pressed', String(bigWearOn(P, L, f, v))); const t = clone(L); bigPickWear(P, t, f, v); drawLook(b.querySelector('canvas'), P, fixLook(P, t), 'body'); });
     } else if (tab.kind === 'h15') {   // b版の髪：髪型（みんなの髪）と、髪の色（プリセット）
       if (full) body.innerHTML = `<div class="du-colors"><span class="du-lab">髪の色</span><div class="du-sws"><button class="du-sw none" data-h15="" aria-label="髪の色を元の色に">元</button>${bigHairs(P).map(([k, c]) => `<button class="du-sw" data-h15="${esc(k)}" style="background:${c}" aria-label="${esc(k)}" title="${esc(k)}"></button>`).join('')}</div></div><div class="du-grid face">${bigHairStyles(P).map(([c, n]) => `<button class="du-item" data-hs15="${c}"><canvas></canvas><span class="du-nm">${esc(n)}</span></button>`).join('')}</div>`;
@@ -128,6 +129,7 @@ export function openDress({ look, home = null, title = 'お着替え', note = ''
     else if (b.dataset.w !== undefined) { if (!wearOn(P, L, wf, b.dataset.w)) change(x => pickWear(P, x, wf, b.dataset.w)); }
     else if (b.dataset.v !== undefined) { if (cur(L, tab.id) !== b.dataset.v) change(x => pick(x, tab.id, b.dataset.v)); }
     else if (b.dataset.d) { const s = b.closest('.du-sl'), r = s.querySelector('input'), k = s.dataset.k, nv = Math.max(+r.min, Math.min(+r.max, vGet(L, k) + +b.dataset.d)); if (nv !== vGet(L, k)) change(x => vSet(x, k, nv)); }
+    else if (a === 'tuck15') change(x => { if (x.tuck15) delete x.tuck15; else x.tuck15 = true; });
     else if (a === 'hair15_0') { if (L.hv15) change(x => { delete x.hv15; }); }
     else if (a === 'preset') { const pv = presetOf(P, L.rin, L.v); if (!same(pv, L.v)) change(x => { x.v = pv; }); }
     else if (a === 'hair0') { if (HAIR_VALS.some(([k]) => L.v[k])) change(x => { for (const [k] of HAIR_VALS) x.v[k] = 0; }); }

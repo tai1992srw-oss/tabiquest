@@ -453,6 +453,32 @@
     "noNose": "鼻はなし",
     "note": "キャラ1b と同じ形。順は 目→まゆ→口（ほおは共通の部品を目の下に）"
    },
+   "wears": {
+    "uniform": {
+     "name": "12番の服",
+     "layers": [
+      "c3b/uniform_bottom.png",
+      "c3b/uniform_shoes.png",
+      "c3b/uniform_top.png"
+     ],
+     "layersTucked": [
+      "c3b/uniform_top.png",
+      "c3b/uniform_bottom.png",
+      "c3b/uniform_shoes.png"
+     ],
+     "parts": {
+      "top": "c3b/uniform_top.png",
+      "bottom": "c3b/uniform_bottom.png",
+      "shoes": "c3b/uniform_shoes.png"
+     },
+     "partNames": {
+      "top": "ブラウス",
+      "bottom": "スカート",
+      "shoes": "くつ・くつ下"
+     },
+     "note": "メイン衣装（ステップ4、素体に合わせた。ミントのブラウス・ワイン色のスカート・くつ下とブーツ）。ふだんは layers（ブラウスを外に出す）。layersTucked はブラウスをスカートの中に入れる順（もとのデザインの見た目）。ゲームで切りかえられるように。offset はかけない"
+    }
+   },
    "hairPreset": "キャラ3bのデザイン"
   }
  },

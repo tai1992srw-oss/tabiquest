@@ -436,7 +436,7 @@ export function applyParts(P, ch, st) {
 const BASE15 = 'assets/chara15/';
 const isBig = (P, id) => !!P.big?.J.chars[id];
 export const WEAR15_PARTS = [['top', 'トップス'], ['bottom', 'ボトムス'], ['shoes', 'くつ']];
-const DRAW15 = ['bottom', 'shoes', 'top'];
+const DRAW15 = ['bottom', 'shoes', 'top'], DRAW15_TUCK = ['top', 'bottom', 'shoes'];   // ふだん＝トップスを外に出す。look.tuck15 ＝ トップスをボトムスの中に入れる（2026-11-27 くりた「重ね順を変えられるように」）
 // 服の一覧：みんなの「素体に合わせた服」（chars.<c>.wears）を、部分（top・bottom・shoes）ごとに。番号は '<キャラ>.<服>.<部分>'
 function wearCatalog(J) {
   const parts = [], sets = [];
@@ -508,6 +508,7 @@ function fixBig(P, L) {
   if (w === 'tshirt' || w === 'design') o.w15 = w;
   else if (w === 'parts') { o.w15 = 'parts'; const q = {}; for (const [k] of WEAR15_PARTS) if (B.wears.parts.some(x => x.id === p15?.[k] && x.kind === k)) q[k] = p15[k]; o.p15 = q; }
   else Object.assign(o, bigLook(P, L.big));
+  if (L.tuck15 && o.w15 === 'parts' && o.p15?.top && o.p15?.bottom) o.tuck15 = true;   // トップスを中に入れる（上下がそろっているときだけ）
   if (Array.isArray(L.items15)) { const its = L.items15.filter(q => B.J.items.some(x => x.id === q)); if (its.length) o.items15 = its; else delete o.items15; }   // 小物（はずした物は入らない）
   const hv = {}; for (const [k, , mn, mx] of HAIR15_VALS) { const v = Math.round(+L.hv15?.[k] || 0); if (v) hv[k] = Math.max(mn, Math.min(mx, v)); } if (Object.keys(hv).length) o.hv15 = hv;   // 髪の調整
   for (const k of ['face', 'blink']) if (L[k]) o[k] = L[k];
@@ -596,7 +597,7 @@ function composeBig(P, L) {
   else {
     hairTo(bk, 'hair_back', o, 7); body.push([skin15(P, J.sotaiBody, sk), 0, 0]); hg.drawImage(skin15(P, C.layers.head, sk), ...o);   // 肌の色（look.colors.skin）
     if (L.w15 === 'tshirt') wear.push([B.IM[J.wear.tshirt], 0, 0]);
-    else for (const k of DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (it) wear.push([B.IM[it.file], 0, 0]); }   // 服は offset なし
+    else for (const k of L.tuck15 ? DRAW15_TUCK : DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (it) wear.push([B.IM[it.file], 0, 0]); }   // 服は offset なし
   }
   // 小物・装飾品（look.items15）：頭に付く物は headOf のキャラの頭の位置（offset）に置いて、頭といっしょにかしげる。後ろの層は後ろ髪のあと、前の層は前髪のあと
   const its = (L.items15 || []).map(id => J.items.find(q => q.id === id)).filter(Boolean), itAt = it => (design ? [0, 0] : it.head ? (J.chars[it.headOf]?.offset || o) : [0, 0]);
