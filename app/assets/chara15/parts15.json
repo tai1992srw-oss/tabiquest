@@ -1370,7 +1370,67 @@
     "none": null,
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
-   "hairPreset": "4番のデザイン"
+   "hairPreset": "4番のデザイン",
+   "wears": {
+    "uniform": {
+     "name": "4番の服",
+     "tuckDefault": true,
+     "parts": {
+      "top": "c4n/uniform_top.png",
+      "bottom": "c4n/uniform_bottom.png",
+      "shoes": "c4n/uniform_shoes.png"
+     },
+     "partNames": {
+      "top": "緑のブラウス",
+      "bottom": "プリーツスカート・ベルト",
+      "shoes": "くつ下・ひもぐつ"
+     },
+     "note": "うでのポーズつきの服（research/style/pose_r/SI/c4n、SI/export_app.py）。top＝胴＋立ちのうで、bottom＝立ち姿の絵のドットから、shoes＝デザインの服から。上げるの手は handOffset だけ下げて焼きこみ",
+     "arms": {
+      "torso": "c4n/arms/torso.png",
+      "down_R": "c4n/arms/down_R.png",
+      "down_L": "c4n/arms/down_L.png",
+      "up_R": "c4n/arms/up_R.png",
+      "up_R_fore": "c4n/arms/up_R_fore.png",
+      "up_L": "c4n/arms/up_L.png",
+      "up_L_fore": "c4n/arms/up_L_fore.png",
+      "front_R": "c4n/arms/front_R.png",
+      "front_R_fore": "c4n/arms/front_R_fore.png",
+      "front_L": "c4n/arms/front_L.png",
+      "front_L_fore": "c4n/arms/front_L_fore.png",
+      "back_R": "c4n/arms/back_R.png",
+      "back_L": "c4n/arms/back_L.png",
+      "wrist": {
+       "up_R": "c4n/arms/up_R_wrist.png",
+       "up_R_fore": "c4n/arms/up_R_fore_wrist.png",
+       "up_L": "c4n/arms/up_L_wrist.png",
+       "up_L_fore": "c4n/arms/up_L_fore_wrist.png",
+       "front_R": "c4n/arms/front_R_wrist.png",
+       "front_R_fore": "c4n/arms/front_R_fore_wrist.png",
+       "front_L": "c4n/arms/front_L_wrist.png",
+       "front_L_fore": "c4n/arms/front_L_fore_wrist.png"
+      },
+      "handOffset": {
+       "up_R": [
+        0,
+        3
+       ],
+       "up_L": [
+        0,
+        4
+       ],
+       "front_R": [
+        0,
+        0
+       ],
+       "front_L": [
+        0,
+        0
+       ]
+      }
+     }
+    }
+   }
   },
   "c2n": {
    "name": "2番",
