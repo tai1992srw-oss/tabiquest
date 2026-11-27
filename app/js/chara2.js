@@ -538,7 +538,7 @@ async function loadBig() {
     const o = C.offset || [0, 0]; chars[c] = { cx: Math.round(J.size[0] / 2 / 1.5), headTop: Math.round((57 + o[1]) / 1.5) };   // 顔の寄りの切りぬき（256×384 の目もり）
   }
   await Promise.all([...files].map(async f => { IM[f] = await image(BASE15 + f).catch(() => null); }));
-  const ids = Object.keys(J.chars).filter(c => !REPLACED15[c] || !J.chars[REPLACED15[c]]).sort((a, b) => ((J.chars[a].number ?? 99) || 99) - ((J.chars[b].number ?? 99) || 99) || a.localeCompare(b));   // 出席番号の順（1番・2番…、0番は最後）
+  const ids = Object.keys(J.chars).filter(c => !REPLACED15[c] || !J.chars[REPLACED15[c]]).sort((a, b) => ((J.chars[a].number ?? 99) || 99) - ((J.chars[b].number ?? 99) || 99) || (a.endsWith('n') - b.endsWith('n')) || a.localeCompare(b));   // 出席番号の順（1番・2番…、0番は最後）
   for (const [c, C] of Object.entries(J.chars)) chars[c].head = bbox(IM[C.layers.head]);   // 頭の大きさ（頭の絵の、ドットのある所。offset をかける前）
   return { J, IM, ids, chars, wears: wearCatalog(J), tint: new Map(), fit: new Map() };
 }

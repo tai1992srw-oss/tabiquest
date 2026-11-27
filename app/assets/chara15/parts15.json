@@ -196,6 +196,14 @@
    "base": "#8B656B",
    "light": "#8A676D",
    "highlight": "#BD969C"
+  },
+  "12番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#84628A",
+   "shadow1": "#937098",
+   "base": "#BC97BE",
+   "light": "#C49FC8",
+   "highlight": "#E4C1E1"
   }
  },
  "shared": {
@@ -1531,6 +1539,90 @@
     "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
    },
    "hairPreset": "6番のデザイン"
+  },
+  "c12n": {
+   "name": "12番",
+   "number": 12,
+   "offset": [
+    0,
+    8
+   ],
+   "cheekAnchor": [
+    191,
+    132
+   ],
+   "layers": {
+    "hair_back": "c12n/hair_back.png",
+    "head": "c12n/head.png",
+    "hair_front": "c12n/hair_front.png"
+   },
+   "items": [
+    "c12n_AF"
+   ],
+   "design": {
+    "body": "c12n/body_design.png",
+    "wear": "c12n/wear_design.png",
+    "tucked": true,
+    "note": "デザインの服（そのキャラの絵の体ごと）。手首の小物もこの中。offset はかけない"
+   },
+   "faces": {
+    "normal": "c12n/face.png",
+    "smile": "c12n/face_smile.png",
+    "close": "c12n/face_close.png",
+    "wink": "c12n/face_wink.png",
+    "surprise": "c12n/face_surprise.png",
+    "trouble": "c12n/face_trouble.png",
+    "shy": "c12n/face_shy.png",
+    "angry": "c12n/face_angry.png",
+    "jito": "c12n/face_jito.png",
+    "kiiteru": "c12n/face_kiiteru.png"
+   },
+   "faceNames": {
+    "normal": "ふだん",
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "kiiteru": "生きものと話す"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c12n/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "smile",
+     "close",
+     "wink",
+     "surprise",
+     "trouble",
+     "shy",
+     "angry",
+     "jito",
+     "kiiteru"
+    ],
+    "uniqueExprs": [
+     "kiiteru"
+    ],
+    "noNose": "鼻はなし（絵では描かせるが、ドットでは外す）",
+    "note": "ほおは shared.cheek ではなく、このキャラの cheeks を使う（顔の部品のいちばん下）"
+   },
+   "cheeks": {
+    "normal": "c12n/cheek_normal.png",
+    "shy": "c12n/cheek_shy.png",
+    "none": null,
+    "note": "キャラ固有のほお（ふだん・照れ）。顔と同じ枠・offset は顔と同じ。照れの表情（shy）には shy、ほかは normal がはじめ"
+   },
+   "hairPreset": "12番のデザイン"
   }
  },
  "items": [
@@ -1685,6 +1777,15 @@
    "back": null,
    "head": true,
    "headOf": "c6n",
+   "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
+  },
+  {
+   "id": "c12n_AF",
+   "name": "おだんごのリボンと星のピン",
+   "front": "c12n/acc_AF.png",
+   "back": null,
+   "head": true,
+   "headOf": "c12n",
    "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
   }
  ],
