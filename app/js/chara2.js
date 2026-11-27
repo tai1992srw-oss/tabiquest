@@ -644,18 +644,16 @@ function hair15(P, f, preset) {
 //   かしげ：頭（後ろ髪・頭・前髪・顔）を、あごの下のまん中を軸にまわす。体と服はそのまま。風：髪を、下ほど風下へ（後ろ髪は大きく、前髪は少し）
 const K15 = 1.5;
 // ボトムスのはば（2026-11-28 くりた「各自が調整できるように」）：look.bw15 ＝ 左右それぞれ何ドット広げるか（0〜BW15_MAX）
-//   中に入れたトップスがボトムスの横から出るのを、ボトムスの上のほうを広げてかくす。広げるのは、上のはしから トップスの胴のすそ（tb）まで。そこから下 BW15_FADE 行で元のはばにもどす
+//   中に入れたトップスがボトムスの横から出るのを、ボトムス全体を左右に広げてかくす（2026-11-28 くりた「全体的に広がるでいい」）
 //   1行ずつ、まんなかから左右へ引きのばす（絵は描き足さない。ドットを横にのばすだけ）
-export const BW15_MAX = 14; const BW15_FADE = 16;
-function widenBottom(B, im, n, tb) {
-  B.wide = B.wide || new Map(); const key = `${im.src}|${n}|${tb}`; if (B.wide.has(key)) return B.wide.get(key);
+export const BW15_MAX = 14;
+function widenBottom(B, im, n) {
+  B.wide = B.wide || new Map(); const key = `${im.src}|${n}`; if (B.wide.has(key)) return B.wide.get(key);
   const w = im.width, h = im.height, c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0);
   const s = g.getImageData(0, 0, w, h), d = g.createImageData(w, h), S = s.data, D = d.data;
-  let y0 = -1; for (let y = 0; y < h && y0 < 0; y++) for (let x = 0; x < w; x++) if (S[(y * w + x) * 4 + 3] > 128) { y0 = y; break; }
-  const end = tb == null ? y0 + 30 : tb;
   for (let y = 0; y < h; y++) {
     let l = -1, r = -1; for (let x = 0; x < w; x++) if (S[(y * w + x) * 4 + 3] > 128) { if (l < 0) l = x; r = x; }
-    const f = y <= end ? 1 : Math.max(0, 1 - (y - end) / BW15_FADE), dl = Math.round(n * f), cx = (l + r) / 2;
+    const dl = n, cx = (l + r) / 2;
     for (let x = 0; x < w; x++) {
       let src = x;
       if (l >= 0 && dl) { if (x < cx) src = x < l - dl ? -1 : cx - (cx - x) * (cx - l) / (cx - l + dl); else src = x > r + dl ? -1 : cx + (x - cx) * (r - cx) / (r - cx + dl); }
@@ -665,7 +663,6 @@ function widenBottom(B, im, n, tb) {
   }
   g.putImageData(d, 0, 0); B.wide.set(key, c); return c;
 }
-const lowY = (B, im) => { const b = bbOf(B, im); return b ? b.y1 : null; };   // 絵のいちばん下の行
 const bbOf = (B, im) => { if (!im) return null; B.bb = B.bb || new Map(); if (!B.bb.has(im)) B.bb.set(im, bbox(im)); return B.bb.get(im); };
 function composeBig(P, L) {
   const B = P.big, J = B.J, C = J.chars[L.big], [W, H] = J.size, o = C.offset || [0, 0], design = L.w15 === 'design' && C.design && !C.wears, fo = design ? [0, 0] : o;
@@ -688,7 +685,7 @@ function composeBig(P, L) {
     hairTo(bk, 'hair_back', o, 7); body.push([skin15(P, PZ ? J.arms.body : J.sotaiBody, sk), 0, 0]); hg.drawImage(skin15(P, C.layers.head, sk), ...o);   // 肌の色（look.colors.skin）。ポーズのときは、ポーズの体
     if (L.w15 === 'tshirt') wear.push([B.IM[J.wear.tshirt], 0, 0]);
     else for (const k of L.tuck15 ? DRAW15_TUCK : DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (!it) continue;   // 服は offset なし
-      if (k === 'bottom' && L.bw15 > 0) { const t = B.wears.parts.find(q => q.id === L.p15?.top), A = t?.arms, tor = A && B.IM[(L.tuck15 && A.torsoTuck) || A.torso]; wear.push([widenBottom(B, B.IM[it.file], L.bw15, tor ? lowY(B, tor) : null), 0, 0]); continue; }   // ボトムスのはば：トップスの胴のすそまで広げる
+      if (k === 'bottom' && L.bw15 > 0) { wear.push([widenBottom(B, B.IM[it.file], L.bw15), 0, 0]); continue; }   // ボトムスのはば：全体を左右に広げる
       if (k !== 'top' || !PZ) { wear.push([B.IM[(L.tuck15 && it.tuckFile) || it.file], 0, 0]); continue; }   // 中に入れたときは、短い胴があればそれ
       // うでのポーズ：トップスのかわりに、後ろのうで → トップスの胴 → ほかのうで（backOver の服は、後ろのうでも胴より前）
       const A = PZ.A, arm = (a, s) => skin15(P, PZ.h[s] ? A.wrist[`${a}_${s}`] : A[`${a}_${s}`], sk, true), sides = [['R', PZ.r], ['L', PZ.l]];
