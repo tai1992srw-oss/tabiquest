@@ -329,6 +329,27 @@
     "noNose": "鼻はなし",
     "note": "キャラ1b と同じ形。順は 目→まゆ→口（ほおは共通の部品を目の下に）"
    },
+   "wears": {
+    "uniform": {
+     "name": "キャラ2bの服",
+     "layers": [
+      "c2b/uniform_bottom.png",
+      "c2b/uniform_shoes.png",
+      "c2b/uniform_top.png"
+     ],
+     "parts": {
+      "top": "c2b/uniform_top.png",
+      "bottom": "c2b/uniform_bottom.png",
+      "shoes": "c2b/uniform_shoes.png"
+     },
+     "partNames": {
+      "top": "トップス",
+      "bottom": "スカート",
+      "shoes": "くつ・くつ下"
+     },
+     "note": "メイン衣装（ステップ4、素体に合わせた。ベージュのTシャツ・茶色のスカート・くつ下とブーツ）。c1b の制服と同じ重ね方、offset はかけない"
+    }
+   },
    "hairPreset": "キャラ2bのデザイン"
   }
  }
