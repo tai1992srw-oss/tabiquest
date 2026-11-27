@@ -1634,6 +1634,128 @@
        ]
       }
      }
+    },
+    "parka": {
+     "name": "2番の山の服",
+     "tuckDefault": false,
+     "parts": {
+      "top": "c2n/parka_top.png",
+      "bottom": "c2n/parka_bottom.png",
+      "shoes": "c2n/parka_shoes.png",
+      "legs": "c2n/parka_legs.png"
+     },
+     "partNames": {
+      "top": "マウンテンパーカー",
+      "bottom": "黒のショートパンツ",
+      "shoes": "くつ下・登山ぐつ",
+      "legs": "黒いタイツ"
+     },
+     "note": "うでのポーズつきの服（research/style/pose_r/SI/c2n_parka、SI/export_app.py）。top＝胴＋立ちのうで、bottom＝立ち姿の絵のドットから、shoes＝デザインの服から。上げるの手は handOffset だけ下げて焼きこみ",
+     "arms": {
+      "torso": "c2n/parka/arms/torso.png",
+      "down_R": "c2n/parka/arms/down_R.png",
+      "down_L": "c2n/parka/arms/down_L.png",
+      "up_R": "c2n/parka/arms/up_R.png",
+      "up_R_fore": "c2n/parka/arms/up_R_fore.png",
+      "up_L": "c2n/parka/arms/up_L.png",
+      "up_L_fore": "c2n/parka/arms/up_L_fore.png",
+      "front_R": "c2n/parka/arms/front_R.png",
+      "front_R_fore": "c2n/parka/arms/front_R_fore.png",
+      "front_L": "c2n/parka/arms/front_L.png",
+      "front_L_fore": "c2n/parka/arms/front_L_fore.png",
+      "back_R": "c2n/parka/arms/back_R.png",
+      "back_L": "c2n/parka/arms/back_L.png",
+      "wrist": {
+       "up_R": "c2n/parka/arms/up_R_wrist.png",
+       "up_R_fore": "c2n/parka/arms/up_R_fore_wrist.png",
+       "up_L": "c2n/parka/arms/up_L_wrist.png",
+       "up_L_fore": "c2n/parka/arms/up_L_fore_wrist.png",
+       "front_R": "c2n/parka/arms/front_R_wrist.png",
+       "front_R_fore": "c2n/parka/arms/front_R_fore_wrist.png",
+       "front_L": "c2n/parka/arms/front_L_wrist.png",
+       "front_L_fore": "c2n/parka/arms/front_L_fore_wrist.png"
+      },
+      "sleeveOverHand": true,
+      "handOffset": {
+       "up_R": [
+        0,
+        7
+       ],
+       "up_L": [
+        0,
+        6
+       ],
+       "front_R": [
+        0,
+        0
+       ],
+       "front_L": [
+        0,
+        0
+       ]
+      }
+     }
+    },
+    "turtle": {
+     "name": "2番の冬の服",
+     "tuckDefault": false,
+     "parts": {
+      "top": "c2n/turtle_top.png",
+      "bottom": "c2n/turtle_bottom.png",
+      "shoes": "c2n/turtle_shoes.png",
+      "legs": "c2n/turtle_legs.png"
+     },
+     "partNames": {
+      "top": "タートルネックのニット",
+      "bottom": "フレアスカート",
+      "shoes": "ショートブーツ",
+      "legs": "こげ茶のタイツ"
+     },
+     "note": "うでのポーズつきの服（research/style/pose_r/SI/c2n_turtle、SI/export_app.py）。top＝胴＋立ちのうで、bottom＝立ち姿の絵のドットから、shoes＝デザインの服から。上げるの手は handOffset だけ下げて焼きこみ",
+     "arms": {
+      "torso": "c2n/turtle/arms/torso.png",
+      "down_R": "c2n/turtle/arms/down_R.png",
+      "down_L": "c2n/turtle/arms/down_L.png",
+      "up_R": "c2n/turtle/arms/up_R.png",
+      "up_R_fore": "c2n/turtle/arms/up_R_fore.png",
+      "up_L": "c2n/turtle/arms/up_L.png",
+      "up_L_fore": "c2n/turtle/arms/up_L_fore.png",
+      "front_R": "c2n/turtle/arms/front_R.png",
+      "front_R_fore": "c2n/turtle/arms/front_R_fore.png",
+      "front_L": "c2n/turtle/arms/front_L.png",
+      "front_L_fore": "c2n/turtle/arms/front_L_fore.png",
+      "back_R": "c2n/turtle/arms/back_R.png",
+      "back_L": "c2n/turtle/arms/back_L.png",
+      "wrist": {
+       "up_R": "c2n/turtle/arms/up_R_wrist.png",
+       "up_R_fore": "c2n/turtle/arms/up_R_fore_wrist.png",
+       "up_L": "c2n/turtle/arms/up_L_wrist.png",
+       "up_L_fore": "c2n/turtle/arms/up_L_fore_wrist.png",
+       "front_R": "c2n/turtle/arms/front_R_wrist.png",
+       "front_R_fore": "c2n/turtle/arms/front_R_fore_wrist.png",
+       "front_L": "c2n/turtle/arms/front_L_wrist.png",
+       "front_L_fore": "c2n/turtle/arms/front_L_fore_wrist.png"
+      },
+      "sleeveOverHand": true,
+      "handOffset": {
+       "up_R": [
+        0,
+        5
+       ],
+       "up_L": [
+        0,
+        5
+       ],
+       "front_R": [
+        0,
+        0
+       ],
+       "front_L": [
+        0,
+        0
+       ]
+      }
+     }
     }
    }
   },

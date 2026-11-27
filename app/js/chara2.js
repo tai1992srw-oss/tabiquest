@@ -439,8 +439,8 @@ export function applyParts(P, ch, st) {
 //   重ねる順：後ろ髪 → 素体の体 → 頭 → 服（ボトムス → くつ → トップス）→ 前髪 → ほお（全キャラ共通）→ 目 → まゆ → 口
 const BASE15 = 'assets/chara15/';
 const isBig = (P, id) => !!P.big?.J.chars[id];
-export const WEAR15_PARTS = [['top', 'トップス'], ['bottom', 'ボトムス'], ['shoes', 'くつ']];
-const DRAW15 = ['bottom', 'shoes', 'top'], DRAW15_TUCK = ['top', 'bottom', 'shoes'];   // ふだん＝トップスを外に出す。look.tuck15 ＝ トップスをボトムスの中に入れる（2026-11-27 くりた「重ね順を変えられるように」）
+export const WEAR15_PARTS = [['top', 'トップス'], ['bottom', 'ボトムス'], ['shoes', 'くつ'], ['legs', 'タイツ']];   // legs：タイツ（2026-11-28 くりた。新しい部品。体のすぐ上）
+const DRAW15 = ['legs', 'bottom', 'shoes', 'top'], DRAW15_TUCK = ['legs', 'top', 'bottom', 'shoes'];   // ふだん＝トップスを外に出す。look.tuck15 ＝ トップスをボトムスの中に入れる（2026-11-27 くりた「重ね順を変えられるように」）
 // 服の一覧：みんなの「素体に合わせた服」（chars.<c>.wears）を、部分（top・bottom・shoes）ごとに。番号は '<キャラ>.<服>.<部分>'
 function wearCatalog(J) {
   const parts = [], sets = [];
