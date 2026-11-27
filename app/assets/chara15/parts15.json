@@ -2570,7 +2570,8 @@
     "hair_front": "c34n/hair_front.png"
    },
    "items": [
-    "c34n_AF"
+    "c34n_AF",
+    "c34n_AN"
    ],
    "design": {
     "body": "c34n/body_design.png",
@@ -3214,6 +3215,14 @@
    "head": true,
    "headOf": "c34n",
    "note": "そのキャラの頭に合わせて描いた髪かざり。headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
+  },
+  {
+   "id": "c34n_AN",
+   "name": "細い金のネックレス",
+   "front": "c34n/acc_AN.png",
+   "back": null,
+   "head": false,
+   "note": "首の小物。体と同じ枠・offset なし。うでのポーズのときも出す"
   },
   {
    "id": "c36n_AF",
