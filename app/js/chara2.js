@@ -124,7 +124,7 @@ export function fixLook(P, L) {
 }
 // ふだんの見た目（ホームのお着替え）と、そのカードの見た目（カードに残してあればそれ）
 export const homeLook = P => fixLook(P, settings.chara2);
-export const lookOf = (P, st) => { const L = st?.look?.rin || st?.look?.big ? fixLook(P, st.look) : homeLook(P), o = {}; for (const k of ['tilt', 'turn', 'lean', 'wind']) if (+st?.photo?.[k]) o[k] = +st.photo[k]; if (isFace(st?.photo?.face) && st.photo.face) o.face = st.photo.face; if (L.big && typeof st?.photo?.pose15 === 'string' && st.photo.pose15) o.pose15 = st.photo.pose15; return Object.keys(o).length ? { ...L, ...o } : L; };   // 首のかしげ・腰・風は、撮影の設定（photo）から
+export const lookOf = (P, st) => { const L = st?.look?.rin || st?.look?.big ? fixLook(P, st.look) : homeLook(P), o = {}; for (const k of ['tilt', 'turn', 'lean', 'wind']) if (+st?.photo?.[k]) o[k] = +st.photo[k]; if (st?.photo?.face && isFace(st.photo.face)) o.face = st.photo.face; if (L.big && typeof st?.photo?.pose15 === 'string' && st.photo.pose15) o.pose15 = st.photo.pose15; return Object.keys(o).length ? { ...L, ...o } : L; };   // 首のかしげ・腰・風は、撮影の設定（photo）から
 export const has = (P, k, c) => k !== 'cheek' || !!P.J.chars[c].pieces.cheekL;
 export const itemName = (P, k, c) => (c === '' ? NONE[k] : k === 'wear' ? P.J.chars[c].wear : k === 'rin' ? `${P.J.chars[c].name}（${P.J.chars[c].rin}）` : P.J.chars[c].name);
 
