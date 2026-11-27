@@ -935,11 +935,11 @@
       "handOffset": {
        "up_R": [
         0,
-        4
+        6
        ],
        "up_L": [
         0,
-        9
+        8
        ],
        "front_R": [
         0,
@@ -1051,7 +1051,7 @@
       "bottom": "ショートパンツ・スパッツ",
       "shoes": "くつ下・くつ"
      },
-     "note": "うでのポーズつきの服（research/style/pose_r/SI/c5n、SI/export_app.py）。top＝胴＋立ちのうで、bottom＝立ち姿の絵のドットから、shoes＝デザインの服から。上げるの手は2ドット下げて焼きこみ",
+     "note": "うでのポーズつきの服（research/style/pose_r/SI/c5n、SI/export_app.py）。top＝胴＋立ちのうで、bottom＝立ち姿の絵のドットから、shoes＝デザインの服から。上げるの手は handOffset だけ下げて焼きこみ",
      "arms": {
       "torso": "c5n/arms/torso.png",
       "down_R": "c5n/arms/down_R.png",
