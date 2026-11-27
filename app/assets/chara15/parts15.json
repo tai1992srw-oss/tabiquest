@@ -175,11 +175,11 @@
   },
   "0番のデザイン": {
    "line": "#211012",
-   "shadow2": "#2C180E",
-   "shadow1": "#512F1E",
-   "base": "#75462F",
-   "light": "#905D43",
-   "highlight": "#AD7456"
+   "shadow2": "#321C10",
+   "shadow1": "#4C2C1C",
+   "base": "#75452F",
+   "light": "#88563C",
+   "highlight": "#AB7355"
   }
  },
  "shared": {

@@ -105,7 +105,7 @@ export function loadParts() {
 // キャラのプリセット：そのキャラの部品とバランスを、ひとそろい（色は元の色、髪の調整は 0）。名前は、ならび順に「キャラ1」「キャラ2」…
 export const charaLook = (P, id) => isBig(P, id) ? bigLook(P, id) : ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, k === 'cheek' && !P.J.chars[id].pieces.cheekL ? '' : id])), v: presetOf(P, id) });
 // 同じ番号の作り直し（c0n など）は「（新）」をつける
-export const charaName = (P, id) => isBig(P, id) ? (P.big.J.chars[id].number != null ? `${P.big.J.chars[id].number}番${id.endsWith('n') && Object.entries(P.big.J.chars).some(([c, C]) => c !== id && C.number === P.big.J.chars[id].number) ? '（新）' : ''}` : P.big.J.chars[id].name) : `キャラ${P.ids.indexOf(id) + 1}`;
+export const charaName = (P, id) => isBig(P, id) ? (P.big.J.chars[id].number != null ? `${P.big.J.chars[id].number}番${id.endsWith('n') && P.big.ids.some(c => c !== id && P.big.J.chars[c].number === P.big.J.chars[id].number) ? '（新）' : ''}` : P.big.J.chars[id].name) : `キャラ${P.ids.indexOf(id) + 1}`;
 // はじめの見た目：最初の子（1つめの id）の部品とバランス
 export const firstLook = P => !SMALL ? bigLook(P, P.big.ids[0]) : ({ ...Object.fromEntries(SLOTS.map(([k]) => [k, P.ids[0]])), v: presetOf(P, P.ids[0]) });
 // 見た目をととのえる（前のキャラの見た目や、欠けた項目は、はじめの見た目で埋める）
@@ -527,17 +527,23 @@ async function loadBig() {
     const o = C.offset || [0, 0]; chars[c] = { cx: Math.round(J.size[0] / 2 / 1.5), headTop: Math.round((57 + o[1]) / 1.5) };   // 顔の寄りの切りぬき（256×384 の目もり）
   }
   await Promise.all([...files].map(async f => { IM[f] = await image(BASE15 + f).catch(() => null); }));
-  const ids = Object.keys(J.chars).sort((a, b) => ((J.chars[a].number ?? 99) || 99) - ((J.chars[b].number ?? 99) || 99) || a.localeCompare(b));   // 出席番号の順（1番・2番…、0番は最後）
+  const ids = Object.keys(J.chars).filter(c => !REPLACED15[c] || !J.chars[REPLACED15[c]]).sort((a, b) => ((J.chars[a].number ?? 99) || 99) - ((J.chars[b].number ?? 99) || 99) || a.localeCompare(b));   // 出席番号の順（1番・2番…、0番は最後）
   for (const [c, C] of Object.entries(J.chars)) chars[c].head = bbox(IM[C.layers.head]);   // 頭の大きさ（頭の絵の、ドットのある所。offset をかける前）
   return { J, IM, ids, chars, wears: wearCatalog(J), tint: new Map(), fit: new Map() };
 }
 // そのキャラのはじめの見た目：素体に合わせた服があればそれ、なければデザインの服、それもなければ Tシャツ
 function bigLook(P, id) {
   const C = P.big.J.chars[id], w = Object.keys(C.wears || {})[0], its = (C.items || []).filter(q => P.big.J.items.some(x => x.id === q));
-  const s = w && P.big.wears.sets.find(q => q.id === `${id}.${w}`), o = s ? { big: id, w15: 'parts', p15: { ...s.parts }, ...(s.tuck ? { tuck15: true } : {}) } : { big: id, w15: C.design ? 'design' : 'tshirt' };
+  const old = !w && Object.keys(REPLACED15).find(k => REPLACED15[k] === id), ow = old && Object.keys(P.big.J.chars[old]?.wears || {})[0];   // 差し替えた子で服がまだないときは、前の子の服（0番＝Tシャツ）
+  const s = (w && P.big.wears.sets.find(q => q.id === `${id}.${w}`)) || (ow && P.big.wears.sets.find(q => q.id === `${old}.${ow}`)), o = s ? { big: id, w15: 'parts', p15: { ...s.parts }, ...(s.tuck ? { tuck15: true } : {}) } : { big: id, w15: C.design ? 'design' : 'tshirt' };
   if (its.length) o.items15 = its; return o;   // その子のふだんの装飾品（chars.<c>.items）
 }
+// 作り直して差し替えたキャラ（2026-11-27 くりた「0番も差し替え」）：前の子はえらべる一覧から外し、前の子の見た目は新しい子で読む。
+//   前の子の部品（c0 の素体の色・Tシャツの服など）はそのまま使う
+const REPLACED15 = { c0: 'c0n' };
 function fixBig(P, L) {
+  const RB = REPLACED15[L.big] && P.big.J.chars[REPLACED15[L.big]]; if (RB) L = { ...L, big: REPLACED15[L.big] };
+  if (REPLACED15[L.hair15] && P.big.J.chars[REPLACED15[L.hair15]]) L = { ...L, hair15: REPLACED15[L.hair15] };
   const B = P.big, C = B.J.chars[L.big], o = { big: L.big };
   if (isBig(P, L.hair15) && L.hair15 !== L.big) o.hair15 = L.hair15;
   if (B.J.hairPresets[L.h15]) o.h15 = L.h15;
