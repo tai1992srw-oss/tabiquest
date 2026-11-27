@@ -156,6 +156,14 @@
    "base": "#E77789",
    "light": "#FF90A2",
    "highlight": "#FFAEBB"
+  },
+  "3番のデザイン": {
+   "line": "#211012",
+   "shadow2": "#1D1C1E",
+   "shadow1": "#252326",
+   "base": "#343035",
+   "light": "#3B373D",
+   "highlight": "#5C585F"
   }
  },
  "shared": {
@@ -789,6 +797,85 @@
     "note": "キャラ1b と同じ形。順は 目→まゆ→口（ほおは共通の部品を目の下に）。puii（ぷいっ）は6番だけの表情（ほかのキャラにはない）"
    },
    "hairPreset": "6番のデザイン"
+  },
+  "c3n": {
+   "name": "3番",
+   "number": 3,
+   "offset": [
+    0,
+    5
+   ],
+   "cheekAnchor": [
+    191,
+    132
+   ],
+   "layers": {
+    "hair_back": "c3n/hair_back.png",
+    "head": "c3n/head.png",
+    "hair_front": "c3n/hair_front.png"
+   },
+   "items": [
+    "c3n_hairacc"
+   ],
+   "design": {
+    "body": "c3n/body_design.png",
+    "wear": "c3n/wear_design.png",
+    "tucked": true,
+    "note": "デザインの服（そのキャラの絵の体ごと。えんじの長そでのトップスを黒いロングスカートの中に入れた形、うで時計もこの中）。offset はかけない"
+   },
+   "faces": {
+    "normal": "c3n/face.png",
+    "smile": "c3n/face_smile.png",
+    "close": "c3n/face_close.png",
+    "wink": "c3n/face_wink.png",
+    "surprise": "c3n/face_surprise.png",
+    "trouble": "c3n/face_trouble.png",
+    "shy": "c3n/face_shy.png",
+    "angry": "c3n/face_angry.png",
+    "jito": "c3n/face_jito.png",
+    "kiite": "c3n/face_kiite.png"
+   },
+   "faceNames": {
+    "smile": "にっこり",
+    "close": "目を閉じる",
+    "wink": "ウインク",
+    "surprise": "おどろき",
+    "trouble": "困り",
+    "shy": "照れ",
+    "angry": "むっと",
+    "jito": "ジト目",
+    "kiite": "ちゃんと聞いて"
+   },
+   "faceParts": {
+    "order": [
+     "eyeL",
+     "eyeR",
+     "browL",
+     "browR",
+     "mouth"
+    ],
+    "path": "c3n/face_parts/{part}_{expr}.png",
+    "exprs": [
+     "normal",
+     "smile",
+     "close",
+     "wink",
+     "surprise",
+     "trouble",
+     "shy",
+     "angry",
+     "jito",
+     "kiite"
+    ],
+    "sharedCheek": "ほおは shared.cheek を使う",
+    "noNose": "鼻はなし",
+    "uniqueExprs": [
+     "kiite"
+    ],
+    "note": "キャラ1b と同じ形。順は 目→まゆ→口（ほおは共通の部品を目の下に）。kiite（ちゃんと聞いて）は3番だけの表情"
+   },
+   "note": "ステップ4（素体に合わせたメイン衣装）はまだ。wears はなし（Tシャツなど共通の服と、デザインの服だけ）",
+   "hairPreset": "3番のデザイン"
   }
  },
  "items": [
@@ -889,6 +976,15 @@
    "head": true,
    "headOf": "c6b",
    "note": "6番の頭に合わせて描いた髪かざり（ステップ2で別の部品にした）。頭に付くので headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
+  },
+  {
+   "id": "c3n_hairacc",
+   "name": "えんじのカチューシャ",
+   "front": "c3n/acc_front.png",
+   "back": null,
+   "head": true,
+   "headOf": "c3n",
+   "note": "3番の頭に合わせて描いた髪かざり（ステップ2で別の部品にした）。頭に付くので headOf の offset で頭といっしょに動かす。顔より下（前髪の上）"
   }
  ],
  "arms": {
