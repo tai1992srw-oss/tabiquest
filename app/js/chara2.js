@@ -439,6 +439,15 @@ export function applyParts(P, ch, st) {
 //   重ねる順：後ろ髪 → 素体の体 → 頭 → 服（ボトムス → くつ → トップス）→ 前髪 → ほお（全キャラ共通）→ 目 → まゆ → 口
 const BASE15 = 'assets/chara15/';
 const DEBUG2 = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug2');   // デバッグ2版：新しい頭身の素体のためし（32番だけ）
+const D2_FACES = ['normal', 'smile', 'close', 'wink', 'surprise', 'trouble', 'shy', 'angry', 'jito', 'moji'];
+// デバッグ2版の32番：512×768 の絵を3倍（1536×2304＝いまの枠の4倍）にして返す。ちょうどの倍数なのでドットはにじまない。drawLook などは絵のはばから倍率を出すので、そのまま使える
+function composeD2(P, L) {
+  const D = P.big.D2, ux = String(L.face || '').startsWith('u:') ? L.face.slice(2) : '', ex = EXPR15[L.face] || {};
+  let e = L.blink ? 'close' : ux || ex.e || ex.m || 'normal'; if (!D.faces[e]) e = 'normal';
+  const c = document.createElement('canvas'); c.width = 1536; c.height = 2304; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  for (const im of [D.hb, D.body, D.head, D.wear, D.hf, D.faces[e], (L.items15 || []).includes('c32n_AF') ? D.acc : null]) if (im) x.drawImage(im, 0, 0, 1536, 2304);
+  return c;
+}
 const isBig = (P, id) => !!P.big?.J.chars[id];
 export const WEAR15_PARTS = [['top', 'トップス'], ['bottom', 'ボトムス'], ['shoes', 'くつ'], ['socks', 'くつ下'], ['legs', 'タイツ']];   // legs：タイツ（2026-11-28 くりた。新しい部品。体のすぐ上）。socks：くつ下（2026-11-28 くりた「靴と靴下、別にしない？」。足の先まで描いた物。タイツの上・くつの下）
 const DRAW15 = ['legs', 'socks', 'bottom', 'shoes', 'top'], DRAW15_TUCK = ['legs', 'socks', 'top', 'bottom', 'shoes'];   // ふだん＝トップスを外に出す。look.tuck15 ＝ トップスをボトムスの中に入れる（2026-11-27 くりた「重ね順を変えられるように」）
@@ -527,9 +536,12 @@ const EXPR15 = { smile: { m: 'smile' }, grin: { e: 'smile', b: 'smile', m: 'smil
   muu: { e: 'angry', b: 'angry', m: 'angry' }, jito: { e: 'jito', b: 'jito' } };
 async function loadBig() {
   const J = await (await fetch(BASE15 + 'parts15.json')).json(), IM = {}, files = new Set([J.sotaiBody, ...Object.values(J.wear)]);
-  if (DEBUG2 && J.chars.c32n) {   // デバッグ2版（?debug2。2026-11-28 くりた「今回の頭身で素体を作る→32番を入れてみる」）：32番だけ、新しい頭身の素体＋首なしの頭＋デザインの服で、立ちだけ
-    const C = J.chars.c32n; C.sotaiBody = '../sotai2/sotai_body.png'; C.layers = { ...C.layers, head: '../sotai2/c32n_head_nokubi.png' }; C.offset = [0, 0];
-    C.wears = { d2: { name: '32番の服（デバッグ2）', tuckDefault: false, parts: { top: '../sotai2/c32n_wear_design.png' }, partNames: { top: 'デザインの服' } } }; files.add(C.sotaiBody); }
+  let D2 = null;   // デバッグ2版（?debug2。2026-11-28 くりた「今回の頭身で素体を作る→32番を入れてみる」「3px・しきい値100で進めて」）：32番だけ、新しい頭身の素体の 512×768（3px）の絵で、立ちだけ。色はデザインのまま
+  if (DEBUG2 && J.chars.c32n) {
+    const p = f => image('assets/sotai2/3px/' + f).catch(() => null), faces = {};
+    const [body, hb, head, wear, hf, acc] = await Promise.all(['sotai_body.png', 'c32n/hair_back.png', 'c32n/head_nokubi.png', 'c32n/wear.png', 'c32n/hair_front.png', 'c32n/acc_AF.png'].map(p));
+    await Promise.all(D2_FACES.map(async e => { faces[e] = await p(`c32n/face_${e}.png`); }));
+    D2 = { body, hb, head, wear, hf, acc, faces }; }
   const SC = J.shared?.cheek; if (SC) for (const k of Object.keys(SC.kinds)) files.add(SC.path.replace('{kind}', k));
   J.items = J.items || []; for (const it of J.items) for (const k of ['front', 'back']) if (it[k]) files.add(it[k]);   // 小物・装飾品
   const noVivid = new Set([...Object.values(J.chars).filter(C => C.hairNoVivid && C.hairPreset).map(C => C.hairPreset)]);   // デザインの色のままにする髪（chars.<c>.hairNoVivid。32番の白い髪 2026-11-28 くりた「コンペ時の白髪が理想」）
@@ -550,7 +562,7 @@ async function loadBig() {
   await Promise.all([...files].map(async f => { IM[f] = await image(BASE15 + f).catch(() => null); }));
   const ids = Object.keys(J.chars).filter(c => !REPLACED15[c] || !J.chars[REPLACED15[c]]).sort((a, b) => ((J.chars[a].number ?? 99) || 99) - ((J.chars[b].number ?? 99) || 99) || (a.endsWith('n') - b.endsWith('n')) || a.localeCompare(b));   // 出席番号の順（1番・2番…、0番は最後）
   for (const [c, C] of Object.entries(J.chars)) chars[c].head = bbox(IM[C.layers.head]);   // 頭の大きさ（頭の絵の、ドットのある所。offset をかける前）
-  return { J, IM, ids, chars, wears: wearCatalog(J), tint: new Map(), fit: new Map() };
+  return { J, IM, ids, chars, wears: wearCatalog(J), tint: new Map(), fit: new Map(), D2 };
 }
 // そのキャラのはじめの見た目：素体に合わせた服があればそれ、なければデザインの服、それもなければ Tシャツ
 function bigLook(P, id) {
@@ -674,6 +686,7 @@ function widenBottom(B, im, n) {
 }
 const bbOf = (B, im) => { if (!im) return null; B.bb = B.bb || new Map(); if (!B.bb.has(im)) B.bb.set(im, bbox(im)); return B.bb.get(im); };
 function composeBig(P, L) {
+  if (P.big.D2 && L.big === 'c32n' && L.pose15 !== UNIQUE_POSE) return composeD2(P, L);   // デバッグ2版の32番（立ちだけ）
   { const U = P.big.J.chars[L.big]?.uniquePose, im = U?.img && L.pose15 === UNIQUE_POSE && P.big.IM[U.img];   // そのキャラだけのポーズ：1まい絵だけ
     if (im) { const [w, h] = P.big.J.size, c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(im, 0, 0); return c; } }
   const B = P.big, J = B.J, C = J.chars[L.big], [W, H] = J.size, o = C.offset || [0, 0], design = L.w15 === 'design' && C.design && !C.wears, fo = design ? [0, 0] : o;
@@ -693,7 +706,7 @@ function composeBig(P, L) {
   const sk = L.colors?.skin || C.skin, PZ = design ? null : poseOf(P, L);   // 肌：お着替えでえらんだ色 → キャラのはじめの肌の色（chars.<c>.skin。32番 2026-11-28 くりた「肌の色もなおして」）
   if (design) { hairTo(bk, 'hair_back', [0, 0], 7); body.push([B.IM[C.design.body], 0, 0]); wear.push([B.IM[C.design.wear], 0, 0]); }   // デザインの服：そのキャラの絵の体ごと、offset なし
   else {
-    hairTo(bk, 'hair_back', o, 7); body.push([skin15(P, PZ ? J.arms.body : (C.sotaiBody || J.sotaiBody), sk), 0, 0]); hg.drawImage(skin15(P, C.layers.head, sk), ...o);   // 肌の色（look.colors.skin）。ポーズのときは、ポーズの体
+    hairTo(bk, 'hair_back', o, 7); body.push([skin15(P, PZ ? J.arms.body : J.sotaiBody, sk), 0, 0]); hg.drawImage(skin15(P, C.layers.head, sk), ...o);   // 肌の色（look.colors.skin）。ポーズのときは、ポーズの体
     if (L.w15 === 'tshirt') wear.push([B.IM[J.wear.tshirt], 0, 0]);
     else for (const k of L.tuck15 ? DRAW15_TUCK : DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (!it) continue;   // 服は offset なし
       if (k === 'bottom' && L.bw15 > 0) { wear.push([widenBottom(B, B.IM[it.file], L.bw15), 0, 0]); continue; }   // ボトムスのはば：全体を左右に広げる
