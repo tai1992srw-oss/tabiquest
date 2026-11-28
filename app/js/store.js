@@ -2,7 +2,7 @@
 // v2：カードは「到着ごとに撮る1枚」。そのときの時間帯・天気・季節・日時・位置を固定して持つ
 // デバッグ版：アドレスの最後に ?debug を付けて開いたときだけ（例：…/tabiquest/?debug）。ふつうに開いた通常版には、デバッグの物は何も出ない
 //   記録（カード・ポイント）も設定（お着替え・時間帯の上書きなど）も、通常版とは別の場所に保存する。おたがいに影響しない
-export const DEBUG = new URLSearchParams(location.search).has('debug');
+export const DEBUG = new URLSearchParams(location.search).has('debug') || new URLSearchParams(location.search).has('debug2');   // ?debug2（デバッグ2版：新しい頭身の素体のためし）も、デバッグ用の記録を使う
 const KEY = { real: 'tabiquest:real:v1', debug: 'tabiquest:debug:v1', settings: DEBUG ? 'tabiquest:settings:debug:v1' : 'tabiquest:settings:v1' };
 const POINTS = { first: 300, revisit: 10 };
 export const VERSION_DATA = 2;

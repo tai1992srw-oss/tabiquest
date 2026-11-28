@@ -438,6 +438,7 @@ export function applyParts(P, ch, st) {
 //   返す絵は 384×576（使う側は、はばの比 1.5 で合わせる）。顔の向き・かしげ・風・小物・顔のバランスは、まだない
 //   重ねる順：後ろ髪 → 素体の体 → 頭 → 服（ボトムス → くつ → トップス）→ 前髪 → ほお（全キャラ共通）→ 目 → まゆ → 口
 const BASE15 = 'assets/chara15/';
+const DEBUG2 = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug2');   // デバッグ2版：新しい頭身の素体のためし（32番だけ）
 const isBig = (P, id) => !!P.big?.J.chars[id];
 export const WEAR15_PARTS = [['top', 'トップス'], ['bottom', 'ボトムス'], ['shoes', 'くつ'], ['socks', 'くつ下'], ['legs', 'タイツ']];   // legs：タイツ（2026-11-28 くりた。新しい部品。体のすぐ上）。socks：くつ下（2026-11-28 くりた「靴と靴下、別にしない？」。足の先まで描いた物。タイツの上・くつの下）
 const DRAW15 = ['legs', 'socks', 'bottom', 'shoes', 'top'], DRAW15_TUCK = ['legs', 'socks', 'top', 'bottom', 'shoes'];   // ふだん＝トップスを外に出す。look.tuck15 ＝ トップスをボトムスの中に入れる（2026-11-27 くりた「重ね順を変えられるように」）
@@ -526,6 +527,9 @@ const EXPR15 = { smile: { m: 'smile' }, grin: { e: 'smile', b: 'smile', m: 'smil
   muu: { e: 'angry', b: 'angry', m: 'angry' }, jito: { e: 'jito', b: 'jito' } };
 async function loadBig() {
   const J = await (await fetch(BASE15 + 'parts15.json')).json(), IM = {}, files = new Set([J.sotaiBody, ...Object.values(J.wear)]);
+  if (DEBUG2 && J.chars.c32n) {   // デバッグ2版（?debug2。2026-11-28 くりた「今回の頭身で素体を作る→32番を入れてみる」）：32番だけ、新しい頭身の素体＋首なしの頭＋デザインの服で、立ちだけ
+    const C = J.chars.c32n; C.sotaiBody = '../sotai2/sotai_body.png'; C.layers = { ...C.layers, head: '../sotai2/c32n_head_nokubi.png' }; C.offset = [0, 0];
+    C.wears = { d2: { name: '32番の服（デバッグ2）', tuckDefault: false, parts: { top: '../sotai2/c32n_wear_design.png' }, partNames: { top: 'デザインの服' } } }; files.add(C.sotaiBody); }
   const SC = J.shared?.cheek; if (SC) for (const k of Object.keys(SC.kinds)) files.add(SC.path.replace('{kind}', k));
   J.items = J.items || []; for (const it of J.items) for (const k of ['front', 'back']) if (it[k]) files.add(it[k]);   // 小物・装飾品
   const noVivid = new Set([...Object.values(J.chars).filter(C => C.hairNoVivid && C.hairPreset).map(C => C.hairPreset)]);   // デザインの色のままにする髪（chars.<c>.hairNoVivid。32番の白い髪 2026-11-28 くりた「コンペ時の白髪が理想」）
@@ -689,7 +693,7 @@ function composeBig(P, L) {
   const sk = L.colors?.skin || C.skin, PZ = design ? null : poseOf(P, L);   // 肌：お着替えでえらんだ色 → キャラのはじめの肌の色（chars.<c>.skin。32番 2026-11-28 くりた「肌の色もなおして」）
   if (design) { hairTo(bk, 'hair_back', [0, 0], 7); body.push([B.IM[C.design.body], 0, 0]); wear.push([B.IM[C.design.wear], 0, 0]); }   // デザインの服：そのキャラの絵の体ごと、offset なし
   else {
-    hairTo(bk, 'hair_back', o, 7); body.push([skin15(P, PZ ? J.arms.body : J.sotaiBody, sk), 0, 0]); hg.drawImage(skin15(P, C.layers.head, sk), ...o);   // 肌の色（look.colors.skin）。ポーズのときは、ポーズの体
+    hairTo(bk, 'hair_back', o, 7); body.push([skin15(P, PZ ? J.arms.body : (C.sotaiBody || J.sotaiBody), sk), 0, 0]); hg.drawImage(skin15(P, C.layers.head, sk), ...o);   // 肌の色（look.colors.skin）。ポーズのときは、ポーズの体
     if (L.w15 === 'tshirt') wear.push([B.IM[J.wear.tshirt], 0, 0]);
     else for (const k of L.tuck15 ? DRAW15_TUCK : DRAW15) { const it = B.wears.parts.find(q => q.id === L.p15?.[k]); if (!it) continue;   // 服は offset なし
       if (k === 'bottom' && L.bw15 > 0) { wear.push([widenBottom(B, B.IM[it.file], L.bw15), 0, 0]); continue; }   // ボトムスのはば：全体を左右に広げる
