@@ -215,11 +215,11 @@
   },
   "32番のデザイン": {
    "line": "#211012",
-   "shadow2": "#BF9A8A",
-   "shadow1": "#D9BBAB",
-   "base": "#F5DDCF",
-   "light": "#F9EBE1",
-   "highlight": "#FCF6F1"
+   "shadow2": "#C0A195",
+   "shadow1": "#CDB2A6",
+   "base": "#F0DAD0",
+   "light": "#F1DCD2",
+   "highlight": "#FAF1EE"
   },
   "33番のデザイン": {
    "line": "#211012",
@@ -2253,11 +2253,11 @@
    "number": 32,
    "offset": [
     0,
-    16
+    9
    ],
    "cheekAnchor": [
-    190,
-    125
+    191,
+    133
    ],
    "layers": {
     "hair_back": "c32n/hair_back.png",
